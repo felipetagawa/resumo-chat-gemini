@@ -1,6 +1,6 @@
 // content.js
 
-// === LISTENER DE MENSAGENS (igual ao anterior) ===
+// === LISTENER DE MENSAGENS ===
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const botaoResumo = document.getElementById("btnResumoGemini");
   if (botaoResumo) {
@@ -15,32 +15,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// === NOVO: VERIFICADOR DE PÁGINA E URL ===
-// URL exata onde os botões devem aparecer
+// === VERIFICADOR DE PÁGINA E URL ===
 const TARGET_URL = "https://softeninformatica.sz.chat/user/agent";
 
-// Verifica a URL a cada 2 segundos. Mais robusto para SPAs (Single Page Apps)
 setInterval(() => {
   const botoesExistem = document.getElementById("containerBotoesGemini");
-  
-  // Usamos startsWith para incluir URLs com parâmetros (ex: /agent?id=123)
   const urlAtualCorreta = window.location.href.startsWith(TARGET_URL);
 
   if (urlAtualCorreta && !botoesExistem) {
-    // Se estamos na URL correta e os botões NÃO existem, crie-os.
     criarBotoesFlutuantes();
   } else if (!urlAtualCorreta && botoesExistem) {
-    // Se NÃO estamos na URL correta e os botões EXISTEM, remova-os.
     botoesExistem.remove();
-    
-    // Opcional: remover o popup de resumo se existir
     const popup = document.getElementById("geminiResumoPopup");
     if (popup) popup.remove();
   }
-}, 2000); // Verifica a cada 2 segundos
+}, 2000);
 
 
-// === FUNÇÃO DE CRIAR BOTÕES (igual ao anterior) ===
+// === FUNÇÃO DE CRIAR BOTÕES ===
 function criarBotoesFlutuantes() {
   if (document.getElementById("containerBotoesGemini")) return;
 
@@ -73,9 +65,9 @@ function criarBotoesFlutuantes() {
   botaoCopiar.textContent = "📋 Copiar Histórico";
   Object.assign(botaoCopiar.style, estiloBotao);
   Object.assign(botaoCopiar.style, {
-      background: "#fff",
-      color: "#4285F4",
-      border: "1px solid #4285F4",
+    background: "#fff",
+    color: "#4285F4",
+    border: "1px solid #4285F4",
   });
 
   botaoCopiar.addEventListener("click", () => {
@@ -85,7 +77,7 @@ function criarBotoesFlutuantes() {
       return;
     }
     navigator.clipboard.writeText(texto);
-    
+
     botaoCopiar.textContent = "✅ Histórico Copiado!";
     botaoCopiar.disabled = true;
     setTimeout(() => {
@@ -99,9 +91,9 @@ function criarBotoesFlutuantes() {
   botaoResumo.textContent = "🧠 Gerar Relatório";
   Object.assign(botaoResumo.style, estiloBotao);
   Object.assign(botaoResumo.style, {
-      background: "#4285F4",
-      color: "#fff",
-      border: "none",
+    background: "#4285F4",
+    color: "#fff",
+    border: "none",
   });
 
   botaoResumo.addEventListener("click", async () => {
@@ -124,9 +116,7 @@ function criarBotoesFlutuantes() {
 }
 
 
-// === MUDANÇA PRINCIPAL AQUI ===
 function capturarTextoChat() {
-  // Seleciona somente as mensagens da conversa visível
   const mensagensDOM = document.querySelectorAll(".msg");
 
   if (!mensagensDOM.length) {
@@ -134,7 +124,6 @@ function capturarTextoChat() {
     return "";
   }
 
-  // Mapeia o texto de cada mensagem visível
   const mensagens = Array.from(mensagensDOM)
     .map(msg => {
       const nome = msg.querySelector(".name")?.innerText?.trim() || "";
@@ -142,87 +131,110 @@ function capturarTextoChat() {
       if (!texto) return null;
       return `${nome ? nome + ": " : ""}${texto}`;
     })
-    .filter(Boolean) // remove nulos
+    .filter(Boolean)
     .filter(linha => {
       const t = linha.toLowerCase();
-      // Ignora mensagens automáticas ou vazias
       return t && !t.startsWith("automático");
     })
     .join("\n");
 
-  // Limite de segurança (Gemini aceita até 4096 tokens)
   return mensagens.slice(0, 4000);
 }
 
 
-
-// === FUNÇÃO DE EXIBIR O POPUP (igual ao anterior) ===
+// === FUNÇÃO DE EXIBIR O POPUP (ATUALIZADA) ===
 function exibirResumo(texto) {
   const popupAntigo = document.getElementById("geminiResumoPopup");
   if (popupAntigo) popupAntigo.remove();
 
+  // 1. Analisar Humor
+  let humorIcon = "";
+  const lowerText = texto.toLowerCase();
+  if (lowerText.includes("humor do cliente:")) {
+    // Tenta extrair a linha do humor
+    const lines = texto.split("\n");
+    const humorLine = lines.find(l => l.toLowerCase().includes("humor do cliente:")) || "";
+
+    if (humorLine.match(/positivo|feliz|satisfeito|elogio/i)) humorIcon = "😊";
+    else if (humorLine.match(/negativo|irritado|insatisfeito|reclama/i)) humorIcon = "😡";
+    else if (humorLine.match(/neutro|normal|dúvida/i)) humorIcon = "😐";
+  }
+
   const popup = document.createElement("div");
-  popup.id = "geminiResumoPopup"; 
+  popup.id = "geminiResumoPopup";
   popup.style = `
     position:fixed;
-    bottom:130px; /* Ajustado para ficar acima dos botões */
+    bottom:130px;
     right:20px;
     z-index:999999;
     background:#fff;
     border:1px solid #ccc;
     border-radius:8px;
     padding:16px;
-    width:340px;
-    max-height:400px;
+    width:360px;
+    max-height:500px;
     overflow-y:auto;
-    box-shadow:0 2px 10px rgba(0,0,0,0.2);
-    font-family:Arial;
+    box-shadow:0 4px 15px rgba(0,0,0,0.2);
+    font-family:Arial, sans-serif;
     font-size: 14px;
+    display: flex;
+    flex-direction: column;
   `;
 
   popup.innerHTML = `
-    <b style="font-size:16px;">Resumo Gerado:</b>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <b style="font-size:16px;">Resumo Gerado ${humorIcon}</b>
+      <button id="fecharResumoFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
+    </div>
+    
     <pre style="
       white-space:pre-wrap;
-      margin-top:12px;
-      margin-bottom:16px;
-      padding: 8px;
+      padding: 10px;
       background: #f9f9f9;
       border: 1px solid #eee;
       border-radius: 4px;
       font-family: monospace;
-      max-height: 250px;
+      flex: 1;
       overflow-y: auto;
+      margin-bottom: 12px;
     "></pre>
+
     <div style="display:flex; gap:8px;">
       <button id="copiarResumoFlutuante" style="
-        flex: 1; padding: 8px 12px; background: #4285F4;
-        color: #fff; border: none; border-radius: 6px; cursor: pointer;
-      ">📋 Copiar Resumo</button>
-      <button id="fecharResumoFlutuante" style="
-        flex: 0; padding: 8px 12px; background: #eee;
-        color: #333; border: 1px solid #ccc; border-radius: 6px; cursor: pointer;
-      ">Fechar</button>
+        flex: 1; padding: 8px; background: #4285F4;
+        color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight:bold;
+      ">📋 Copiar</button>
+      
+      <button id="exportarResumo" style="
+        flex: 1; padding: 8px; background: #34A853;
+        color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight:bold;
+      ">💾 Salvar .txt</button>
     </div>
   `;
 
   popup.querySelector("pre").innerText = texto;
   document.body.appendChild(popup);
 
-  popup.querySelector("#fecharResumoFlutuante").addEventListener("click", () => {
-    popup.remove();
-  });
+  // Eventos
+  popup.querySelector("#fecharResumoFlutuante").addEventListener("click", () => popup.remove());
 
   popup.querySelector("#copiarResumoFlutuante").addEventListener("click", () => {
     navigator.clipboard.writeText(texto);
     const btn = popup.querySelector("#copiarResumoFlutuante");
+    const original = btn.textContent;
     btn.textContent = "✅ Copiado!";
-    setTimeout(() => {
-      btn.textContent = "📋 Copiar Resumo";
-    }, 2000);
+    setTimeout(() => btn.textContent = original, 2000);
+  });
+
+  popup.querySelector("#exportarResumo").addEventListener("click", () => {
+    const blob = new Blob([texto], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `resumo-atendimento-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   });
 }
-
-// REMOVIDO:
-// window.addEventListener("load", () => setTimeout(criarBotoesFlutuantes, 2000));
-// A nova lógica setInterval() acima substitui isso.
