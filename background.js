@@ -74,4 +74,70 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     return true; // mantém o canal aberto para sendResponse assíncrono
   }
+
+  if (request.action === "buscarSolucao") {
+    const { texto } = request;
+
+    const enviarResposta = (data) => {
+      if (sender.tab) {
+        if (data.resumo) {
+          chrome.tabs.sendMessage(sender.tab.id, {
+            action: "exibirResumo",
+            resumo: data.resumo
+          });
+        } else if (data.erro) {
+          chrome.tabs.sendMessage(sender.tab.id, {
+            action: "exibirErro",
+            erro: data.erro
+          });
+        }
+      } else {
+        sendResponse(data);
+      }
+    };
+
+    (async () => {
+      try {
+        const storageData = await chrome.storage.local.get(["customInstructions", "history"]);
+        const customInstructions = storageData.customInstructions || "";
+
+        let textoFinal = `INSTRUÇÃO: Baseado no atendimento abaixo, sugira uma solução técnica ou resposta adequada para o problema relatado. Seja direto e prático.\n\n${texto}`;
+
+        if (customInstructions.trim()) {
+          textoFinal = `INSTRUÇÕES ADICIONAIS DO USUÁRIO:\n${customInstructions}\n\n---\n\n${textoFinal}`;
+        }
+
+        const resp = await fetch("https://gemini-resumo-api-298442462030.southamerica-east1.run.app/api/gemini/resumir", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texto: textoFinal })
+        });
+
+        const json = await resp.json();
+
+        if (!resp.ok) {
+          enviarResposta({ erro: json.erro || `HTTP ${resp.status}` });
+          return;
+        }
+
+        // Salvar no Histórico (opcional, mas bom para registro)
+        const novoItem = {
+          timestamp: Date.now(),
+          summary: "SOLUÇÃO: " + json.resumo
+        };
+
+        const history = storageData.history || [];
+        history.push(novoItem);
+        if (history.length > 20) history.shift();
+        await chrome.storage.local.set({ history });
+
+        enviarResposta({ resumo: json.resumo });
+
+      } catch (err) {
+        enviarResposta({ erro: "Erro na comunicação: " + err.message });
+      }
+    })();
+
+    return true;
+  }
 });

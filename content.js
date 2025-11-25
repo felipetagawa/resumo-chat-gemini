@@ -8,6 +8,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     botaoResumo.textContent = "🧠 Gerar Relatório";
   }
 
+  const botaoSolucao = document.getElementById("btnSolucaoGemini");
+  if (botaoSolucao) {
+    botaoSolucao.disabled = false;
+    botaoSolucao.textContent = "💡 Buscar Solução";
+  }
+
   if (request.action === "exibirResumo") {
     exibirResumo(request.resumo);
   } else if (request.action === "exibirErro") {
@@ -110,8 +116,33 @@ function criarBotoesFlutuantes() {
     chrome.runtime.sendMessage({ action: "gerarResumo", texto });
   });
 
+  const botaoSolucao = document.createElement("button");
+  botaoSolucao.id = "btnSolucaoGemini";
+  botaoSolucao.textContent = "💡 Buscar Solução";
+  Object.assign(botaoSolucao.style, estiloBotao);
+  Object.assign(botaoSolucao.style, {
+    background: "#34A853",
+    color: "#fff",
+    border: "none",
+  });
+
+  botaoSolucao.addEventListener("click", async () => {
+    botaoSolucao.disabled = true;
+    botaoSolucao.textContent = "⏳ Buscando solução...";
+
+    const texto = capturarTextoChat();
+    if (!texto) {
+      alert("Não foi possível capturar o texto do chat.");
+      botaoSolucao.disabled = false;
+      botaoSolucao.textContent = "💡 Buscar Solução";
+      return;
+    }
+    chrome.runtime.sendMessage({ action: "buscarSolucao", texto });
+  });
+
   container.appendChild(botaoCopiar);
   container.appendChild(botaoResumo);
+  container.appendChild(botaoSolucao);
   document.body.appendChild(container);
 }
 
