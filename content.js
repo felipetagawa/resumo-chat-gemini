@@ -1,5 +1,4 @@
 // content.js
-
 // === LISTENER DE MENSAGENS ===
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const botaoResumo = document.getElementById("btnResumoGemini");
@@ -8,14 +7,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     botaoResumo.textContent = "🧠 Gerar Relatório";
   }
 
-  const botaoSolucao = document.getElementById("btnSolucaoGemini");
-  if (botaoSolucao) {
-    botaoSolucao.disabled = false;
-    botaoSolucao.textContent = "💡 Buscar Solução";
-  }
-
   if (request.action === "exibirResumo") {
-    exibirResumo(request.resumo);
+    exibirResumo(request.resumo, request.tipo);
   } else if (request.action === "exibirErro") {
     alert("Erro: " + request.erro);
   }
@@ -117,27 +110,33 @@ function criarBotoesFlutuantes() {
   });
 
   const botaoSolucao = document.createElement("button");
-  botaoSolucao.id = "btnSolucaoGemini";
-  botaoSolucao.textContent = "💡 Buscar Solução";
+  botaoSolucao.id = "btnBuscarSolucao";
+  botaoSolucao.textContent = "🔍 Buscar Solução";
   Object.assign(botaoSolucao.style, estiloBotao);
   Object.assign(botaoSolucao.style, {
-    background: "#34A853",
+    background: "#ff9800", // Laranja para diferenciar
     color: "#fff",
     border: "none",
   });
 
   botaoSolucao.addEventListener("click", async () => {
     botaoSolucao.disabled = true;
-    botaoSolucao.textContent = "⏳ Buscando solução...";
+    botaoSolucao.textContent = "⏳ Buscando...";
 
     const texto = capturarTextoChat();
     if (!texto) {
       alert("Não foi possível capturar o texto do chat.");
       botaoSolucao.disabled = false;
-      botaoSolucao.textContent = "💡 Buscar Solução";
+      botaoSolucao.textContent = "🔍 Buscar Solução";
       return;
     }
     chrome.runtime.sendMessage({ action: "buscarSolucao", texto });
+
+    // Reabilitar botão após alguns segundos
+    setTimeout(() => {
+      botaoSolucao.disabled = false;
+      botaoSolucao.textContent = "🔍 Buscar Solução";
+    }, 5000);
   });
 
   container.appendChild(botaoCopiar);
@@ -169,27 +168,31 @@ function capturarTextoChat() {
     })
     .join("\n");
 
-  return mensagens.slice(0, 4000);
+  return mensagens;
 }
 
 
 // === FUNÇÃO DE EXIBIR O POPUP (ATUALIZADA) ===
-function exibirResumo(texto) {
+function exibirResumo(texto, tipo = "resumo") {
   const popupAntigo = document.getElementById("geminiResumoPopup");
   if (popupAntigo) popupAntigo.remove();
 
-  // 1. Analisar Humor
+  // 1. Analisar Humor (apenas se for resumo)
   let humorIcon = "";
-  const lowerText = texto.toLowerCase();
-  if (lowerText.includes("humor do cliente:")) {
-    // Tenta extrair a linha do humor
-    const lines = texto.split("\n");
-    const humorLine = lines.find(l => l.toLowerCase().includes("humor do cliente:")) || "";
+  if (tipo === "resumo") {
+    const lowerText = texto.toLowerCase();
+    if (lowerText.includes("humor do cliente:")) {
+      // Tenta extrair a linha do humor
+      const lines = texto.split("\n");
+      const humorLine = lines.find(l => l.toLowerCase().includes("humor do cliente:")) || "";
 
-    if (humorLine.match(/positivo|feliz|satisfeito|elogio/i)) humorIcon = "😊";
-    else if (humorLine.match(/negativo|irritado|insatisfeito|reclama/i)) humorIcon = "😡";
-    else if (humorLine.match(/neutro|normal|dúvida/i)) humorIcon = "😐";
+      if (humorLine.match(/positivo|feliz|satisfeito|elogio/i)) humorIcon = "😊";
+      else if (humorLine.match(/negativo|irritado|insatisfeito|reclama/i)) humorIcon = "😡";
+      else if (humorLine.match(/neutro|normal|dúvida/i)) humorIcon = "😐";
+    }
   }
+
+  const titulo = tipo === "solucao" ? "Solução Sugerida" : `Resumo Gerado ${humorIcon}`;
 
   const popup = document.createElement("div");
   popup.id = "geminiResumoPopup";
@@ -214,7 +217,7 @@ function exibirResumo(texto) {
 
   popup.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-      <b style="font-size:16px;">Resumo Gerado ${humorIcon}</b>
+      <b style="font-size:16px;">${titulo}</b>
       <button id="fecharResumoFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
     </div>
     
