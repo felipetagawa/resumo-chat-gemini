@@ -102,20 +102,44 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // PASSO 1: Classificar o problema usando a API externa (Gemini)
         // Isso transforma o chat bagunçado em uma string de busca limpa (ex: "NFE - Erro de Duplicidade")
         const promptClassificacao = `
-ATUE COMO UM SUPORTE TÉCNICO ESPECIALISTA.
-Analise a conversa abaixo e identifique a CATEGORIA DO PROBLEMA (Ex: NFE, FINANCEIRO, ESTOQUE, VENDAS) e o TÍTULO DO ERRO.
-Se não encontrar uma categoria clara, tente inferir pelo contexto.
+ATUE COMO UM ESPECIALISTA EM SUPORTE TÉCNICO DE SOFTWARE ERP.
 
-Retorne APENAS uma linha no seguinte formato:
-CATEGORIA: [Nome da Categoria] - ERRO: [Descrição curta do erro]
+Analise a conversa de atendimento abaixo e identifique a CATEGORIA do problema e as palavras-chave mais relevantes.
 
-Exemplos:
-CATEGORIA: NFE - ERRO: Duplicidade de Nota
-CATEGORIA: FINANCEIRO - ERRO: Boleto não registrado
+CATEGORIAS VÁLIDAS (escolha UMA):
+- NFE: Nota Fiscal Eletrônica, emissão de notas, SEFAZ, XML, certificado digital, danfe
+- NFCE: Nota Fiscal de Consumidor Eletrônica, cupom fiscal eletrônico
+- CTE: Conhecimento de Transporte Eletrônico
+- VENDAS: PDV, frente de caixa, orçamento, pedido de venda, forma de pagamento, desconto
+- FINANCEIRO: Contas a pagar/receber, boleto, fluxo de caixa, conciliação bancária
+- ESTOQUE: Controle de estoque, movimentação, inventário, saldo, produtos
+- OUTROS: Problemas que não se encaixam nas categorias acima
 
-CONVERSA:
+INSTRUÇÕES:
+1. Identifique a categoria que melhor se encaixa no problema
+2. Extraia as 3-5 palavras-chave mais importantes do problema
+3. Retorne APENAS no formato: CATEGORIA palavra1 palavra2 palavra3
+4. NÃO inclua prefixos como "Busca:", "Categoria:", etc.
+5. Se o problema for sobre PDV, Frente de Caixa, Cupom Fiscal ou Pagamentos, use VENDAS
+6. Se for sobre emissão de notas, use NFE ou NFCE conforme o caso
+
+EXEMPLOS:
+Entrada: "Cliente com erro ao emitir NFe, aparece rejeição 539"
+Saída: NFE erro rejeição 539
+
+Entrada: "Boleto não está sendo registrado no banco"
+Saída: FINANCEIRO boleto registro banco
+
+Entrada: "Produto com saldo negativo no estoque"
+Saída: ESTOQUE saldo negativo produto
+
+Entrada: "Como configurar forma de pagamento no PDV"
+Saída: VENDAS forma pagamento PDV configurar
+
+CONVERSA DO ATENDIMENTO:
 ${texto}
-        `.trim();
+
+RESPOSTA (categoria + palavras-chave):`.trim();
 
         const respClassificacao = await fetch("https://gemini-resumo-api-298442462030.southamerica-east1.run.app/api/gemini/resumir", {
           method: "POST",
@@ -129,8 +153,8 @@ ${texto}
           throw new Error("Falha na classificação inteligente: " + (jsonClassificacao.erro || respClassificacao.status));
         }
 
-        const termoDeBusca = jsonClassificacao.resumo; // Ex: "CATEGORIA: NFE - ERRO: Duplicidade..."
-        console.log("Termo classificado:", termoDeBusca);
+        const termoDeBusca = jsonClassificacao.resumo.trim();
+        console.log("Termo de busca gerado pelo Gemini:", termoDeBusca);
 
         // PASSO 2: Buscar a solução no banco de dados local usando o termo classificado
         const respSolucao = await fetch("http://localhost:8080/api/gemini/solucao", {

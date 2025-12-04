@@ -96,6 +96,19 @@ function criarBotoesFlutuantes() {
   });
 
   botaoResumo.addEventListener("click", async () => {
+    // VERIFICAR PRIMEIRO se o service worker está disponível
+    if (!chrome.runtime || !chrome.runtime.sendMessage) {
+      alert("⚠️ ERRO: Service worker não está disponível!\n\n" +
+        "SOLUÇÃO:\n" +
+        "1. Vá em chrome://extensions/\n" +
+        "2. Encontre 'Resumo de Atendimentos - Gemini'\n" +
+        "3. Clique em REMOVER\n" +
+        "4. Clique em 'Carregar sem compactação'\n" +
+        "5. Selecione a pasta da extensão\n\n" +
+        "Se o problema persistir, verifique o console do service worker.");
+      return;
+    }
+
     botaoResumo.disabled = true;
     botaoResumo.textContent = "⏳ Gerando resumo...";
 
@@ -106,7 +119,14 @@ function criarBotoesFlutuantes() {
       botaoResumo.textContent = "🧠 Gerar Relatório";
       return;
     }
-    chrome.runtime.sendMessage({ action: "gerarResumo", texto });
+
+    try {
+      chrome.runtime.sendMessage({ action: "gerarResumo", texto });
+    } catch (error) {
+      alert("Erro ao comunicar com a extensão: " + error.message + "\n\nTente recarregar a extensão em chrome://extensions/");
+      botaoResumo.disabled = false;
+      botaoResumo.textContent = "🧠 Gerar Relatório";
+    }
   });
 
   const botaoSolucao = document.createElement("button");
@@ -120,6 +140,19 @@ function criarBotoesFlutuantes() {
   });
 
   botaoSolucao.addEventListener("click", async () => {
+    // VERIFICAR PRIMEIRO se o service worker está disponível
+    if (!chrome.runtime || !chrome.runtime.sendMessage) {
+      alert("⚠️ ERRO: Service worker não está disponível!\n\n" +
+        "SOLUÇÃO:\n" +
+        "1. Vá em chrome://extensions/\n" +
+        "2. Encontre 'Resumo de Atendimentos - Gemini'\n" +
+        "3. Clique em REMOVER\n" +
+        "4. Clique em 'Carregar sem compactação'\n" +
+        "5. Selecione a pasta da extensão\n\n" +
+        "Se o problema persistir, verifique o console do service worker.");
+      return;
+    }
+
     botaoSolucao.disabled = true;
     botaoSolucao.textContent = "⏳ Buscando...";
 
@@ -130,13 +163,20 @@ function criarBotoesFlutuantes() {
       botaoSolucao.textContent = "🔍 Buscar Solução";
       return;
     }
-    chrome.runtime.sendMessage({ action: "buscarSolucao", texto });
 
-    // Reabilitar botão após alguns segundos
-    setTimeout(() => {
+    try {
+      chrome.runtime.sendMessage({ action: "buscarSolucao", texto });
+
+      // Reabilitar botão após alguns segundos
+      setTimeout(() => {
+        botaoSolucao.disabled = false;
+        botaoSolucao.textContent = "🔍 Buscar Solução";
+      }, 5000);
+    } catch (error) {
+      alert("Erro ao comunicar com a extensão: " + error.message + "\n\nTente recarregar a extensão em chrome://extensions/");
       botaoSolucao.disabled = false;
       botaoSolucao.textContent = "🔍 Buscar Solução";
-    }, 5000);
+    }
   });
 
   container.appendChild(botaoCopiar);
