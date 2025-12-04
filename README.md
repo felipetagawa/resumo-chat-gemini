@@ -19,40 +19,8 @@ Tudo direto do navegador — sem precisar sair do SZ.
 ---
 
 ## ⚙️ Pré-requisitos
-
-1. Navegador **Google Chrome** ou **Microsoft Edge (Chromium)** atualizado.
-2. Acesso à rede interna (ou internet) para comunicação com a API de resumo.
-
----
-
-## 📂 Estrutura da pasta
-
-Coloque todos os arquivos abaixo dentro de uma pasta chamada, por exemplo, `extensao-gemini-sz`:
-
-```text
-extensao-gemini-sz/
-│
-├── manifest.json
-├── background.js
-├── content.js
-├── popup.html
-├── popup.js
-├── options.html
-└── options.js
-```
-
-*(Os arquivos devem ser obtidos com o técnico responsável pelo projeto ou via repositório interno.)*
-
----
-
-## 🧰 Instalação no navegador
-
-1. Abra o navegador e acesse:
-   `chrome://extensions/`
-
-2. Ative o **Modo do desenvolvedor** (no canto superior direito).
-3. Clique em **“Carregar sem compactação”**.
-4. Selecione a pasta da extensão (ex: `extensao-gemini-sz`).
+2. Clique em **“Usar no Chrome”**.
+3. Confirme a instalação clicando em **“Adicionar extensão”**.
 
 A extensão aparecerá na barra superior (ícone 🧩).
 
@@ -66,7 +34,7 @@ A extensão aparecerá na barra superior (ícone 🧩).
 2. Abra o **chat do cliente** que deseja resumir.
 3. Aguarde alguns segundos — dois botões aparecerão no canto inferior direito da tela:
 
-   - 📋 **Copiar Histórico** → copia apenas o chat aberto.
+   - 📋 **Copiar Histórico** → copia apenas o chat aberto. (Útil caso o técnico queira copiar e usar uma outra IA de sua preferência).
    - 🧠 **Gerar Relatório** → envia o histórico para o Gemini e mostra o resumo formatado.
 
 4. O resumo será exibido em um popup com campos como:
@@ -119,6 +87,13 @@ Insere os botões flutuantes no chat SZ e captura apenas o conteúdo visível (c
 - Copie apenas o chat visível (a extensão já ignora os outros).
 - O limite de texto enviado é controlado para evitar erros de tokens.
 - Caso os botões não apareçam, recarregue a página do SZ.
+
+---
+
+## 🤝 Contribuição / Open Source
+
+Este projeto é **Open Source** e estamos abertos a colaborações!
+Sinta-se à vontade para sugerir melhorias, abrir issues ou enviar pull requests.
 
 ---
 
