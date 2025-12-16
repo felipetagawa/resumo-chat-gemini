@@ -1,22 +1,45 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8" />
   <title>Resumo Gemini</title>
   <style>
-    body { font-family: Arial; width: 340px; padding: 10px; }
-    textarea { width: 100%; padding: 8px; font-family: monospace; }
-    #texto { height: 120px; }
-    #resultado { height: 150px; margin-top: 10px; }
-    button { margin-top: 8px; padding: 6px 10px; width: 100%; }
+    body {
+      font-family: Arial;
+      width: 340px;
+      padding: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 8px;
+      font-family: monospace;
+    }
+
+    #texto {
+      height: 120px;
+    }
+
+    #resultado {
+      height: 150px;
+      margin-top: 10px;
+    }
+
+    button {
+      margin-top: 8px;
+      padding: 6px 10px;
+      width: 100%;
+    }
   </style>
 </head>
+
 <body>
   <h3>Resumo de Atendimento</h3>
-  
+
   <label for="texto"><b>Texto do Atendimento:</b></label>
   <textarea id="texto" placeholder="Cole aqui o texto do atendimento..."></textarea>
-  
+
   <button id="gerar">Gerar Resumo</button>
 
   <label for="resultado"><b>Resumo Gerado:</b></label>
@@ -25,7 +48,8 @@
   <button id="copiar">📋 Copiar Resumo</button>
 
   <p style="font-size:12px;">Configurar chave em <a href="options.html" target="_blank">Opções</a></p>
-  
+
   <script src="popup.js"></script>
 </body>
+
 </html>

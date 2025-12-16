@@ -128,7 +128,23 @@ function criarBotoesFlutuantes() {
     chrome.runtime.sendMessage({ action: "gerarResumo", texto });
   });
 
+  // Botão Busca Docs (Novo)
+  const botaoBusca = document.createElement("button");
+  botaoBusca.id = "btnBuscaDocs";
+  botaoBusca.textContent = "🔎 Busca Docs";
+  Object.assign(botaoBusca.style, estiloBotao);
+  Object.assign(botaoBusca.style, {
+    background: "#fff",
+    color: "#D93025",
+    border: "1px solid #D93025",
+  });
+
+  botaoBusca.addEventListener("click", () => {
+    exibirBuscaDocs();
+  });
+
   container.appendChild(botaoAjuda);
+  container.appendChild(botaoBusca);
   container.appendChild(botaoCopiar);
   container.appendChild(botaoResumo);
   document.body.appendChild(container);
@@ -158,7 +174,7 @@ function capturarTextoChat() {
     })
     .join("\n");
 
-  return mensagens.slice(0, 4000);
+  return mensagens;
 }
 
 
@@ -333,7 +349,7 @@ function exibirResumo(texto) {
           const item = document.createElement("div");
           item.style = "background:#f9f9f9; padding:8px; border:1px solid #eee; border-radius:4px; font-size:12px; margin-bottom:5px;";
           const titulo = (doc.metadata && doc.metadata.title) ? doc.metadata.title : "Documento Oficial";
-          const snippet = doc.content ? doc.content.substring(0, 120) + "..." : "";
+          const snippet = doc.content || "";
 
           item.innerHTML = `
                     <div style="font-weight:bold; color:#1a73e8; margin-bottom:2px;">${titulo}</div>
@@ -424,5 +440,100 @@ function exibirPainelAjuda() {
         listaSolucoes.innerHTML = `<div style='color:red;'>Erro: ${resp ? resp.erro : "Desconhecido"}</div>`;
       }
     });
+  });
+}
+
+// === FUNÇÃO DO PAINEL DE BUSCA DE DOCUMENTAÇÃO (MANUAL) ===
+function exibirBuscaDocs() {
+  const popupId = "geminiBuscaDocsPopup";
+  const popupAntigo = document.getElementById(popupId);
+  if (popupAntigo) {
+    popupAntigo.remove();
+    return;
+  }
+
+  const popup = document.createElement("div");
+  popup.id = popupId;
+  popup.style = `
+      position:fixed;
+      bottom:130px;
+      right:20px;
+      z-index:999999;
+      background:#fff;
+      border:1px solid #ccc;
+      border-radius:8px;
+      width:360px;
+      height: 500px;
+      box-shadow:0 4px 15px rgba(0,0,0,0.2);
+      font-family:Arial, sans-serif;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+    `;
+
+  popup.innerHTML = `
+      <div style="background:#f1f3f4; padding:10px; border-bottom:1px solid #ddd; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-weight:bold; font-size:16px; color:#333;">🔎 Busca Docs</div>
+        <button id="fecharBusca" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
+      </div>
+      
+      <div style="padding:15px; flex:1; overflow-y:auto; display:flex; flex-direction:column;">
+        <div style="display:flex; gap:5px; margin-bottom:10px;">
+            <input id="inputBusca" type="text" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="Digite para buscar...">
+            <button id="btnBuscar" style="background:#D93025; color:#fff; padding:8px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Buscar</button>
+        </div>
+        <div id="listaDocs" style="margin-top:5px; flex:1; overflow-y:auto;"></div>
+      </div>
+    `;
+
+  document.body.appendChild(popup);
+
+  // Focus no input
+  setTimeout(() => popup.querySelector("#inputBusca").focus(), 100);
+
+  // --- Event Listeners ---
+  popup.querySelector("#fecharBusca").addEventListener("click", () => popup.remove());
+
+  const btnBuscar = popup.querySelector("#btnBuscar");
+  const inputBusca = popup.querySelector("#inputBusca");
+  const listaDocs = popup.querySelector("#listaDocs");
+
+  const realizarBusca = () => {
+    const termo = inputBusca.value.trim();
+    if (!termo) return;
+
+    listaDocs.innerHTML = "<div style='text-align:center; color:#666;'>Buscando...</div>";
+
+    chrome.runtime.sendMessage({ action: "buscarDocumentacao", termo }, (resp) => {
+      listaDocs.innerHTML = "";
+      if (resp && resp.sucesso) {
+        if (!resp.docs || resp.docs.length === 0) {
+          listaDocs.innerHTML = "<div style='color:#666;'>Nenhum documento encontrado.</div>";
+        } else {
+          resp.docs.forEach(doc => {
+            const item = document.createElement("div");
+            item.style = "background:#f9f9f9; padding:10px; margin-bottom:8px; border-left:3px solid #D93025; font-size:13px;";
+
+            const titulo = (doc.metadata && doc.metadata.title) ? doc.metadata.title : "Sem Título";
+            const content = doc.content || "";
+            // Exibir todo o conteúdo conforme solicitado
+            const snippet = content;
+
+            item.innerHTML = `
+                    <div style="font-weight:bold; color:#D93025; margin-bottom:4px;">${titulo}</div>
+                    <div style="white-space:pre-wrap; color:#333;">${snippet}</div>
+                `;
+            listaDocs.appendChild(item);
+          });
+        }
+      } else {
+        listaDocs.innerHTML = `<div style='color:red;'>Erro: ${resp ? resp.erro : "Desconhecido"}</div>`;
+      }
+    });
+  };
+
+  btnBuscar.addEventListener("click", realizarBusca);
+  inputBusca.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") realizarBusca();
   });
 }

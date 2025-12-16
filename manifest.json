@@ -3,7 +3,11 @@
   "name": "Resumo de Atendimentos - Gemini",
   "version": "1.2",
   "description": "Gera resumos estruturados de atendimentos usando Gemini.",
-  "permissions": ["storage", "activeTab", "scripting"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
     "https://softeninformatica.sz.chat/*",
@@ -23,8 +27,12 @@
   "options_page": "options.html",
   "content_scripts": [
     {
-      "matches": ["https://softeninformatica.sz.chat/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://softeninformatica.sz.chat/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_end"
     }
   ]

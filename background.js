@@ -1,5 +1,5 @@
 // background.js (service worker)
-const API_BASE_URL = "https://gemini-resumo-api-298442462030.southamerica-east1.run.app";
+const API_BASE_URL = "http://localhost:8080";
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Helper para enviar resposta de volta (tab ou popup)
@@ -101,6 +101,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const url = new URL(`${API_BASE_URL}/api/docs/search`);
 
         if (termo) url.searchParams.append('query', termo);
+        // Filtro de categoria
+        url.searchParams.append('categoria', 'manuais');
 
         const resp = await fetch(url.toString());
         if (!resp.ok) throw new Error(`Erro na API (${resp.status})`);
@@ -140,21 +142,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  // === 5. SUGERIR DOCUMENTAÇÃO (Smart Docs) ===
+  // === 5. SUGERIR DOCUMENTAÇÃO (Debug Endpoint) ===
   if (request.action === "sugerirDocumentacao") {
     (async () => {
       try {
         const { resumo } = request;
+
         const resp = await fetch(`${API_BASE_URL}/api/gemini/documentacoes`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ resumo })
         });
 
         if (!resp.ok) throw new Error(`Erro na API (${resp.status})`);
 
         const data = await resp.json();
-        // data esperava: { documentacoesSugeridas: [ { id, content, metadata }, ... ] }
+        // Endpoint novo retorna: { documentacoesSugeridas: [...] }
         sendResponse({ sucesso: true, docs: data.documentacoesSugeridas || [] });
       } catch (err) {
         console.error("Erro sugerirDocumentacao:", err);
