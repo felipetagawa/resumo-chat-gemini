@@ -1,5 +1,5 @@
 // background.js (service worker)
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "https://gemini-resumo-api-298442462030.southamerica-east1.run.app";
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Helper para enviar resposta de volta (tab ou popup)
@@ -97,11 +97,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "buscarDocumentacao") {
     (async () => {
       try {
-        const { termo, tipo } = request;
+        const { termo } = request;
         const url = new URL(`${API_BASE_URL}/api/docs/search`);
 
         if (termo) url.searchParams.append('query', termo);
-        if (tipo) url.searchParams.append('tipo', tipo); // Filtro de metadado
 
         const resp = await fetch(url.toString());
         if (!resp.ok) throw new Error(`Erro na API (${resp.status})`);
