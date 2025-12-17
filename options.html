@@ -85,10 +85,21 @@
     }
 
     .message-card {
-      border-radius: 10px;
-      padding: 12px;
-      margin-bottom: 10px;
-      border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+    border: 1px solid #ddd;
+    transition: all 0.2s ease;
+    }
+
+    .message-card.fixed {
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    border-color: #d1d5db;
+    }
+
+    .message-card.custom {
+    background: linear-gradient(135deg, #eef4ff 0%, #dbeafe 100%);
+    border-color: #93c5fd;
     }
 
     .fixed {
@@ -101,14 +112,56 @@
     }
 
     .message-text {
-      font-size: 13px;
-      margin-bottom: 10px;
-      white-space: pre-wrap;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-bottom: 12px;
+    padding: 10px;
+    background: rgba(255,255,255,0.7);
+    border-radius: 6px;
+    border: 1px solid rgba(0,0,0,0.05);
     }
 
     .message-actions {
-      display: flex;
-      gap: 8px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    }
+
+    .shortcut-config {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    margin-top: 8px;
+    font-size: 13px;
+    }
+
+    .btn-test-shortcut {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    }
+
+    .btn-test-shortcut:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
     }
 
     .btn-copy {
@@ -187,6 +240,69 @@
     #limparHistorico:hover {
       background: #c0392b;
     }
+
+    .accordion {
+      margin-bottom: 15px;
+    }
+
+    .accordion-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 15px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      font-size: 14px;
+      color: #334155;
+      transition: all 0.2s ease;
+    }
+
+    .accordion-header:hover {
+      background: #f1f5f9;
+    }
+
+    .accordion-header.open {
+      background: #f1f5f9;
+      border-radius: 8px 8px 0 0;
+      border-bottom: none;
+    }
+
+    .accordion-icon {
+      font-size: 18px;
+      font-weight: bold;
+      transition: transform 0.3s ease;
+    }
+
+    .accordion-content {
+      border: 1px solid #e2e8f0;
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      background: white;
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+
+    .accordion-content.open {
+      max-height: 2000px;
+      opacity: 1;
+      padding: 15px;
+      overflow: visible;
+    }
+
+    .accordion-count {
+      background: #e2e8f0;
+      color: #475569;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-left: 8px;
+    }
   </style>
 
   <dialog id="creditsDialog" style="
@@ -199,7 +315,6 @@
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 ">
 
-  <!-- Header -->
   <div style="
     padding: 18px 20px;
     background: #4285F4;
@@ -309,15 +424,37 @@
   <div class="card">
     <h2>💬 Mensagens Padrão</h2>
 
-    <h3>Mensagens Fixas</h3>
-    <div id="fixedMessages"></div>
+    <div class="accordion" id="fixedAccordion">
+      <div class="accordion-header open" data-target="fixedContent">
+        <span>Mensagens Fixas <span class="accordion-count">3</span></span>
+        <span class="accordion-icon">−</span>
+      </div>
+      <div class="accordion-content open" id="fixedContent">
+        <div id="fixedMessages"></div>
+      </div>
+    </div>
 
-    <h3>Mensagens Personalizadas</h3>
-    <div id="customMessages"></div>
+    <div class="accordion" id="customAccordion">
+      <div class="accordion-header" data-target="customContent">
+        <span>Mensagens Personalizadas <span class="accordion-count" id="customCount">0</span></span>
+        <span class="accordion-icon">+</span>
+      </div>
+      <div class="accordion-content" id="customContent">
+        <div id="customMessages"></div>
+      </div>
+    </div>
 
-    <textarea id="newMessage" placeholder="Digite a mensagem personalizada..."></textarea>
-    <button id="addMessage" class="btn-primary">Adicionar Mensagem</button>
-    <button id="backupMessages" class="btn-backup">Backup Mensagens (.TXT)</button>
+    <div style="display: flex; gap: 10px; align-items: center; margin-top: 20px;">
+        <textarea id="newMessage" placeholder="Digite a mensagem personalizada..." style="flex: 1;"></textarea>
+        <button id="addMessage" class="btn-primary" style="height: fit-content;">Adicionar Mensagem</button>
+    </div>
+    
+    <div style="display: flex; gap: 10px; margin-top: 15px;">
+        <button id="backupMessages" class="btn-backup" style="flex: 1;">Backup Mensagens (.TXT)</button>
+        <button id="limparTodosAtalhos" class="btn-delete" style="flex: 1;">Limpar Atalhos</button>
+    </div>
+    
+    <div id="statusAtalhos" style="font-size: 12px; margin-top: 8px; color: #666; min-height: 20px;"></div>
   </div>
 
   <div class="card">
