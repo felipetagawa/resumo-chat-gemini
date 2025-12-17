@@ -1,5 +1,142 @@
 // content.js
 
+// === SISTEMA DE ATALHOS (LETRAS E NÚMEROS) ===
+let messageShortcutsCache = {};
+let isReplacing = false;
+
+function carregarAtalhosMensagens() {
+  chrome.storage.local.get(["customMessages", "messageShortcuts"], (data) => {
+    messageShortcutsCache = {};
+
+    const fixedMessages = [
+      "Estamos cientes da instabilidade e nossa equipe já está trabalhando na correção.",
+      "Esse comportamento ocorre devido a uma atualização recente no sistema.",
+      "Pedimos que limpe o cache e reinicie o sistema antes de tentar novamente."
+    ];
+
+    const shortcuts = data.messageShortcuts || {};
+
+    fixedMessages.forEach((msg, index) => {
+      const shortcutKey = `fixed_${index}`;
+      const shortcutValue = shortcuts[shortcutKey];
+      if (shortcutValue) {
+        const key = typeof shortcutValue === 'string' ? shortcutValue.toUpperCase() : shortcutValue.toString();
+        messageShortcutsCache[key] = msg;
+      }
+    });
+
+    const customMessages = data.customMessages || [];
+    customMessages.forEach((msg, index) => {
+      const shortcutKey = `custom_${index}`;
+      const shortcutValue = shortcuts[shortcutKey];
+      if (shortcutValue) {
+        const key = typeof shortcutValue === 'string' ? shortcutValue.toUpperCase() : shortcutValue.toString();
+        messageShortcutsCache[key] = msg;
+      }
+    });
+
+    console.log("Atalhos carregados (automático):", messageShortcutsCache);
+  });
+}
+
+function detectarEInserirAtalho(element) {
+  if (isReplacing) return false;
+
+  let currentText = '';
+
+  if (element.contentEditable === 'true') {
+    currentText = element.textContent || element.innerText || '';
+  } else {
+    currentText = element.value || '';
+  }
+
+  const match = currentText.match(/\/([A-Za-z0-9])$/);
+
+  if (match) {
+    const shortcutKey = match[1].toUpperCase();
+    const message = messageShortcutsCache[shortcutKey];
+
+    if (message) {
+      isReplacing = true;
+
+      const newText = currentText.replace(/\/[A-Za-z0-9]$/, message);
+
+      if (element.contentEditable === 'true') {
+        element.textContent = newText;
+
+        setTimeout(() => {
+          const range = document.createRange();
+          const sel = window.getSelection();
+          range.selectNodeContents(element);
+          range.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(range);
+
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+
+          isReplacing = false;
+        }, 10);
+      } else {
+        element.value = newText;
+        element.setSelectionRange(newText.length, newText.length);
+
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+
+        isReplacing = false;
+      }
+
+      console.log(`✅ Atalho /${shortcutKey} substituído automaticamente`);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+document.addEventListener('input', function (event) {
+  const isTextArea = event.target.matches('textarea, [contenteditable="true"], div[contenteditable="true"], [role="textbox"]');
+
+  if (isTextArea) {
+    detectarEInserirAtalho(event.target);
+  }
+});
+
+document.addEventListener('keydown', function (event) {
+  const isTextArea = event.target.matches('textarea, [contenteditable="true"], div[contenteditable="true"], [role="textbox"]');
+
+  if (isTextArea) {
+    const isLetterOrNumber = /^[a-zA-Z0-9]$/.test(event.key);
+
+    if (isLetterOrNumber) {
+      const element = event.target;
+      let currentText = '';
+
+      if (element.contentEditable === 'true') {
+        currentText = element.textContent || element.innerText || '';
+      } else {
+        currentText = element.value || '';
+      }
+
+      if (currentText.endsWith('/')) {
+        setTimeout(() => {
+          detectarEInserirAtalho(element);
+        }, 10);
+      }
+    }
+  }
+});
+
+carregarAtalhosMensagens();
+
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'local' && (changes.messageShortcuts || changes.customMessages)) {
+    carregarAtalhosMensagens();
+  }
+});
+
+
 // === LISTENER DE MENSAGENS ===
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("Mensagem recebida no content.js:", request.action);
@@ -564,50 +701,169 @@ function mostrarPopupMensagens() {
 }
 
 function carregarEMostrarMensagens() {
+
   const container = document.getElementById("mensagensContainer");
 
   chrome.storage.local.get(["customMessages"], (data) => {
     const customMessages = data.customMessages || [];
     const fixedMessages = [
-      "Estamos cientes da instabilidade e nossa equipe já está trabalhando na correção.",
-      "Esse comportamento ocorre devido a uma atualização recente no sistema.",
-      "Pedimos que limpe o cache e reinicie o sistema antes de tentar novamente."
+      "Os valores exibidos de IBS e CBS neste primeiro momento não representam cobrança efetiva, pois a fase inicial da Reforma Tributária é apenas experimental e nominativa, com alíquotas padrão 0,10 e 0,90, sem geração de recolhimento, sendo exigida apenas para empresas do Lucro Presumido e Lucro Real para fins de adaptação e validação das informações.",
+      "Atualmente, a fase inicial da Reforma Tributária com IBS e CBS se aplica apenas às empresas do regime normal (Lucro Presumido e Lucro Real), sendo que para o Simples Nacional não há recolhimento nem impacto prático neste primeiro ano, pois as informações são utilizadas apenas de forma nominativa e experimental.",
+      "A reformulação das telas não altera a lógica de cálculo nem as regras fiscais do sistema, sendo uma evolução voltada à melhoria contínua, e qualquer diferença percebida está relacionada apenas à interface ou fluxo, com nossa equipe disponível para esclarecer dúvidas e ajustar eventuais pontos específicos.",
+      "As telas reformuladas de Contas a Receber, Contas a Pagar, NFC-e e Cadastro de Produtos mantêm as mesmas regras fiscais e operacionais de antes, tendo sido alterados apenas aspectos visuais e funcionais para melhorar usabilidade e organização, sem impacto nos cálculos ou validações já existentes.",
+      "A emissão de NFC-e para CNPJ deixou de ser permitida por determinação das normas fiscais vigentes, não sendo uma regra criada pelo sistema, que apenas aplica automaticamente essa exigência legal para evitar rejeições e problemas fiscais ao contribuinte.",
+      "O procedimento de referenciar NFC-e em uma NF-e não é mais aceito pela legislação fiscal atual, motivo pelo qual o sistema bloqueia essa prática, garantindo conformidade legal e evitando a rejeição dos documentos junto à SEFAZ.",
+      "A vedação à emissão de NFC-e para CNPJ e ao seu referenciamento em NF-e decorre exclusivamente de alterações nas regras fiscais, e o sistema apenas segue essas determinações para manter a regularidade das operações e evitar inconsistências legais."
     ];
 
     container.innerHTML = "";
 
-    const fixedSection = document.createElement("div");
-    fixedSection.innerHTML = `<h3 style="margin: 0 0 10px 0; color: #555; font-size: 14px;">Mensagens Fixas</h3>`;
+    const fixedAccordion = criarAcordeon(
+      "Mensagens Fixas",
+      true,
+      "fixed-accordion"
+    );
 
     fixedMessages.forEach((msg, index) => {
-      const messageCard = criarCardMensagem(msg, false, index);
-      fixedSection.appendChild(messageCard);
+      const messageCard = criarCardMensagemPopup(msg, false, index);
+      fixedAccordion.content.appendChild(messageCard);
     });
 
-    container.appendChild(fixedSection);
+    container.appendChild(fixedAccordion.container);
+
+    const customAccordion = criarAcordeon(
+      `Mensagens Personalizadas (${customMessages.length})`,
+      false,
+      "custom-accordion"
+    );
 
     if (customMessages.length > 0) {
-      const customSection = document.createElement("div");
-      customSection.innerHTML = `<h3 style="margin: 20px 0 10px 0; color: #555; font-size: 14px;">Mensagens Personalizadas</h3>`;
-
       customMessages.forEach((msg, index) => {
-        const messageCard = criarCardMensagem(msg, true, index, customMessages);
-        customSection.appendChild(messageCard);
+        const messageCard = criarCardMensagemPopup(msg, true, index, customMessages);
+        customAccordion.content.appendChild(messageCard);
       });
-
-      container.appendChild(customSection);
     } else {
       const emptyMsg = document.createElement("div");
       emptyMsg.style = "text-align: center; color: #666; padding: 20px; font-style: italic;";
       emptyMsg.textContent = "Nenhuma mensagem personalizada cadastrada.";
-      container.appendChild(emptyMsg);
+      customAccordion.content.appendChild(emptyMsg);
     }
+
+    container.appendChild(customAccordion.container);
+
+    const instructions = document.createElement("div");
+    instructions.style = "margin-top: 15px; padding: 10px; background: #f0f7ff; border-radius: 6px; border-left: 3px solid #4285F4; font-size: 12px; color: #555;";
+    instructions.innerHTML = `
+            <strong>💡 Como usar os atalhos:</strong><br>
+            Digite o atalho (ex: /1, /a) no campo de mensagem do chat para inserir automaticamente.
+        `;
+    container.appendChild(instructions);
+
   });
+
+
 }
 
-function criarCardMensagem(text, isCustom, index, customMessagesList) {
+
+function criarAcordeon(titulo, aberto = true, id = "") {
+  const container = document.createElement("div");
+  container.id = id;
+  container.style = "margin-bottom: 10px;";
+
+  const header = document.createElement("div");
+  header.style = `
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 15px;
+        background: ${aberto ? '#f1f5f9' : '#f8fafc'};
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        cursor: pointer;
+        user-select: none;
+        font-weight: 600;
+        font-size: 14px;
+        color: #334155;
+        transition: background 0.2s;
+    `;
+
+  header.innerHTML = `
+        <span>${titulo}</span>
+        <span style="font-size: 18px; transition: transform 0.3s;">${aberto ? '−' : '+'}</span>
+    `;
+
+  const content = document.createElement("div");
+  content.style = `
+        border: 1px solid #e2e8f0;
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        background: white;
+        max-height: ${aberto ? '1000px' : '0'};
+        overflow: hidden;
+        opacity: ${aberto ? '1' : '0'};
+        transition: all 0.3s ease;
+        margin-top: ${aberto ? '0' : '-1px'}; /* Corrige o espaçamento quando fechado */
+    `;
+
+  if (aberto) {
+    content.style.padding = '15px 15px 5px 15px';
+    content.style.borderTop = 'none';
+  } else {
+    content.style.padding = '0';
+    content.style.border = 'none';
+  }
+
+  let isOpen = aberto;
+
+  function toggleAcordeon() {
+    isOpen = !isOpen;
+
+    const icon = header.querySelector('span:last-child');
+    icon.textContent = isOpen ? '−' : '+';
+
+    header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
+    header.style.borderRadius = isOpen ? '6px 6px 0 0' : '6px';
+
+    if (isOpen) {
+      content.style.padding = '15px 15px 5px 15px';
+      content.style.maxHeight = '1000px';
+      content.style.opacity = '1';
+      content.style.border = '1px solid #e2e8f0';
+      content.style.borderTop = 'none';
+      content.style.marginTop = '0';
+    } else {
+      content.style.padding = '0';
+      content.style.maxHeight = '0';
+      content.style.opacity = '0';
+      content.style.border = 'none';
+      content.style.marginTop = '-1px';
+    }
+  }
+
+  header.addEventListener('click', toggleAcordeon);
+
+  header.addEventListener('mouseenter', () => {
+    header.style.background = isOpen ? '#e2e8f0' : '#f1f5f9';
+  });
+
+  header.addEventListener('mouseleave', () => {
+    header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
+  });
+
+  container.appendChild(header);
+  container.appendChild(content);
+
+  return {
+    container: container,
+    content: content,
+    toggle: toggleAcordeon
+  };
+}
+
+function criarCardMensagemPopup(text, isCustom, index, customMessagesList) {
   const card = document.createElement("div");
   card.style = `
+
         background: ${isCustom ? '#eef4ff' : '#f9fafb'};
         border: 1px solid ${isCustom ? '#c9ddff' : '#ddd'};
         border-radius: 8px;
@@ -617,16 +873,29 @@ function criarCardMensagem(text, isCustom, index, customMessagesList) {
         line-height: 1.4;
     `;
 
+
   const textDiv = document.createElement("div");
   textDiv.style = "margin-bottom: 10px; white-space: pre-wrap;";
   textDiv.textContent = text;
 
-  const actionsDiv = document.createElement("div");
-  actionsDiv.style = "display: flex; gap: 8px; justify-content: flex-end;";
+  card.appendChild(textDiv);
+
+  const bottomRow = document.createElement("div");
+  bottomRow.style = `
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 10px;
+        border-top: 1px solid ${isCustom ? '#c9ddff' : '#ddd'};
+    `;
+
+  const buttonsContainer = document.createElement("div");
+  buttonsContainer.style = "display: flex; gap: 8px; align-items: center;";
 
   const btnCopiar = document.createElement("button");
   btnCopiar.innerHTML = "Copiar";
   btnCopiar.style = `
+
         background: #dbeafe;
         color: #1e40af;
         border: none;
@@ -638,17 +907,19 @@ function criarCardMensagem(text, isCustom, index, customMessagesList) {
         align-items: center;
         gap: 4px;
     `;
+
   btnCopiar.onclick = () => {
     navigator.clipboard.writeText(text);
-    btnCopiar.innerHTML = "Copiado!";
+    btnCopiar.innerHTML = "✅ Copiado!";
     setTimeout(() => {
       btnCopiar.innerHTML = "Copiar";
     }, 1500);
   };
 
   const btnEnviar = document.createElement("button");
-  btnEnviar.innerHTML = "Enviar";
+  btnEnviar.innerHTML = " Enviar";
   btnEnviar.style = `
+
         background: #4285F4;
         color: white;
         border: none;
@@ -660,19 +931,80 @@ function criarCardMensagem(text, isCustom, index, customMessagesList) {
         align-items: center;
         gap: 4px;
     `;
+
   btnEnviar.onclick = () => {
     enviarMensagemParaChat(text);
     const popup = document.getElementById("popupMensagensPadrao");
     if (popup) popup.remove();
   };
 
-  actionsDiv.appendChild(btnCopiar);
-  actionsDiv.appendChild(btnEnviar);
+  buttonsContainer.appendChild(btnCopiar);
+  buttonsContainer.appendChild(btnEnviar);
 
-  card.appendChild(textDiv);
-  card.appendChild(actionsDiv);
+  const shortcutContainer = document.createElement("div");
+  shortcutContainer.style = `
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-left: auto;
+    `;
+
+  const shortcutKey = isCustom ? `custom_${index}` : `fixed_${index}`;
+
+  chrome.storage.local.get(["messageShortcuts"], (data) => {
+    const shortcuts = data.messageShortcuts || {};
+    const shortcutValue = shortcuts[shortcutKey];
+
+    if (shortcutValue) {
+      const displayValue = typeof shortcutValue === 'string' ? shortcutValue.toUpperCase() : shortcutValue.toString();
+
+      const shortcutLabel = document.createElement("span");
+      shortcutLabel.textContent = "Atalho: /";
+      shortcutLabel.style = `
+                color: #666;
+                font-size: 12px;
+                font-family: Arial, sans-serif;
+            `;
+
+      const shortcutBadge = document.createElement("span");
+      shortcutBadge.textContent = displayValue;
+      shortcutBadge.style = `
+                display: inline-block;
+                background: ${isCustom ? '#dbeafe' : '#e5e7eb'};
+                color: ${isCustom ? '#1e40af' : '#374151'};
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-family: monospace;
+                font-size: 12px;
+                font-weight: bold;
+                border: 1px solid ${isCustom ? '#93c5fd' : '#d1d5db'};
+                min-width: 20px;
+                text-align: center;
+            `;
+      shortcutBadge.title = `Digite "/${displayValue}" no chat para inserir automaticamente`;
+
+      shortcutContainer.appendChild(shortcutLabel);
+      shortcutContainer.appendChild(shortcutBadge);
+    } else {
+      const noShortcutLabel = document.createElement("span");
+      noShortcutLabel.textContent = "Sem atalho";
+      noShortcutLabel.style = `
+                color: #999;
+                font-size: 11px;
+                font-style: italic;
+            `;
+      noShortcutLabel.title = "Configure um atalho nas opções da extensão";
+      shortcutContainer.appendChild(noShortcutLabel);
+    }
+  });
+
+  bottomRow.appendChild(buttonsContainer);
+  bottomRow.appendChild(shortcutContainer);
+
+  card.appendChild(bottomRow);
 
   return card;
+
 }
 
 function enviarMensagemParaChat(mensagem) {
