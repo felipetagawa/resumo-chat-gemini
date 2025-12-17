@@ -394,7 +394,7 @@ function exibirPainelConsultaDocs() {
             item.style = "background:#f9f9f9; padding:10px; margin-bottom:8px; border:1px solid #eee; border-radius:4px; font-size:13px;";
 
             const titulo = (doc.metadata && doc.metadata.title) ? doc.metadata.title : "Documento Sem Título";
-            const conteudo = doc.content ? doc.content.substring(0, 150) + "..." : "";
+            const conteudo = doc.content || "";
 
             item.innerHTML = `
               <div style="font-weight:bold; color:#1a73e8; margin-bottom:4px;">${titulo}</div>
