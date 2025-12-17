@@ -4,11 +4,16 @@
   "version": "1.3",
   "description": "Gera resumos estruturados de atendimentos usando Gemini.",
   "permissions": [
-    "storage"
+    "storage",
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
     "https://softeninformatica.sz.chat/*",
-    "https://gemini-resumo-api-298442462030.southamerica-east1.run.app/*"
+    "https://gemini-resumo-api-298442462030.southamerica-east1.run.app/*",
+    "https://generativelanguage.googleapis.com/*",
+    "http://localhost:8080/*",
+    "https://your-api-domain.example/*"
   ],
   "background": {
     "service_worker": "background.js"
