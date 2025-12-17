@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Resumo Gemini</title>
+
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      width: 360px;
+      padding: 14px;
+      background: #ffffff;
+      color: #1f1f1f;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 18px 0 8px;
+    }
+
+    .card {
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    .card-resumo {
+      background: #fff;
+      color: #4285F4;
+      border: 1px solid #4285F4;
+    }
+
+    .card-dicas {
+      background: #FEF7E0;
+      color: #B06000;
+      border: 1px solid #e08002ff;
+    }
+
+    .card-mensagens {
+      background: #fff;
+      color: #555453ff;
+      border: 1px solid #555453ff;
+    }
+
+    .alerta {
+      font-size: 13px;
+      margin-top: 6px;
+      opacity: 0.9;
+    }
+
+    .config {
+      font-size: 14px;
+      color: #666;
+      margin-top: 10px;
+      text-align: right;
+    }
+
+    .config a {
+      color: #4285F4;
+      text-decoration: none;
+    }
+
+    .config a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Resumo de Atendimentos - Gemini</h1>
+
+  <h2>Gerar Relatório</h2>
+  <div class="card card-resumo">
+    Este recurso gera automaticamente um <strong>resumo completo do atendimento</strong>,
+    analisando toda a conversa do início ao fim no padrão de abertura de chamado
+    (problema, solução e contexto).
+
+    <div class="alerta">
+      ⚠️ Este conteúdo é analisado e gerado pelo <strong>Gemini (IA)</strong>.
+      As informações devem ser revisadas e, se necessário, editadas,
+      pois a IA é passível de erro.
+    </div>
+  </div>
+
+  <h2>Dicas Inteligentes</h2>
+  <div class="card card-dicas">
+    Consulta chamados anteriores do <strong>mesmo módulo</strong> e com
+    <strong>problemas semelhantes</strong>.
+    O Gemini analisa esse histórico e gera dicas e orientações baseadas
+    em atendimentos já realizados.
+
+    <div class="alerta">
+      ⚠️ As dicas são sugestões baseadas em histórico.
+      Sempre revise antes de aplicar ou repassar ao cliente.
+    </div>
+  </div>
+
+  <h2>Mensagens Padrão</h2>
+  <div class="card card-mensagens">
+    Utilizado para manter <strong>mensagens pré-prontas</strong> para envio no chat.
+    Cada mensagem possui as opções de <strong>enviar no chat</strong> ou
+    <strong>copiar</strong>.
+  </div>
+
+  <div class="config">
+    <a href="options.html" target="_blank">Configurações</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
