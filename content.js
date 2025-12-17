@@ -783,7 +783,6 @@ function criarAcordeon(titulo, aberto = true, id = "") {
         color: #334155;
         transition: background 0.2s;
     `;
-<<<<<<< HEAD
 
   header.innerHTML = `
         <span>${titulo}</span>
@@ -792,27 +791,16 @@ function criarAcordeon(titulo, aberto = true, id = "") {
 
   const content = document.createElement("div");
   content.style = `
-=======
-    
-    header.innerHTML = `
-    < span > ${ titulo }</span >
-      <span style="font-size: 18px; transition: transform 0.3s;">${aberto ? '−' : '+'}</span>
-  `;
-    
-    const content = document.createElement("div");
-    content.style = `
->>>>>>> origin/new-feature-solution
-  border: 1px solid #e2e8f0;
-  border - top: none;
-  border - radius: 0 0 6px 6px;
-  background: white;
-  max - height: ${ aberto ? '1000px' : '0' };
-  overflow: hidden;
-  opacity: ${ aberto ? '1' : '0' };
-  transition: all 0.3s ease;
-  margin - top: ${ aberto ? '0' : '-1px' }; /* Corrige o espaçamento quando fechado */
-  `;
-<<<<<<< HEAD
+        border: 1px solid #e2e8f0;
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        background: white;
+        max-height: ${aberto ? '1000px' : '0'};
+        overflow: hidden;
+        opacity: ${aberto ? '1' : '0'};
+        transition: all 0.3s ease;
+        margin-top: ${aberto ? '0' : '-1px'}; /* Corrige o espaçamento quando fechado */
+    `;
 
   if (aberto) {
     content.style.padding = '15px 15px 5px 15px';
@@ -872,78 +860,14 @@ function criarAcordeon(titulo, aberto = true, id = "") {
 function criarCardMensagemPopup(text, isCustom, index, customMessagesList) {
   const card = document.createElement("div");
   card.style = `
-
-=======
-
-    if (aberto) {
-        content.style.padding = '15px 15px 5px 15px';
-        content.style.borderTop = 'none';
-    } else {
-        content.style.padding = '0';
-        content.style.border = 'none';
-    }
-
-    let isOpen = aberto;
-
-    function toggleAcordeon() {
-        isOpen = !isOpen;
-
-        const icon = header.querySelector('span:last-child');
-        icon.textContent = isOpen ? '−' : '+';
-
-        header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
-        header.style.borderRadius = isOpen ? '6px 6px 0 0' : '6px';
-
-        if (isOpen) {
-            content.style.padding = '15px 15px 5px 15px';
-            content.style.maxHeight = '1000px';
-            content.style.opacity = '1';
-            content.style.border = '1px solid #e2e8f0';
-            content.style.borderTop = 'none';
-            content.style.marginTop = '0';
-        } else {
-            content.style.padding = '0';
-            content.style.maxHeight = '0';
-            content.style.opacity = '0';
-            content.style.border = 'none';
-            content.style.marginTop = '-1px';
-        }
-    }
-
-    header.addEventListener('click', toggleAcordeon);
-
-    header.addEventListener('mouseenter', () => {
-        header.style.background = isOpen ? '#e2e8f0' : '#f1f5f9';
-    });
-
-    header.addEventListener('mouseleave', () => {
-        header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
-    });
-
-    container.appendChild(header);
-    container.appendChild(content);
-
-    return {
-        container: container,
-        content: content,
-        toggle: toggleAcordeon
-    };
-}
-
-function criarCardMensagemPopup(text, isCustom, index, customMessagesList) {
-    const card = document.createElement("div");
-    card.style = `
->>>>>>> origin/new-feature-solution
-  background: ${ isCustom ? '#eef4ff' : '#f9fafb' };
-  border: 1px solid ${ isCustom ? '#c9ddff' : '#ddd' };
-  border - radius: 8px;
-  padding: 12px;
-  margin - bottom: 10px;
-  font - size: 13px;
-  line - height: 1.4;
-  `;
-<<<<<<< HEAD
-
+        background: ${isCustom ? '#eef4ff' : '#f9fafb'};
+        border: 1px solid ${isCustom ? '#c9ddff' : '#ddd'};
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        font-size: 13px;
+        line-height: 1.4;
+    `;
 
   const textDiv = document.createElement("div");
   textDiv.style = "margin-bottom: 10px; white-space: pre-wrap;";
@@ -953,24 +877,12 @@ function criarCardMensagemPopup(text, isCustom, index, customMessagesList) {
 
   const bottomRow = document.createElement("div");
   bottomRow.style = `
-=======
-
-    const textDiv = document.createElement("div");
-    textDiv.style = "margin-bottom: 10px; white-space: pre-wrap;";
-    textDiv.textContent = text;
-
-    card.appendChild(textDiv);
-
-    const bottomRow = document.createElement("div");
-    bottomRow.style = `
->>>>>>> origin/new-feature-solution
-  display: flex;
-  justify - content: space - between;
-  align - items: center;
-  padding - top: 10px;
-  border - top: 1px solid ${ isCustom ? '#c9ddff' : '#ddd' };
-  `;
-<<<<<<< HEAD
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 10px;
+        border-top: 1px solid ${isCustom ? '#c9ddff' : '#ddd'};
+    `;
 
   const buttonsContainer = document.createElement("div");
   buttonsContainer.style = "display: flex; gap: 8px; align-items: center;";
@@ -978,28 +890,17 @@ function criarCardMensagemPopup(text, isCustom, index, customMessagesList) {
   const btnCopiar = document.createElement("button");
   btnCopiar.innerHTML = "Copiar";
   btnCopiar.style = `
-
-=======
-
-    const buttonsContainer = document.createElement("div");
-    buttonsContainer.style = "display: flex; gap: 8px; align-items: center;";
-
-    const btnCopiar = document.createElement("button");
-    btnCopiar.innerHTML = "Copiar";
-    btnCopiar.style = `
->>>>>>> origin/new-feature-solution
-  background: #dbeafe;
-  color: #1e40af;
-  border: none;
-  border - radius: 4px;
-  padding: 6px 12px;
-  font - size: 12px;
-  cursor: pointer;
-  display: flex;
-  align - items: center;
-  gap: 4px;
-  `;
-<<<<<<< HEAD
+        background: #dbeafe;
+        color: #1e40af;
+        border: none;
+        border-radius: 4px;
+        padding: 6px 12px;
+        font-size: 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    `;
 
   btnCopiar.onclick = () => {
     navigator.clipboard.writeText(text);
@@ -1012,32 +913,17 @@ function criarCardMensagemPopup(text, isCustom, index, customMessagesList) {
   const btnEnviar = document.createElement("button");
   btnEnviar.innerHTML = " Enviar";
   btnEnviar.style = `
-
-=======
-    btnCopiar.onclick = () => {
-        navigator.clipboard.writeText(text);
-        btnCopiar.innerHTML = "✅ Copiado!";
-        setTimeout(() => {
-            btnCopiar.innerHTML = "Copiar";
-        }, 1500);
-    };
-
-    const btnEnviar = document.createElement("button");
-    btnEnviar.innerHTML = " Enviar";
-    btnEnviar.style = `
->>>>>>> origin/new-feature-solution
-  background: #4285F4;
-  color: white;
-  border: none;
-  border - radius: 4px;
-  padding: 6px 12px;
-  font - size: 12px;
-  cursor: pointer;
-  display: flex;
-  align - items: center;
-  gap: 4px;
-  `;
-<<<<<<< HEAD
+        background: #4285F4;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 6px 12px;
+        font-size: 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    `;
 
   btnEnviar.onclick = () => {
     enviarMensagemParaChat(text);
@@ -1050,27 +936,13 @@ function criarCardMensagemPopup(text, isCustom, index, customMessagesList) {
 
   const shortcutContainer = document.createElement("div");
   shortcutContainer.style = `
-=======
-    btnEnviar.onclick = () => {
-        enviarMensagemParaChat(text);
-        const popup = document.getElementById("popupMensagensPadrao");
-        if (popup) popup.remove();
-    };
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-left: auto;
+    `;
 
-    buttonsContainer.appendChild(btnCopiar);
-    buttonsContainer.appendChild(btnEnviar);
-
-    const shortcutContainer = document.createElement("div");
-    shortcutContainer.style = `
->>>>>>> origin/new-feature-solution
-  display: flex;
-  align - items: center;
-  gap: 5px;
-  margin - left: auto;
-  `;
-<<<<<<< HEAD
-
-  const shortcutKey = isCustom ? `custom_${ index } ` : `fixed_${ index } `;
+  const shortcutKey = isCustom ? `custom_${index}` : `fixed_${index}`;
 
   chrome.storage.local.get(["messageShortcuts"], (data) => {
     const shortcuts = data.messageShortcuts || {};
@@ -1082,49 +954,26 @@ function criarCardMensagemPopup(text, isCustom, index, customMessagesList) {
       const shortcutLabel = document.createElement("span");
       shortcutLabel.textContent = "Atalho: /";
       shortcutLabel.style = `
-=======
-
-    const shortcutKey = isCustom ? `custom_${index}` : `fixed_${index}`;
-
-    chrome.storage.local.get(["messageShortcuts"], (data) => {
-        const shortcuts = data.messageShortcuts || {};
-        const shortcutValue = shortcuts[shortcutKey];
-
-        if (shortcutValue) {
-            const displayValue = typeof shortcutValue === 'string' ? shortcutValue.toUpperCase() : shortcutValue.toString();
-
-            const shortcutLabel = document.createElement("span");
-            shortcutLabel.textContent = "Atalho: /";
-            shortcutLabel.style = `
->>>>>>> origin/new-feature-solution
-  color: #666;
-  font - size: 12px;
-  font - family: Arial, sans - serif;
-  `;
-<<<<<<< HEAD
+                color: #666;
+                font-size: 12px;
+                font-family: Arial, sans-serif;
+            `;
 
       const shortcutBadge = document.createElement("span");
       shortcutBadge.textContent = displayValue;
       shortcutBadge.style = `
-=======
-
-            const shortcutBadge = document.createElement("span");
-            shortcutBadge.textContent = displayValue;
-            shortcutBadge.style = `
->>>>>>> origin/new-feature-solution
-  display: inline - block;
-  background: ${ isCustom ? '#dbeafe' : '#e5e7eb' };
-  color: ${ isCustom ? '#1e40af' : '#374151' };
-  padding: 2px 8px;
-  border - radius: 4px;
-  font - family: monospace;
-  font - size: 12px;
-  font - weight: bold;
-  border: 1px solid ${ isCustom ? '#93c5fd' : '#d1d5db' };
-  min - width: 20px;
-  text - align: center;
-  `;
-<<<<<<< HEAD
+                display: inline-block;
+                background: ${isCustom ? '#dbeafe' : '#e5e7eb'};
+                color: ${isCustom ? '#1e40af' : '#374151'};
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-family: monospace;
+                font-size: 12px;
+                font-weight: bold;
+                border: 1px solid ${isCustom ? '#93c5fd' : '#d1d5db'};
+                min-width: 20px;
+                text-align: center;
+            `;
       shortcutBadge.title = `Digite "/${displayValue}" no chat para inserir automaticamente`;
 
       shortcutContainer.appendChild(shortcutLabel);
@@ -1133,21 +982,10 @@ function criarCardMensagemPopup(text, isCustom, index, customMessagesList) {
       const noShortcutLabel = document.createElement("span");
       noShortcutLabel.textContent = "Sem atalho";
       noShortcutLabel.style = `
-=======
-            shortcutBadge.title = `Digite "/${displayValue}" no chat para inserir automaticamente`;
-
-            shortcutContainer.appendChild(shortcutLabel);
-            shortcutContainer.appendChild(shortcutBadge);
-        } else {
-            const noShortcutLabel = document.createElement("span");
-            noShortcutLabel.textContent = "Sem atalho";
-            noShortcutLabel.style = `
->>>>>>> origin/new-feature-solution
-  color: #999;
-  font - size: 11px;
-  font - style: italic;
-  `;
-<<<<<<< HEAD
+                color: #999;
+                font-size: 11px;
+                font-style: italic;
+            `;
       noShortcutLabel.title = "Configure um atalho nas opções da extensão";
       shortcutContainer.appendChild(noShortcutLabel);
     }
@@ -1159,20 +997,6 @@ function criarCardMensagemPopup(text, isCustom, index, customMessagesList) {
   card.appendChild(bottomRow);
 
   return card;
-
-=======
-            noShortcutLabel.title = "Configure um atalho nas opções da extensão";
-            shortcutContainer.appendChild(noShortcutLabel);
-        }
-    });
-    
-    bottomRow.appendChild(buttonsContainer);
-    bottomRow.appendChild(shortcutContainer);
-    
-    card.appendChild(bottomRow);
-    
-    return card;
->>>>>>> origin/new-feature-solution
 }
 
 function enviarMensagemParaChat(mensagem) {
@@ -1319,14 +1143,14 @@ function exibirPainelConsultaDocs() {
             const conteudo = doc.content || "";
 
             item.innerHTML = `
-    < div style = "font-weight:bold; color:#1a73e8; margin-bottom:4px;" > ${ titulo }</div >
+    < div style = "font-weight:bold; color:#1a73e8; margin-bottom:4px;" > ${titulo}</div >
       <div style="color:#333; line-height:1.4;">${conteudo}</div>
   `;
             lista.appendChild(item);
           });
         }
       } else {
-        lista.innerHTML = `< div style = 'color:red;' > Erro: ${ resp ? resp.erro : "Desconhecido" }</div > `;
+        lista.innerHTML = `< div style = 'color:red;' > Erro: ${resp ? resp.erro : "Desconhecido"}</div > `;
       }
     });
   };
