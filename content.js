@@ -161,9 +161,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "exibirResumo") {
     // Usamos a função do feature/docs-cache-otimizacao que suporta Docs e AutoSave
     exibirResumo(request.resumo);
-  } else if (request.action === "exibirDica") {
-    console.log("Exibindo dica:", request.dica);
-    exibirDica(request.dica);
   } else if (request.action === "exibirErro") {
     alert("Erro: " + request.erro);
   }
@@ -223,34 +220,7 @@ function criarBotoesFlutuantes() {
     textAlign: "left"
   };
 
-  // 1. Botão Copiar Chat (From HEAD)
-  const botaoCopiar = document.createElement("button");
-  botaoCopiar.id = "btnCopiarChat";
-  botaoCopiar.textContent = "📋 Copiar Histórico";
-  Object.assign(botaoCopiar.style, estiloBotao);
-  Object.assign(botaoCopiar.style, {
-    background: "#ffffffff",
-    color: "#4285F4",
-    border: "1px solid #4285F4",
-  });
-
-  botaoCopiar.addEventListener("click", () => {
-    const texto = capturarTextoChat();
-    if (!texto) {
-      alert("Não foi possível capturar o texto do chat.");
-      return;
-    }
-    navigator.clipboard.writeText(texto);
-
-    botaoCopiar.textContent = "✅ Histórico Copiado!";
-    botaoCopiar.disabled = true;
-    setTimeout(() => {
-      botaoCopiar.textContent = "📋 Copiar Histórico";
-      botaoCopiar.disabled = false;
-    }, 2000);
-  });
-
-  // 2. Botão Consultar Docs (From Feature)
+  // 1. Botão Consultar Docs (From Feature)
   const botaoDocs = document.createElement("button");
   botaoDocs.id = "btnConsultarDocs";
   botaoDocs.textContent = "📚 Consultar Docs";
@@ -265,7 +235,7 @@ function criarBotoesFlutuantes() {
     exibirPainelConsultaDocs();
   });
 
-  // 3. Botão Gerar Relatório (Merged)
+  // 2. Botão Gerar Relatório (Merged)
   const botaoResumo = document.createElement("button");
   botaoResumo.id = "btnResumoGemini";
   botaoResumo.textContent = "🧠 Gerar Relatório";
@@ -290,7 +260,7 @@ function criarBotoesFlutuantes() {
     chrome.runtime.sendMessage({ action: "gerarResumo", texto });
   });
 
-  // 4. Botão Dica (From HEAD)
+  // 3. Botão Dica (From HEAD)
   const botaoDica = document.createElement("button");
   botaoDica.id = "btnDica";
   botaoDica.textContent = "💡 Dicas Inteligentes";
@@ -315,7 +285,7 @@ function criarBotoesFlutuantes() {
     chrome.runtime.sendMessage({ action: "gerarDica", texto });
   });
 
-  // 5. Botão Mensagens (From HEAD)
+  // 4. Botão Mensagens (From HEAD)
   const botaoMessages = document.createElement("button");
   botaoMessages.id = "btnMessages";
   botaoMessages.textContent = "💬 Mensagens Padrão";
@@ -332,7 +302,6 @@ function criarBotoesFlutuantes() {
 
 
   // Append All
-  container.appendChild(botaoCopiar);
   container.appendChild(botaoDocs);
   container.appendChild(botaoResumo);
   container.appendChild(botaoDica);
@@ -1082,24 +1051,24 @@ function exibirPainelConsultaDocs() {
   position: fixed;
   bottom: 130px;
   right: 20px;
-  z - index: 999999;
+  z-index: 999999;
   background: #fff;
   border: 1px solid #ccc;
-  border - radius: 8px;
+  border-radius: 8px;
   width: 360px;
   height: 500px;
-  box - shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  font - family: Arial, sans - serif;
-  font - size: 14px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  font-family: Arial, sans-serif;
+  font-size: 14px;
   display: flex;
-  flex - direction: column;
+  flex-direction: column;
   `;
 
   popup.innerHTML = `
-    < div style = "background:#f1f3f4; padding:10px; border-bottom:1px solid #ddd; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; align-items:center;" >
+    <div style="background:#f1f3f4; padding:10px; border-bottom:1px solid #ddd; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; align-items:center;">
         <div style="font-weight:bold; font-size:16px; color:#333;">📚 Consultar Docs</div>
         <button id="fecharDocs" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
-      </div >
+    </div>
 
     <div style="padding:15px; flex:1; overflow-y:auto; display:flex; flex-direction:column;">
       <label style="font-weight:bold; margin-bottom:5px;">O que você procura?</label>
@@ -1143,14 +1112,14 @@ function exibirPainelConsultaDocs() {
             const conteudo = doc.content || "";
 
             item.innerHTML = `
-    < div style = "font-weight:bold; color:#1a73e8; margin-bottom:4px;" > ${titulo}</div >
+    <div style="font-weight:bold; color:#1a73e8; margin-bottom:4px;">${titulo}</div>
       <div style="color:#333; line-height:1.4;">${conteudo}</div>
   `;
             lista.appendChild(item);
           });
         }
       } else {
-        lista.innerHTML = `< div style = 'color:red;' > Erro: ${resp ? resp.erro : "Desconhecido"}</div > `;
+        lista.innerHTML = `<div style='color:red;'>Erro: ${resp ? resp.erro : "Desconhecido"}</div>`;
       }
     });
   };
