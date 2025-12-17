@@ -70,28 +70,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Keep channel open
   }
 
-  // === 2. BUSCAR SOLUÇÕES (Smart RAG) ===
-  if (request.action === "buscarSolucoes") {
-    (async () => {
-      try {
-        const { problema } = request;
-        const resp = await fetch(`${API_BASE_URL}/api/gemini/solucoes`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ problema })
-        });
 
-        if (!resp.ok) throw new Error(`Erro na API (${resp.status})`);
-
-        const data = await resp.json();
-        sendResponse({ sucesso: true, solucoes: data.solucoesSugeridas || [] });
-      } catch (err) {
-        console.error("Erro buscarSolucoes:", err);
-        sendResponse({ sucesso: false, erro: err.toString() });
-      }
-    })();
-    return true;
-  }
 
   // === 3. BUSCAR DOCUMENTAÇÃO (Docs Search) ===
   if (request.action === "buscarDocumentacao") {

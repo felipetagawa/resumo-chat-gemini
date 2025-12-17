@@ -28,8 +28,7 @@ setInterval(() => {
     botoesExistem.remove();
     const popup = document.getElementById("geminiResumoPopup");
     if (popup) popup.remove();
-    const ajudaPopup = document.getElementById("geminiAjudaPopup");
-    if (ajudaPopup) ajudaPopup.remove();
+
   }
 }, 2000);
 
@@ -62,46 +61,20 @@ function criarBotoesFlutuantes() {
     textAlign: "left"
   };
 
-  // Botão Ajuda Inteligente
-  const botaoAjuda = document.createElement("button");
-  botaoAjuda.id = "btnAjudaGemini";
-  botaoAjuda.textContent = "💡 Ajuda Inteligente";
-  Object.assign(botaoAjuda.style, estiloBotao);
-  Object.assign(botaoAjuda.style, {
-    background: "#FEF7E0", // Amarelo claro para destacar
-    color: "#B06000",
-    border: "1px solid #F9D87E",
-  });
 
-  botaoAjuda.addEventListener("click", () => {
-    exibirPainelAjuda();
-  });
-
-
-  const botaoCopiar = document.createElement("button");
-  botaoCopiar.id = "btnCopiarChat";
-  botaoCopiar.textContent = "📋 Copiar Histórico";
-  Object.assign(botaoCopiar.style, estiloBotao);
-  Object.assign(botaoCopiar.style, {
+  // Botão Consultar Docs
+  const botaoDocs = document.createElement("button");
+  botaoDocs.id = "btnConsultarDocs";
+  botaoDocs.textContent = "📚 Consultar Docs";
+  Object.assign(botaoDocs.style, estiloBotao);
+  Object.assign(botaoDocs.style, {
     background: "#fff",
-    color: "#4285F4",
-    border: "1px solid #4285F4",
+    color: "#d93025",
+    border: "1px solid #d93025",
   });
 
-  botaoCopiar.addEventListener("click", () => {
-    const texto = capturarTextoChat();
-    if (!texto) {
-      alert("Não foi possível capturar o texto do chat.");
-      return;
-    }
-    navigator.clipboard.writeText(texto);
-
-    botaoCopiar.textContent = "✅ Histórico Copiado!";
-    botaoCopiar.disabled = true;
-    setTimeout(() => {
-      botaoCopiar.textContent = "📋 Copiar Histórico";
-      botaoCopiar.disabled = false;
-    }, 2000);
+  botaoDocs.addEventListener("click", () => {
+    exibirPainelConsultaDocs();
   });
 
   const botaoResumo = document.createElement("button");
@@ -128,24 +101,8 @@ function criarBotoesFlutuantes() {
     chrome.runtime.sendMessage({ action: "gerarResumo", texto });
   });
 
-  // Botão Busca Docs (Novo)
-  const botaoBusca = document.createElement("button");
-  botaoBusca.id = "btnBuscaDocs";
-  botaoBusca.textContent = "🔎 Busca Docs";
-  Object.assign(botaoBusca.style, estiloBotao);
-  Object.assign(botaoBusca.style, {
-    background: "#fff",
-    color: "#D93025",
-    border: "1px solid #D93025",
-  });
 
-  botaoBusca.addEventListener("click", () => {
-    exibirBuscaDocs();
-  });
-
-  container.appendChild(botaoAjuda);
-  container.appendChild(botaoBusca);
-  container.appendChild(botaoCopiar);
+  container.appendChild(botaoDocs);
   container.appendChild(botaoResumo);
   document.body.appendChild(container);
 }
@@ -364,88 +321,9 @@ function exibirResumo(texto) {
   });
 }
 
-// === FUNÇÃO DO PAINEL DE AJUDA INTELIGENTE ===
-function exibirPainelAjuda() {
-  const popupId = "geminiAjudaPopup";
-  const popupAntigo = document.getElementById(popupId);
-  if (popupAntigo) {
-    popupAntigo.remove(); // Toggle behaviour
-    return;
-  }
-
-  const popup = document.createElement("div");
-  popup.id = popupId;
-  popup.style = `
-      position:fixed;
-      bottom:130px;
-      right:20px;
-      z-index:999999;
-      background:#fff;
-      border:1px solid #ccc;
-      border-radius:8px;
-      width:360px;
-      height: 500px;
-      box-shadow:0 4px 15px rgba(0,0,0,0.2);
-      font-family:Arial, sans-serif;
-      font-size: 14px;
-      display: flex;
-      flex-direction: column;
-    `;
-
-  // Header simples (sem tabs)
-  popup.innerHTML = `
-      <div style="background:#f1f3f4; padding:10px; border-bottom:1px solid #ddd; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; align-items:center;">
-        <div style="font-weight:bold; font-size:16px; color:#333;">💡 Ajuda Inteligente</div>
-        <button id="fecharAjuda" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
-      </div>
-      
-      <div id="conteudoSolucoes" style="padding:15px; flex:1; overflow-y:auto; display:flex; flex-direction:column;">
-        <label style="font-weight:bold; margin-bottom:5px;">Descreva o problema:</label>
-        <textarea id="inputProblema" style="width:100%; height:80px; padding:8px; border:1px solid #ccc; border-radius:4px; margin-bottom:10px;" placeholder="Ex: Cliente com erro 503 no gateway"></textarea>
-        <button id="btnBuscarSolucao" style="background:#4285F4; color:#fff; padding:8px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">🔍 Sugerir Solução</button>
-        <div id="listaSolucoes" style="margin-top:15px; flex:1; overflow-y:auto;"></div>
-      </div>
-    `;
-
-  document.body.appendChild(popup);
-
-  // --- Event Listeners ---
-  popup.querySelector("#fecharAjuda").addEventListener("click", () => popup.remove());
-
-  const btnBuscarSolucao = popup.querySelector("#btnBuscarSolucao");
-  const inputProblema = popup.querySelector("#inputProblema");
-  const listaSolucoes = popup.querySelector("#listaSolucoes");
-
-  // Botão Buscar Soluções
-  btnBuscarSolucao.addEventListener("click", () => {
-    const problema = inputProblema.value.trim();
-    if (!problema) return;
-
-    listaSolucoes.innerHTML = "<div style='text-align:center; color:#666;'>Procurando soluções...</div>";
-
-    chrome.runtime.sendMessage({ action: "buscarSolucoes", problema }, (resp) => {
-      listaSolucoes.innerHTML = "";
-      if (resp && resp.sucesso) {
-        if (!resp.solucoes || resp.solucoes.length === 0) {
-          listaSolucoes.innerHTML = "<div style='color:#666;'>Nenhuma solução similar encontrada.</div>";
-        } else {
-          resp.solucoes.forEach(sol => {
-            const card = document.createElement("div");
-            card.style = "background:#f9f9f9; padding:10px; margin-bottom:8px; border-left:3px solid #34A853; font-size:13px; white-space:pre-wrap;";
-            card.innerText = sol;
-            listaSolucoes.appendChild(card);
-          });
-        }
-      } else {
-        listaSolucoes.innerHTML = `<div style='color:red;'>Erro: ${resp ? resp.erro : "Desconhecido"}</div>`;
-      }
-    });
-  });
-}
-
-// === FUNÇÃO DO PAINEL DE BUSCA DE DOCUMENTAÇÃO (MANUAL) ===
-function exibirBuscaDocs() {
-  const popupId = "geminiBuscaDocsPopup";
+// === FUNÇÃO DO PAINEL DE CONSULTA DE DOCS ===
+function exibirPainelConsultaDocs() {
+  const popupId = "geminiDocsPopup";
   const popupAntigo = document.getElementById(popupId);
   if (popupAntigo) {
     popupAntigo.remove();
@@ -473,61 +351,60 @@ function exibirBuscaDocs() {
 
   popup.innerHTML = `
       <div style="background:#f1f3f4; padding:10px; border-bottom:1px solid #ddd; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; align-items:center;">
-        <div style="font-weight:bold; font-size:16px; color:#333;">🔎 Busca Docs</div>
-        <button id="fecharBusca" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
+        <div style="font-weight:bold; font-size:16px; color:#333;">📚 Consultar Docs</div>
+        <button id="fecharDocs" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
       </div>
       
       <div style="padding:15px; flex:1; overflow-y:auto; display:flex; flex-direction:column;">
-        <div style="display:flex; gap:5px; margin-bottom:10px;">
-            <input id="inputBusca" type="text" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="Digite para buscar...">
-            <button id="btnBuscar" style="background:#D93025; color:#fff; padding:8px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Buscar</button>
+        <label style="font-weight:bold; margin-bottom:5px;">O que você procura?</label>
+        <div style="display:flex; gap:5px; margin-bottom:15px;">
+          <input type="text" id="inputBuscaDocs" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="Ex: Erro 503, Nota Fiscal...">
+          <button id="btnBuscarDocs" style="background:#d93025; color:#fff; padding:8px 12px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">🔍</button>
         </div>
-        <div id="listaDocs" style="margin-top:5px; flex:1; overflow-y:auto;"></div>
+        
+        <div id="listaResultadosDocs" style="flex:1; overflow-y:auto;">
+           <div style="color:#666; font-style:italic; text-align:center; margin-top:20px;">Digite um termo para buscar na base de conhecimento.</div>
+        </div>
       </div>
     `;
 
   document.body.appendChild(popup);
 
-  // Focus no input
-  setTimeout(() => popup.querySelector("#inputBusca").focus(), 100);
-
   // --- Event Listeners ---
-  popup.querySelector("#fecharBusca").addEventListener("click", () => popup.remove());
+  popup.querySelector("#fecharDocs").addEventListener("click", () => popup.remove());
 
-  const btnBuscar = popup.querySelector("#btnBuscar");
-  const inputBusca = popup.querySelector("#inputBusca");
-  const listaDocs = popup.querySelector("#listaDocs");
+  const btnBuscar = popup.querySelector("#btnBuscarDocs");
+  const inputBusca = popup.querySelector("#inputBuscaDocs");
+  const lista = popup.querySelector("#listaResultadosDocs");
 
   const realizarBusca = () => {
     const termo = inputBusca.value.trim();
     if (!termo) return;
 
-    listaDocs.innerHTML = "<div style='text-align:center; color:#666;'>Buscando...</div>";
+    lista.innerHTML = "<div style='text-align:center; color:#666;'>Buscando...</div>";
 
     chrome.runtime.sendMessage({ action: "buscarDocumentacao", termo }, (resp) => {
-      listaDocs.innerHTML = "";
+      lista.innerHTML = "";
       if (resp && resp.sucesso) {
         if (!resp.docs || resp.docs.length === 0) {
-          listaDocs.innerHTML = "<div style='color:#666;'>Nenhum documento encontrado.</div>";
+          lista.innerHTML = "<div style='color:#666;'>Nenhum documento encontrado.</div>";
         } else {
           resp.docs.forEach(doc => {
             const item = document.createElement("div");
-            item.style = "background:#f9f9f9; padding:10px; margin-bottom:8px; border-left:3px solid #D93025; font-size:13px;";
+            item.style = "background:#f9f9f9; padding:10px; margin-bottom:8px; border:1px solid #eee; border-radius:4px; font-size:13px;";
 
-            const titulo = (doc.metadata && doc.metadata.title) ? doc.metadata.title : "Sem Título";
-            const content = doc.content || "";
-            // Exibir todo o conteúdo conforme solicitado
-            const snippet = content;
+            const titulo = (doc.metadata && doc.metadata.title) ? doc.metadata.title : "Documento Sem Título";
+            const conteudo = doc.content ? doc.content.substring(0, 150) + "..." : "";
 
             item.innerHTML = `
-                    <div style="font-weight:bold; color:#D93025; margin-bottom:4px;">${titulo}</div>
-                    <div style="white-space:pre-wrap; color:#333;">${snippet}</div>
-                `;
-            listaDocs.appendChild(item);
+              <div style="font-weight:bold; color:#1a73e8; margin-bottom:4px;">${titulo}</div>
+              <div style="color:#333; line-height:1.4;">${conteudo}</div>
+            `;
+            lista.appendChild(item);
           });
         }
       } else {
-        listaDocs.innerHTML = `<div style='color:red;'>Erro: ${resp ? resp.erro : "Desconhecido"}</div>`;
+        lista.innerHTML = `<div style='color:red;'>Erro: ${resp ? resp.erro : "Desconhecido"}</div>`;
       }
     });
   };
@@ -536,4 +413,9 @@ function exibirBuscaDocs() {
   inputBusca.addEventListener("keypress", (e) => {
     if (e.key === "Enter") realizarBusca();
   });
+
+  // Focar no input ao abrir
+  setTimeout(() => inputBusca.focus(), 100);
 }
+
+
