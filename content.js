@@ -265,15 +265,15 @@ function criarBotoesFlutuantes() {
     exibirPainelConsultaDocs();
   });
 
-  // 3. Botão Gerar Relatório (Merged)
+
   const botaoResumo = document.createElement("button");
   botaoResumo.id = "btnResumoGemini";
   botaoResumo.textContent = "🧠 Gerar Relatório";
   Object.assign(botaoResumo.style, estiloBotao);
   Object.assign(botaoResumo.style, {
-    background: "#4285F4",
-    color: "#fff",
-    border: "none",
+    background: "#fff",
+    color: "#4285F4",
+    border: "1px solid #4285F4",
   });
 
   botaoResumo.addEventListener("click", async () => {
@@ -296,9 +296,9 @@ function criarBotoesFlutuantes() {
   botaoDica.textContent = "💡 Dicas Inteligentes";
   Object.assign(botaoDica.style, estiloBotao);
   Object.assign(botaoDica.style, {
-    background: "#FEF7E0",
-    color: "#B06000",
-    border: "1px solid #e08002ff",
+    background: "#fff",
+    color: "#555453ff",
+    border: "1px solid #555453ff",
   });
 
   botaoDica.addEventListener("click", async () => {
