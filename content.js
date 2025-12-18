@@ -781,19 +781,15 @@ function carregarEMostrarMensagens() {
         `;
     container.appendChild(instructions);
   });
-
-
-
-
 }
 
 function criarAcordeon(titulo, aberto = true, id = "") {
-  const container = document.createElement("div");
-  container.id = id;
-  container.style = "margin-bottom: 10px;";
-
-  const header = document.createElement("div");
-  header.style = `
+    const container = document.createElement("div");
+    container.id = id;
+    container.style = "margin-bottom: 10px;";
+    
+    const header = document.createElement("div");
+    header.style = `
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -808,14 +804,14 @@ function criarAcordeon(titulo, aberto = true, id = "") {
         color: #334155;
         transition: background 0.2s;
     `;
-
-  header.innerHTML = `
+    
+    header.innerHTML = `
         <span>${titulo}</span>
         <span style="font-size: 18px; transition: transform 0.3s;">${aberto ? '−' : '+'}</span>
     `;
-
-  const content = document.createElement("div");
-  content.style = `
+    
+    const content = document.createElement("div");
+    content.style = `
         border: 1px solid #e2e8f0;
         border-top: none;
         border-radius: 0 0 6px 6px;
@@ -848,7 +844,8 @@ function criarAcordeon(titulo, aberto = true, id = "") {
         
         if (isOpen) {
             content.style.padding = '15px 15px 5px 15px';
-            content.style.maxHeight = '1000px';
+            content.style.maxHeight = 'none';
+            content.style.overflow = 'visible';
             content.style.opacity = '1';
             content.style.border = '1px solid #e2e8f0';
             content.style.borderTop = 'none';
@@ -856,6 +853,7 @@ function criarAcordeon(titulo, aberto = true, id = "") {
         } else {
             content.style.padding = '0';
             content.style.maxHeight = '0';
+            content.style.overflow = 'hidden';
             content.style.opacity = '0';
             content.style.border = 'none';
             content.style.marginTop = '-1px';
