@@ -1,6 +1,3 @@
-// content.js
-
-// === SISTEMA DE ATALHOS (LETRAS E NÚMEROS) ===
 let messageShortcutsCache = {};
 let isReplacing = false;
 
@@ -34,8 +31,6 @@ function carregarAtalhosMensagens() {
         messageShortcutsCache[key] = msg;
       }
     });
-
-    console.log("Atalhos carregados (automático):", messageShortcutsCache);
   });
 }
 
@@ -86,8 +81,6 @@ function detectarEInserirAtalho(element) {
 
         isReplacing = false;
       }
-
-      console.log(`✅ Atalho /${shortcutKey} substituído automaticamente`);
       return true;
     }
   }
@@ -135,10 +128,8 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     carregarAtalhosMensagens();
   }
 });
-// === LISTENER DE MENSAGENS ===
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("Mensagem recebida no content.js:", request.action, request);
 
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const botaoResumo = document.getElementById("btnResumoGemini");
   const botaoDica = document.getElementById("btnDica");
   const botaoMessages = document.getElementById("btnMessages");
@@ -159,7 +150,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "exibirResumo") {
-    // Usamos a função do feature/docs-cache-otimizacao que suporta Docs e AutoSave
     exibirResumo(request.resumo);
   } else if (request.action === "exibirDica") {
     exibirDica(request.dica);
@@ -170,8 +160,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true;
 });
 
-
-// === VERIFICADOR DE PÁGINA E URL ===
 const TARGET_URL = "https://softeninformatica.sz.chat/user/agent";
 
 setInterval(() => {
@@ -193,8 +181,6 @@ setInterval(() => {
   }
 }, 2000);
 
-
-// === FUNÇÃO DE CRIAR BOTÕES ===
 function criarBotoesFlutuantes() {
   if (document.getElementById("containerBotoesGemini")) return;
 
@@ -222,7 +208,6 @@ function criarBotoesFlutuantes() {
     textAlign: "left"
   };
 
-  // 1. Botão Consultar Docs (From Feature)
   const botaoDocs = document.createElement("button");
   botaoDocs.id = "btnConsultarDocs";
   botaoDocs.textContent = "📚 Consultar Docs";
@@ -237,7 +222,6 @@ function criarBotoesFlutuantes() {
     exibirPainelConsultaDocs();
   });
 
-  // 3. Botão Gerar Relatório (Merged)
   const botaoResumo = document.createElement("button");
   botaoResumo.id = "btnResumoGemini";
   botaoResumo.textContent = "🧠 Gerar Relatório";
@@ -276,7 +260,6 @@ function criarBotoesFlutuantes() {
     });
   });
 
-  // 3. Botão Dica (From HEAD)
   const botaoDica = document.createElement("button");
   botaoDica.id = "btnDica";
   botaoDica.textContent = "💡 Dicas Inteligentes";
@@ -315,7 +298,6 @@ function criarBotoesFlutuantes() {
     });
   });
 
-  // 4. Botão Mensagens (From HEAD)
   const botaoMessages = document.createElement("button");
   botaoMessages.id = "btnMessages";
   botaoMessages.textContent = "💬 Mensagens Padrão";
@@ -330,9 +312,6 @@ function criarBotoesFlutuantes() {
     mostrarPopupMensagens();
   });
 
-
-  // Append All
-  // Append All - Reordered as requested: Relatório (Top), Dica, Messages, Docs (Bottom)
   container.appendChild(botaoResumo);
   container.appendChild(botaoDica);
   container.appendChild(botaoMessages);
@@ -340,7 +319,6 @@ function criarBotoesFlutuantes() {
 
   document.body.appendChild(container);
 }
-
 
 function capturarTextoChat() {
   const mensagensDOM = document.querySelectorAll(".msg");
@@ -360,7 +338,6 @@ function capturarTextoChat() {
     .filter(Boolean)
     .filter(linha => {
       const t = linha.toLowerCase();
-      // Filtros básicos de msgs automáticas
       return t && !t.startsWith("automático");
     })
     .join("\n");
@@ -368,21 +345,16 @@ function capturarTextoChat() {
   return mensagens;
 }
 
-
-// === FUNÇÃO AUXILIAR: EXTRAIR PROBLEMA DO RESUMO ===
 function extrairProblemaDoResumo(resumoCompleto) {
-  // Tenta extrair apenas a seção de problema/dúvida do resumo
   const linhas = resumoCompleto.split('\n');
   let problema = '';
   let capturando = false;
 
-  // Palavras-chave que indicam início da seção de problema
   const inicioPalavrasChave = [
     'problema:', 'dúvida:', 'questão:', 'issue:', 'erro:',
     'situação:', 'contexto:', 'descrição:', 'relato:'
   ];
 
-  // Palavras-chave que indicam fim da seção de problema (início de solução)
   const fimPalavrasChave = [
     'solução:', 'resolução:', 'resposta:', 'solution:',
     'correção:', 'procedimento:', 'passos:', 'como resolver:'
@@ -391,25 +363,21 @@ function extrairProblemaDoResumo(resumoCompleto) {
   for (let linha of linhas) {
     const linhaLower = linha.toLowerCase().trim();
 
-    // Verifica se é início da seção de problema
     if (inicioPalavrasChave.some(kw => linhaLower.startsWith(kw))) {
       capturando = true;
       problema += linha + '\n';
       continue;
     }
 
-    // Verifica se chegou na seção de solução (para de capturar)
     if (fimPalavrasChave.some(kw => linhaLower.startsWith(kw))) {
       break;
     }
 
-    // Se está capturando e a linha não está vazia, adiciona
     if (capturando && linha.trim()) {
       problema += linha + '\n';
     }
   }
 
-  // Se não encontrou seção específica, tenta pegar os primeiros parágrafos
   if (!problema.trim()) {
     const primeirosParagrafos = linhas.slice(0, Math.min(10, linhas.length));
     problema = primeirosParagrafos
@@ -420,12 +388,10 @@ function extrairProblemaDoResumo(resumoCompleto) {
   return problema.trim() || resumoCompleto;
 }
 
-// === FUNÇÃO DE EXIBIR O POPUP (RESUMO) - Auto-Save & Docs (From Feature) ===
 function exibirResumo(texto, tipo = "resumo") {
   const popupAntigo = document.getElementById("geminiResumoPopup");
   if (popupAntigo) popupAntigo.remove();
 
-  // 1. Analisar Humor (apenas se for resumo)
   let humorIcon = "";
   if (tipo === "resumo") {
     const lowerText = texto.toLowerCase();
@@ -450,19 +416,18 @@ function exibirResumo(texto, tipo = "resumo") {
   right:20px;
   z-index:999999;
   background:#fff;
-  border:2px solid #4285F4; /* BORDA AZUL */
+  border:2px solid #4285F4;
   border-radius:8px;
   padding:16px;
   width:380px;
   max-height:500px;
   overflow-y:auto;
-  box-shadow:0 4px 15px rgba(66,133,244,0.35); /* SOMBRA AZUL */
+  box-shadow:0 4px 15px rgba(66,133,244,0.35);
   font-family:Arial, sans-serif;
   font-size:14px;
   display:flex;
   flex-direction:column;
 `;
-
 
   popup.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -527,6 +492,7 @@ function exibirResumo(texto, tipo = "resumo") {
     URL.revokeObjectURL(url);
   });
 }
+
 function formatarResumoComNegrito(texto) {
   let html = texto
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -548,9 +514,6 @@ function formatarResumoParaCopiar(texto) {
   return formatado.trim();
 }
 
-
-
-// === FUNÇÃO DE EXIBIR DICA (From HEAD) ===
 function exibirDica(dicaData) {
   const popupAntigo = document.getElementById("geminiDicaPopup");
   if (popupAntigo) popupAntigo.remove();
@@ -645,7 +608,6 @@ function exibirDica(dicaData) {
   }
 }
 
-// === FUNÇÃO PARA MOSTRAR POPUP DE MENSAGENS (From HEAD) ===
 function mostrarPopupMensagens() {
   const popupAntigo = document.getElementById("popupMensagensPadrao");
   if (popupAntigo) popupAntigo.remove();
@@ -992,8 +954,6 @@ function criarCardMensagemPopup(text, isCustom, index, customMessagesList) {
 }
 
 function enviarMensagemParaChat(mensagem) {
-  console.log("Tentando enviar mensagem:", mensagem);
-
   const seletores = [
     '#twemoji-textarea',
     '.twemojiTextarea.pastable',
@@ -1012,20 +972,15 @@ function enviarMensagemParaChat(mensagem) {
     const elemento = document.querySelector(seletor);
     if (elemento) {
       textarea = elemento;
-      console.log("Campo encontrado com seletor:", seletor, elemento);
       break;
     }
   }
 
   if (!textarea) {
-    console.error("Campo de texto não encontrado com nenhum seletor!");
-
     const elementosEditaveis = document.querySelectorAll('[contenteditable="true"]');
-    console.log("Elementos editáveis encontrados:", elementosEditaveis.length);
 
     if (elementosEditaveis.length > 0) {
       textarea = elementosEditaveis[0];
-      console.log("Usando primeiro elemento editável:", textarea);
     }
   }
 
@@ -1045,21 +1000,16 @@ function enviarMensagemParaChat(mensagem) {
         });
         textarea.dispatchEvent(keydownEvent);
 
-        console.log("Mensagem inserida no campo:", textarea.textContent);
-
       }, 100);
 
     } catch (error) {
       console.error("Erro ao inserir mensagem:", error);
     }
   } else {
-    console.error("Campo de texto do chat não encontrado!");
     alert("Não foi possível encontrar o campo de texto do chat.");
   }
 }
 
-
-// === FUNÇÃO DO PAINEL DE CONSULTA DE DOCS (From Feature) ===
 function exibirPainelConsultaDocs() {
   const popupId = "geminiDocsPopup";
   const popupAntigo = document.getElementById(popupId);
@@ -1108,7 +1058,6 @@ function exibirPainelConsultaDocs() {
 
   document.body.appendChild(popup);
 
-  // --- Event Listeners ---
   popup.querySelector("#fecharDocs").addEventListener("click", () => popup.remove());
 
   const btnBuscar = popup.querySelector("#btnBuscarDocs");
@@ -1152,6 +1101,5 @@ function exibirPainelConsultaDocs() {
     if (e.key === "Enter") realizarBusca();
   });
 
-  // Focar no input ao abrir
   setTimeout(() => inputBusca.focus(), 100);
 }

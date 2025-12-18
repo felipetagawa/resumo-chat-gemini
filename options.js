@@ -82,7 +82,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  
   const FIXED_MESSAGES = [
     "Os valores exibidos de IBS e CBS neste primeiro momento não representam cobrança efetiva, pois a fase inicial da Reforma Tributária é apenas experimental e nominativa, com alíquotas padrão 0,10 e 0,90, sem geração de recolhimento, sendo exigida apenas para empresas do Lucro Presumido e Lucro Real para fins de adaptação e validação das informações.",
     "Atualmente, a fase inicial da Reforma Tributária com IBS e CBS se aplica apenas às empresas do regime normal (Lucro Presumido e Lucro Real), sendo que para o Simples Nacional não há recolhimento nem impacto prático neste primeiro ano, pois as informações são utilizadas apenas de forma nominativa e experimental.",
@@ -139,36 +138,36 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("limparTodosAtalhos")?.addEventListener("click", () => {
     if (confirm("Tem certeza que deseja remover todos os atalhos configurados?")) {
-        chrome.storage.local.remove("messageShortcuts", () => {
-            const status = document.getElementById("statusAtalhos");
-            status.textContent = "✅ Todos os atalhos foram removidos!";
-            status.style.color = "green";
-            
-            chrome.storage.local.get(["customMessages"], data => {
-                const customMessages = data.customMessages || [];
-                renderCustomMessages(customMessages);
-                
-                fixedMessagesContainer.innerHTML = "";
-                FIXED_MESSAGES.forEach((msg, index) => {
-                    fixedMessagesContainer.appendChild(createMessageCard(msg, false, index));
-                });
-            });
-            
-            setTimeout(() => {
-                status.textContent = "";
-            }, 3000);
+      chrome.storage.local.remove("messageShortcuts", () => {
+        const status = document.getElementById("statusAtalhos");
+        status.textContent = "✅ Todos os atalhos foram removidos!";
+        status.style.color = "green";
+
+        chrome.storage.local.get(["customMessages"], data => {
+          const customMessages = data.customMessages || [];
+          renderCustomMessages(customMessages);
+
+          fixedMessagesContainer.innerHTML = "";
+          FIXED_MESSAGES.forEach((msg, index) => {
+            fixedMessagesContainer.appendChild(createMessageCard(msg, false, index));
+          });
         });
+
+        setTimeout(() => {
+          status.textContent = "";
+        }, 3000);
+      });
     }
   });
 
   function renderCustomMessages(messages) {
     customMessagesContainer.innerHTML = "";
     messages.forEach((msg, index) => {
-        customMessagesContainer.appendChild(
-            createMessageCard(msg, true, index, messages)
-        );
+      customMessagesContainer.appendChild(
+        createMessageCard(msg, true, index, messages)
+      );
     });
-    
+
     customCount.textContent = messages.length;
   }
 
@@ -214,27 +213,27 @@ document.addEventListener("DOMContentLoaded", async () => {
         gap: 4px;
         min-width: 70px;
     `;
-    
+
     btnCopy.onclick = () => {
-        navigator.clipboard.writeText(text);
-        const originalText = btnCopy.textContent;
-        btnCopy.textContent = "Copiado!";
-        btnCopy.style.background = "#34A853";
-        btnCopy.style.color = "white";
-        setTimeout(() => {
-            btnCopy.textContent = originalText;
-            btnCopy.style.background = "#dbeafe";
-            btnCopy.style.color = "#1e40af";
-        }, 1500);
+      navigator.clipboard.writeText(text);
+      const originalText = btnCopy.textContent;
+      btnCopy.textContent = "Copiado!";
+      btnCopy.style.background = "#34A853";
+      btnCopy.style.color = "white";
+      setTimeout(() => {
+        btnCopy.textContent = originalText;
+        btnCopy.style.background = "#dbeafe";
+        btnCopy.style.color = "#1e40af";
+      }, 1500);
     };
 
     buttonsContainer.appendChild(btnCopy);
 
     if (editable) {
-        const btnEdit = document.createElement("button");
-        btnEdit.className = "btn-edit";
-        btnEdit.textContent = "Editar";
-        btnEdit.style.cssText = `
+      const btnEdit = document.createElement("button");
+      btnEdit.className = "btn-edit";
+      btnEdit.textContent = "Editar";
+      btnEdit.style.cssText = `
             background: #e0f2fe;
             color: #0369a1;
             border: none;
@@ -244,22 +243,22 @@ document.addEventListener("DOMContentLoaded", async () => {
             cursor: pointer;
             min-width: 70px;
         `;
-        btnEdit.onclick = () => {
-            const novo = prompt("Editar mensagem:", text);
-            if (novo !== null) {
-                list[index] = novo;
-                chrome.storage.local.set({ customMessages: list }, () => {
-                    chrome.storage.local.get(["customMessages"], data => {
-                        renderCustomMessages(data.customMessages || []);
-                    });
-                });
-            }
-        };
+      btnEdit.onclick = () => {
+        const novo = prompt("Editar mensagem:", text);
+        if (novo !== null) {
+          list[index] = novo;
+          chrome.storage.local.set({ customMessages: list }, () => {
+            chrome.storage.local.get(["customMessages"], data => {
+              renderCustomMessages(data.customMessages || []);
+            });
+          });
+        }
+      };
 
-        const btnDelete = document.createElement("button");
-        btnDelete.className = "btn-delete";
-        btnDelete.textContent = "Excluir";
-        btnDelete.style.cssText = `
+      const btnDelete = document.createElement("button");
+      btnDelete.className = "btn-delete";
+      btnDelete.textContent = "Excluir";
+      btnDelete.style.cssText = `
             background: #fee2e2;
             color: #dc2626;
             border: none;
@@ -269,18 +268,18 @@ document.addEventListener("DOMContentLoaded", async () => {
             cursor: pointer;
             min-width: 70px;
         `;
-        btnDelete.onclick = () => {
-            if (confirm("Tem certeza que deseja excluir esta mensagem?")) {
-                list.splice(index, 1);
-                chrome.storage.local.set({ customMessages: list }, () => {
-                    chrome.storage.local.get(["customMessages"], data => {
-                        renderCustomMessages(data.customMessages || []);
-                    });
-                });
-            }
-        };
+      btnDelete.onclick = () => {
+        if (confirm("Tem certeza que deseja excluir esta mensagem?")) {
+          list.splice(index, 1);
+          chrome.storage.local.set({ customMessages: list }, () => {
+            chrome.storage.local.get(["customMessages"], data => {
+              renderCustomMessages(data.customMessages || []);
+            });
+          });
+        }
+      };
 
-        buttonsContainer.append(btnEdit, btnDelete);
+      buttonsContainer.append(btnEdit, btnDelete);
     }
 
     const shortcutConfig = document.createElement("div");
@@ -311,74 +310,74 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
 
     shortcutInput.addEventListener('wheel', (e) => e.preventDefault());
-    
+
     shortcutInput.addEventListener('input', () => {
-        let value = shortcutInput.value.toUpperCase();
-        const isValid = /^[A-Z0-9]$/.test(value);
-        
-        if (!isValid && value !== "") {
-            const lastChar = value.split('').find(char => /^[A-Z0-9]$/.test(char));
-            shortcutInput.value = lastChar || "";
-        } else {
-            shortcutInput.value = value;
-        }
+      let value = shortcutInput.value.toUpperCase();
+      const isValid = /^[A-Z0-9]$/.test(value);
+
+      if (!isValid && value !== "") {
+        const lastChar = value.split('').find(char => /^[A-Z0-9]$/.test(char));
+        shortcutInput.value = lastChar || "";
+      } else {
+        shortcutInput.value = value;
+      }
     });
 
     shortcutInput.addEventListener('keydown', (e) => {
-        if (e.key.length === 1 && !/^[a-zA-Z0-9]$/.test(e.key)) {
-            e.preventDefault();
-        }
+      if (e.key.length === 1 && !/^[a-zA-Z0-9]$/.test(e.key)) {
+        e.preventDefault();
+      }
     });
 
     const shortcutKey = editable ? `custom_${index}` : `fixed_${index}`;
-    
+
     chrome.storage.local.get(["messageShortcuts"], (data) => {
-        const shortcuts = data.messageShortcuts || {};
-        const savedValue = shortcuts[shortcutKey];
-        if (savedValue) {
-            shortcutInput.value = typeof savedValue === 'string' ? savedValue.toUpperCase() : savedValue.toString();
-        } else {
-            shortcutInput.value = "";
-        }
+      const shortcuts = data.messageShortcuts || {};
+      const savedValue = shortcuts[shortcutKey];
+      if (savedValue) {
+        shortcutInput.value = typeof savedValue === 'string' ? savedValue.toUpperCase() : savedValue.toString();
+      } else {
+        shortcutInput.value = "";
+      }
     });
 
     shortcutInput.addEventListener('change', () => {
-        let value = shortcutInput.value.trim().toUpperCase();
-        
-        if (value && /^[A-Z0-9]$/.test(value)) {
-            chrome.storage.local.get(["messageShortcuts"], (data) => {
-                const shortcuts = data.messageShortcuts || {};
-                
-                let isDuplicate = false;
-                for (const [key, savedValue] of Object.entries(shortcuts)) {
-                    const compareValue = typeof savedValue === 'string' ? savedValue.toUpperCase() : savedValue.toString();
-                    if (key !== shortcutKey && compareValue === value) {
-                        isDuplicate = true;
-                        break;
-                    }
-                }
-                
-                if (isDuplicate) {
-                    alert("Este atalho já está sendo usado por outra mensagem!");
-                    chrome.storage.local.get(["messageShortcuts"], (data2) => {
-                        const shortcuts2 = data2.messageShortcuts || {};
-                        const savedValue = shortcuts2[shortcutKey];
-                        shortcutInput.value = savedValue ? 
-                            (typeof savedValue === 'string' ? savedValue.toUpperCase() : savedValue.toString()) : 
-                            "";
-                    });
-                } else {
-                    shortcuts[shortcutKey] = value;
-                    chrome.storage.local.set({ messageShortcuts: shortcuts });
-                }
+      let value = shortcutInput.value.trim().toUpperCase();
+
+      if (value && /^[A-Z0-9]$/.test(value)) {
+        chrome.storage.local.get(["messageShortcuts"], (data) => {
+          const shortcuts = data.messageShortcuts || {};
+
+          let isDuplicate = false;
+          for (const [key, savedValue] of Object.entries(shortcuts)) {
+            const compareValue = typeof savedValue === 'string' ? savedValue.toUpperCase() : savedValue.toString();
+            if (key !== shortcutKey && compareValue === value) {
+              isDuplicate = true;
+              break;
+            }
+          }
+
+          if (isDuplicate) {
+            alert("Este atalho já está sendo usado por outra mensagem!");
+            chrome.storage.local.get(["messageShortcuts"], (data2) => {
+              const shortcuts2 = data2.messageShortcuts || {};
+              const savedValue = shortcuts2[shortcutKey];
+              shortcutInput.value = savedValue ?
+                (typeof savedValue === 'string' ? savedValue.toUpperCase() : savedValue.toString()) :
+                "";
             });
-        } else if (value === "") {
-            chrome.storage.local.get(["messageShortcuts"], (data) => {
-                const shortcuts = data.messageShortcuts || {};
-                delete shortcuts[shortcutKey];
-                chrome.storage.local.set({ messageShortcuts: shortcuts });
-            });
-        }
+          } else {
+            shortcuts[shortcutKey] = value;
+            chrome.storage.local.set({ messageShortcuts: shortcuts });
+          }
+        });
+      } else if (value === "") {
+        chrome.storage.local.get(["messageShortcuts"], (data) => {
+          const shortcuts = data.messageShortcuts || {};
+          delete shortcuts[shortcutKey];
+          chrome.storage.local.set({ messageShortcuts: shortcuts });
+        });
+      }
     });
 
     shortcutConfig.appendChild(shortcutLabel);
@@ -388,19 +387,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     div.appendChild(p);
     div.appendChild(bottomRow);
-    
+
     return div;
   }
 
   function inicializarAcordeons() {
     const accordionHeaders = document.querySelectorAll('.accordion-header');
-    
+
     accordionHeaders.forEach(header => {
       header.addEventListener('click', () => {
         const targetId = header.getAttribute('data-target');
         const content = document.getElementById(targetId);
         const icon = header.querySelector('.accordion-icon');
-        
+
         if (content.classList.contains('open')) {
           content.classList.remove('open');
           header.classList.remove('open');
@@ -419,7 +418,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const header = accordion.querySelector('.accordion-header');
     const content = document.getElementById(header.getAttribute('data-target'));
     const icon = header.querySelector('.accordion-icon');
-    
+
     if (!content.classList.contains('open')) {
       content.classList.add('open');
       header.classList.add('open');

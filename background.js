@@ -1,21 +1,14 @@
-// background.js (service worker)
 const API_BASE_URL = "http://localhost:8080";
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  // Helper para enviar resposta de volta (tab ou popup)
   const responder = (data) => {
-    if (sender.tab && request.fromTab) { // Se veio de uma aba (content script)
-      // Podemos responder diretamente via sendResponse se for síncrono ou chrome.tabs.sendMessage se fluxo complexo
-      // Aqui, vamos tentar usar sendResponse se o canal estiver aberto, mas para chamadas async longas, 
-      // às vezes é melhor mandar mensagem direta.
-      // O padrão aqui será usar sendResponse para simplificar, já que retornamos true no listener.
+    if (sender.tab && request.fromTab) {
       sendResponse(data);
     } else {
       sendResponse(data);
     }
   };
 
-  // === 1. GERAR RESUMO ===
   if (request.action === "gerarResumo") {
     const handleGerarResumo = async () => {
       try {
@@ -45,7 +38,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           return;
         }
 
-        // Salvar localmente no histórico. API agora retorna 'summary' ou 'resumo'.
         const resumoTexto = json.summary || json.resumo;
 
         const novoItem = { timestamp: Date.now(), summary: resumoTexto };
@@ -54,11 +46,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (history.length > 20) history.shift();
         await chrome.storage.local.set({ history });
 
-        // Enviar sucesso
         if (sender.tab) {
-          // Mantemos a chave 'resumo' na mensagem para compatibilidade com content.js
           chrome.tabs.sendMessage(sender.tab.id, { action: "exibirResumo", resumo: resumoTexto });
-          sendResponse({ success: true, resumo: resumoTexto }); // Close the callback without confusing the flow
+          sendResponse({ success: true, resumo: resumoTexto });
         } else {
           sendResponse({ resumo: resumoTexto });
         }
@@ -71,10 +61,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     };
     handleGerarResumo();
-    return true; // Keep channel open
+    return true;
   }
 
-  // === 2. GERAR DICA (Merged from new-feature-solution) ===
   if (request.action === "gerarDica") {
     const { texto } = request;
 
@@ -84,7 +73,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     (async () => {
       try {
-        // Chamar API de Dica - Using API_BASE_URL
         const resp = await fetch(`${API_BASE_URL}/api/chamado/processar-dica`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -108,7 +96,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  // === 3. BUSCAR DOCUMENTAÇÃO (Docs Search) ===
   if (request.action === "buscarDocumentacao") {
     (async () => {
       try {
@@ -116,14 +103,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const url = new URL(`${API_BASE_URL}/api/docs/search`);
 
         if (termo) url.searchParams.append('query', termo);
-        // Filtro de categoria
         url.searchParams.append('categoria', 'manuais');
 
         const resp = await fetch(url.toString());
         if (!resp.ok) throw new Error(`Erro na API (${resp.status})`);
 
         const data = await resp.json();
-        // data deve ser [{id, content, metadata}, ...]
         sendResponse({ sucesso: true, docs: data });
       } catch (err) {
         console.error("Erro buscarDocumentacao:", err);
