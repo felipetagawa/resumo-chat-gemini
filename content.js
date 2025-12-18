@@ -137,7 +137,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 });
 // === LISTENER DE MENSAGENS ===
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("Mensagem recebida no content.js:", request.action);
+  console.log("Mensagem recebida no content.js:", request.action, request);
 
   const botaoResumo = document.getElementById("btnResumoGemini");
   const botaoDica = document.getElementById("btnDica");
@@ -161,6 +161,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "exibirResumo") {
     // Usamos a função do feature/docs-cache-otimizacao que suporta Docs e AutoSave
     exibirResumo(request.resumo);
+  } else if (request.action === "exibirDica") {
+    exibirDica(request.dica);
   } else if (request.action === "exibirErro") {
     alert("Erro: " + request.erro);
   }
@@ -257,7 +259,21 @@ function criarBotoesFlutuantes() {
       botaoResumo.textContent = "🧠 Gerar Relatório";
       return;
     }
-    chrome.runtime.sendMessage({ action: "gerarResumo", texto });
+    chrome.runtime.sendMessage({ action: "gerarResumo", texto }, (response) => {
+      botaoResumo.disabled = false;
+      botaoResumo.textContent = "🧠 Gerar Relatório";
+
+      if (chrome.runtime.lastError) {
+        alert("Erro de comunicação: " + chrome.runtime.lastError.message);
+        return;
+      }
+
+      if (response && response.resumo) {
+        exibirResumo(response.resumo);
+      } else if (response && response.erro) {
+        alert("Erro ao gerar resumo: " + response.erro);
+      }
+    });
   });
 
   // 3. Botão Dica (From HEAD)
@@ -267,8 +283,8 @@ function criarBotoesFlutuantes() {
   Object.assign(botaoDica.style, estiloBotao);
   Object.assign(botaoDica.style, {
     background: "#fff",
-    color: "#555453ff",
-    border: "1px solid #555453ff",
+    color: "#C9A227",
+    border: "1px solid #C9A227",
   });
 
   botaoDica.addEventListener("click", async () => {
@@ -282,7 +298,21 @@ function criarBotoesFlutuantes() {
       botaoDica.textContent = "💡 Dicas Inteligentes";
       return;
     }
-    chrome.runtime.sendMessage({ action: "gerarDica", texto });
+    chrome.runtime.sendMessage({ action: "gerarDica", texto }, (response) => {
+      botaoDica.disabled = false;
+      botaoDica.textContent = "💡 Dicas Inteligentes";
+
+      if (chrome.runtime.lastError) {
+        alert("Erro de comunicação: " + chrome.runtime.lastError.message);
+        return;
+      }
+
+      if (response && response.dica) {
+        exibirDica(response.dica);
+      } else if (response && response.erro) {
+        alert("Erro ao gerar dica: " + response.erro);
+      }
+    });
   });
 
   // 4. Botão Mensagens (From HEAD)
@@ -292,8 +322,8 @@ function criarBotoesFlutuantes() {
   Object.assign(botaoMessages.style, estiloBotao);
   Object.assign(botaoMessages.style, {
     background: "#fff",
-    color: "#555453ff",
-    border: "1px solid #555453ff",
+    color: "#2F2F2F",
+    border: "1px solid #2F2F2F",
   });
 
   botaoMessages.addEventListener("click", () => {
@@ -302,10 +332,11 @@ function criarBotoesFlutuantes() {
 
 
   // Append All
-  container.appendChild(botaoDocs);
+  // Append All - Reordered as requested: Relatório (Top), Dica, Messages, Docs (Bottom)
   container.appendChild(botaoResumo);
   container.appendChild(botaoDica);
   container.appendChild(botaoMessages);
+  container.appendChild(botaoDocs);
 
   document.body.appendChild(container);
 }
@@ -390,195 +421,133 @@ function extrairProblemaDoResumo(resumoCompleto) {
 }
 
 // === FUNÇÃO DE EXIBIR O POPUP (RESUMO) - Auto-Save & Docs (From Feature) ===
-function exibirResumo(texto) {
+function exibirResumo(texto, tipo = "resumo") {
   const popupAntigo = document.getElementById("geminiResumoPopup");
   if (popupAntigo) popupAntigo.remove();
 
-  // 1. Analisar Humor
+  // 1. Analisar Humor (apenas se for resumo)
   let humorIcon = "";
-  const lowerText = texto.toLowerCase();
-
-  if (lowerText.includes("humor do cliente:")) {
-    const lines = texto.split("\n");
-    const humorLine = lines.find(l => l.toLowerCase().includes("humor do cliente:")) || "";
-    if (humorLine.match(/positivo|feliz|satisfeito|elogio/i)) humorIcon = "😊";
-    else if (humorLine.match(/negativo|irritado|insatisfeito|reclama/i)) humorIcon = "😡";
-    else if (humorLine.match(/neutro|normal|dúvida/i)) humorIcon = "😐";
+  if (tipo === "resumo") {
+    const lowerText = texto.toLowerCase();
+    if (lowerText.includes("humor do cliente:")) {
+      const lines = texto.split("\n");
+      const humorLine = lines.find(l => l.toLowerCase().includes("humor do cliente:")) || "";
+      if (humorLine.match(/positivo|feliz|satisfeito|elogio/i)) humorIcon = "😊";
+      else if (humorLine.match(/negativo|irritado|insatisfeito|reclama/i)) humorIcon = "😡";
+      else if (humorLine.match(/neutro|normal|dúvida/i)) humorIcon = "😐";
+    }
   }
 
-  // Tentar extrair um título sugerido para salvar automaticamente
-  let tituloSugerido = "Atendimento " + new Date().toLocaleString();
-  const tituloMatch = texto.match(/^(?:Título|Assunto):\s*(.+)$/m) || texto.match(/^(.+)$/m);
-  if (tituloMatch && tituloMatch[1].length < 100) {
-    tituloSugerido = tituloMatch[1].trim().replace(/\*\*/g, '');
-  }
+  const titulo = tipo === "solucao" ? "Solução Sugerida" : `Resumo Gerado ${humorIcon}`;
+
+  const conteudoFormatado = formatarResumoComNegrito(texto);
 
   const popup = document.createElement("div");
   popup.id = "geminiResumoPopup";
   popup.style = `
-    position:fixed;
-    bottom:130px;
-    right:20px;
-    z-index:999999;
-    background:#fff;
-    border:2px solid #4285F4;
-    border-radius:8px;
-    padding:16px;
-    width:380px;
-    max-height:600px;
-    overflow-y:auto;
-    box-shadow:0 4px 15px rgba(66,133,244,0.35);
-    font-family:Arial, sans-serif;
-    font-size:14px;
-    display:flex;
-    flex-direction:column;
-  `;
+  position:fixed;
+  bottom:130px;
+  right:20px;
+  z-index:999999;
+  background:#fff;
+  border:2px solid #4285F4; /* BORDA AZUL */
+  border-radius:8px;
+  padding:16px;
+  width:380px;
+  max-height:500px;
+  overflow-y:auto;
+  box-shadow:0 4px 15px rgba(66,133,244,0.35); /* SOMBRA AZUL */
+  font-family:Arial, sans-serif;
+  font-size:14px;
+  display:flex;
+  flex-direction:column;
+`;
+
 
   popup.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-      <b style="font-size:16px; color:#4285F4;">Resumo Gerado ${humorIcon}</b>
+      <b style="font-size:16px; color:#4285F4;">${titulo}</b>
       <button id="fecharResumoFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
     </div>
     
-    <div id="statusSalvar" style="
-        font-size:12px; color:#666; background:#f1f3f4; padding:5px; border-radius:4px; margin-bottom:10px; display:flex; align-items:center; gap:5px;
-    ">
-        <span>⏳</span> Salvando automaticamente na base...
-    </div>
-
-    <pre style="
-      white-space:pre-wrap;
-      padding: 10px;
+    <div id="conteudoResumo" style="
+      padding: 12px;
       background: #f9f9f9;
       border: 1px solid #eee;
       border-radius: 4px;
-      font-family: monospace;
+      font-family: Arial, sans-serif;
       flex: 1;
       overflow-y: auto;
       margin-bottom: 12px;
-      max-height: 300px; 
-    "></pre>
+      line-height: 1.5;
+    "></div>
 
     <div style="display:flex; gap:8px;">
       <button id="copiarResumoFlutuante" style="
-        flex: 1; padding: 8px; background: #fff;
-        color: #4285F4; border: 1px solid #4285F4; border-radius: 6px; cursor: pointer; font-weight:bold;
+        flex: 1; padding: 8px; background: #4285F4;
+        color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight:bold;
       ">📋 Copiar</button>
       
       <button id="exportarResumo" style="
         flex: 1; padding: 8px; background: #34A853;
         color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight:bold;
-      ">💾 Baixar .txt</button>
-      
-      <button id="btnSugerirDocs" style="
-        flex: 1; padding: 8px; background: #fbbc04;
-        color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight:bold;
-      ">📚 Docs Sugeridos</button>
-    </div>
-    
-    <div id="containerDocsSugeridos" style="
-        margin-top: 10px;
-        padding-top: 10px;
-        border-top: 1px solid #eee;
-        display: none;
-        flex-direction: column;
-        gap: 5px;
-    ">
-        <label style="font-size:12px; font-weight:bold; color:#555;">Documentação Sugerida:</label>
-        <div id="listaDocsSugeridos" style="max-height: 150px; overflow-y: auto;"></div>
+      ">💾 Salvar .txt</button>
     </div>
   `;
 
-  popup.querySelector("pre").innerText = texto;
+  popup.querySelector("#conteudoResumo").innerHTML = conteudoFormatado;
   document.body.appendChild(popup);
 
-  // Auto-Save Call
-  chrome.runtime.sendMessage({
-    action: "salvarResumo",
-    titulo: tituloSugerido,
-    conteudo: texto
-  }, (response) => {
-    const statusDiv = popup.querySelector("#statusSalvar");
-    if (response && response.sucesso) {
-      statusDiv.innerHTML = `<span style="color:green;">✅</span> Salvo como: <b>${tituloSugerido.substring(0, 25)}...</b>`;
-      statusDiv.style.background = "#e6f4ea";
-      statusDiv.style.color = "#137333";
-    } else {
-      statusDiv.innerHTML = `<span style="color:red;">❌</span> Erro ao salvar: ${response ? response.erro : "Desconhecido"}`;
-      statusDiv.style.background = "#fce8e6";
-      statusDiv.style.color = "#c5221f";
-    }
-  });
-
-  // Eventos UI
   popup.querySelector("#fecharResumoFlutuante").addEventListener("click", () => popup.remove());
 
   popup.querySelector("#copiarResumoFlutuante").addEventListener("click", () => {
-    navigator.clipboard.writeText(texto);
+    const textoParaCopiar = formatarResumoParaCopiar(texto);
+    navigator.clipboard.writeText(textoParaCopiar);
+
     const btn = popup.querySelector("#copiarResumoFlutuante");
     const original = btn.textContent;
     btn.textContent = "✅ Copiado!";
-    setTimeout(() => btn.textContent = original, 2000);
+    btn.style.background = "#34A853";
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.style.background = "#4285F4";
+    }, 2000);
   });
 
   popup.querySelector("#exportarResumo").addEventListener("click", () => {
-    const blob = new Blob([texto], { type: "text/plain" });
+    const textoFormatado = formatarResumoParaCopiar(texto);
+    const blob = new Blob([textoFormatado], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `resumo-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `resumo-atendimento-${new Date().toISOString().slice(0, 10)}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   });
-
-  // 💾 Busca única de documentações (só executa uma vez)
-  let jaCarregouDocs = false;
-
-  popup.querySelector("#btnSugerirDocs").addEventListener("click", () => {
-    const btn = popup.querySelector("#btnSugerirDocs");
-    const container = popup.querySelector("#containerDocsSugeridos");
-    const lista = popup.querySelector("#listaDocsSugeridos");
-
-    // Se já carregou, não faz nada (botão fica desabilitado)
-    if (jaCarregouDocs) return;
-
-    btn.disabled = true;
-    btn.textContent = "⌛ Buscando...";
-    container.style.display = "flex";
-    lista.innerHTML = "<div style='color:#666; font-style:italic;'>Analisando resumo e buscando docs...</div>";
-
-    // Extrai apenas o problema/dúvida do resumo completo
-    const apenasProblema = extrairProblemaDoResumo(texto);
-
-    console.log("📤 Enviando para /documentacoes (apenas problema):", apenasProblema);
-
-    chrome.runtime.sendMessage({ action: "sugerirDocumentacao", resumo: apenasProblema }, (resp) => {
-      jaCarregouDocs = true;
-      btn.textContent = "✅ Documentação Carregada";
-      // Mantém botão desabilitado após carregar
-
-      lista.innerHTML = "";
-      if (resp && resp.sucesso && resp.docs && resp.docs.length > 0) {
-        resp.docs.forEach(doc => {
-          const item = document.createElement("div");
-          item.style = "background:#f9f9f9; padding:8px; border:1px solid #eee; border-radius:4px; font-size:12px; margin-bottom:5px;";
-          const titulo = (doc.metadata && doc.metadata.title) ? doc.metadata.title : "Documento Oficial";
-          const snippet = doc.content || "";
-
-          item.innerHTML = `
-                    <div style="font-weight:bold; color:#1a73e8; margin-bottom:2px;">${titulo}</div>
-                    <div style="color:#333;">${snippet}</div>
-                `;
-          lista.appendChild(item);
-        });
-      } else {
-        lista.innerHTML = "<div style='color:#999;'>Nenhuma documentação relevante encontrada para este resumo.</div>";
-      }
-    });
-  });
 }
+function formatarResumoComNegrito(texto) {
+  let html = texto
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(\*\*[A-ZÁÉÍÓÚÃÕÇ\/\s]+\*\*)/g, '<br><br>$1<br>')
+    .replace(/\n/g, '<br>')
+    .replace(/^<br><br>/, '');
+
+  return html;
+}
+
+function formatarResumoParaCopiar(texto) {
+  let formatado = texto.replace(/\*\*/g, '');
+
+  formatado = formatado.replace(/([A-ZÁÉÍÓÚÃÕÇ\/\s]+:)(\s*)/g, '\n\n$1 ');
+  formatado = formatado.replace(/^\s+|\s+$/g, '');
+  formatado = formatado.replace(/\n{3,}/g, '\n\n');
+  formatado = formatado.replace(/^\n+/, '');
+
+  return formatado.trim();
+}
+
 
 
 // === FUNÇÃO DE EXIBIR DICA (From HEAD) ===
@@ -784,12 +753,12 @@ function carregarEMostrarMensagens() {
 }
 
 function criarAcordeon(titulo, aberto = true, id = "") {
-    const container = document.createElement("div");
-    container.id = id;
-    container.style = "margin-bottom: 10px;";
-    
-    const header = document.createElement("div");
-    header.style = `
+  const container = document.createElement("div");
+  container.id = id;
+  container.style = "margin-bottom: 10px;";
+
+  const header = document.createElement("div");
+  header.style = `
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -804,14 +773,14 @@ function criarAcordeon(titulo, aberto = true, id = "") {
         color: #334155;
         transition: background 0.2s;
     `;
-    
-    header.innerHTML = `
+
+  header.innerHTML = `
         <span>${titulo}</span>
         <span style="font-size: 18px; transition: transform 0.3s;">${aberto ? '−' : '+'}</span>
     `;
-    
-    const content = document.createElement("div");
-    content.style = `
+
+  const content = document.createElement("div");
+  content.style = `
         border: 1px solid #e2e8f0;
         border-top: none;
         border-radius: 0 0 6px 6px;
@@ -822,62 +791,62 @@ function criarAcordeon(titulo, aberto = true, id = "") {
         transition: all 0.3s ease;
         margin-top: ${aberto ? '0' : '-1px'};
     `;
-    
-    if (aberto) {
-        content.style.padding = '15px 15px 5px 15px';
-        content.style.borderTop = 'none';
+
+  if (aberto) {
+    content.style.padding = '15px 15px 5px 15px';
+    content.style.borderTop = 'none';
+  } else {
+    content.style.padding = '0';
+    content.style.border = 'none';
+  }
+
+  let isOpen = aberto;
+
+  function toggleAcordeon() {
+    isOpen = !isOpen;
+
+    const icon = header.querySelector('span:last-child');
+    icon.textContent = isOpen ? '−' : '+';
+
+    header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
+    header.style.borderRadius = isOpen ? '6px 6px 0 0' : '6px';
+
+    if (isOpen) {
+      content.style.padding = '15px 15px 5px 15px';
+      content.style.maxHeight = 'none';
+      content.style.overflow = 'visible';
+      content.style.opacity = '1';
+      content.style.border = '1px solid #e2e8f0';
+      content.style.borderTop = 'none';
+      content.style.marginTop = '0';
     } else {
-        content.style.padding = '0';
-        content.style.border = 'none';
+      content.style.padding = '0';
+      content.style.maxHeight = '0';
+      content.style.overflow = 'hidden';
+      content.style.opacity = '0';
+      content.style.border = 'none';
+      content.style.marginTop = '-1px';
     }
-    
-    let isOpen = aberto;
-    
-    function toggleAcordeon() {
-        isOpen = !isOpen;
-        
-        const icon = header.querySelector('span:last-child');
-        icon.textContent = isOpen ? '−' : '+';
-        
-        header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
-        header.style.borderRadius = isOpen ? '6px 6px 0 0' : '6px';
-        
-        if (isOpen) {
-            content.style.padding = '15px 15px 5px 15px';
-            content.style.maxHeight = 'none';
-            content.style.overflow = 'visible';
-            content.style.opacity = '1';
-            content.style.border = '1px solid #e2e8f0';
-            content.style.borderTop = 'none';
-            content.style.marginTop = '0';
-        } else {
-            content.style.padding = '0';
-            content.style.maxHeight = '0';
-            content.style.overflow = 'hidden';
-            content.style.opacity = '0';
-            content.style.border = 'none';
-            content.style.marginTop = '-1px';
-        }
-    }
-    
-    header.addEventListener('click', toggleAcordeon);
-    
-    header.addEventListener('mouseenter', () => {
-        header.style.background = isOpen ? '#e2e8f0' : '#f1f5f9';
-    });
-    
-    header.addEventListener('mouseleave', () => {
-        header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
-    });
-    
-    container.appendChild(header);
-    container.appendChild(content);
-    
-    return {
-        container: container,
-        content: content,
-        toggle: toggleAcordeon
-    };
+  }
+
+  header.addEventListener('click', toggleAcordeon);
+
+  header.addEventListener('mouseenter', () => {
+    header.style.background = isOpen ? '#e2e8f0' : '#f1f5f9';
+  });
+
+  header.addEventListener('mouseleave', () => {
+    header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
+  });
+
+  container.appendChild(header);
+  container.appendChild(content);
+
+  return {
+    container: container,
+    content: content,
+    toggle: toggleAcordeon
+  };
 }
 
 function criarCardMensagemPopup(text, isCustom, index, customMessagesList) {

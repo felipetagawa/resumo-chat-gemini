@@ -17,7 +17,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // === 1. GERAR RESUMO ===
   if (request.action === "gerarResumo") {
-    (async () => {
+    const handleGerarResumo = async () => {
       try {
         const { texto } = request;
         const storageData = await chrome.storage.local.get(["customInstructions", "history"]);
@@ -45,8 +45,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           return;
         }
 
-        // Salvar localmente no histórico
-        const novoItem = { timestamp: Date.now(), summary: json.resumo };
+        // Salvar localmente no histórico. API agora retorna 'summary' ou 'resumo'.
+        const resumoTexto = json.summary || json.resumo;
+
+        const novoItem = { timestamp: Date.now(), summary: resumoTexto };
         const history = storageData.history || [];
         history.push(novoItem);
         if (history.length > 20) history.shift();
@@ -54,19 +56,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         // Enviar sucesso
         if (sender.tab) {
-          chrome.tabs.sendMessage(sender.tab.id, { action: "exibirResumo", resumo: json.resumo });
+          // Mantemos a chave 'resumo' na mensagem para compatibilidade com content.js
+          chrome.tabs.sendMessage(sender.tab.id, { action: "exibirResumo", resumo: resumoTexto });
+          sendResponse({ success: true, resumo: resumoTexto }); // Close the callback without confusing the flow
         } else {
-          sendResponse({ resumo: json.resumo });
+          sendResponse({ resumo: resumoTexto });
         }
 
       } catch (err) {
         if (sender.tab) {
-          chrome.tabs.sendMessage(sender.tab.id, { action: "exibirErro", erro: "Erro na comunicação: " + err.message });
-        } else {
-          sendResponse({ erro: "Erro: " + err.message });
+          chrome.tabs.sendMessage(sender.tab.id, { action: "exibirErro", erro: "Erro: " + err.message });
         }
+        sendResponse({ erro: "Erro: " + err.message });
       }
-    })();
+    };
+    handleGerarResumo();
     return true; // Keep channel open
   }
 
@@ -75,21 +79,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const { texto } = request;
 
     const enviarRespostaDica = (data) => {
-      if (sender.tab) {
-        if (data.dica) {
-          chrome.tabs.sendMessage(sender.tab.id, {
-            action: "exibirDica",
-            dica: data.dica
-          });
-        } else if (data.erro) {
-          chrome.tabs.sendMessage(sender.tab.id, {
-            action: "exibirErro",
-            erro: data.erro
-          });
-        }
-      } else {
-        sendResponse(data);
-      }
+      sendResponse(data);
     };
 
     (async () => {
@@ -143,52 +133,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  // === 4. SALVAR RESUMO COMO SOLUÇÃO (Manual Save) ===
-  if (request.action === "salvarResumo") {
-    (async () => {
-      try {
-        const { titulo, conteudo } = request;
-        const resp = await fetch(`${API_BASE_URL}/api/gemini/salvar`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ titulo, conteudo })
-        });
-
-        if (!resp.ok) throw new Error(`Erro ao salvar (${resp.status})`);
-
-        // Se a API retornar JSON, podemos ler, mas o importante é o status 200
-        const data = await resp.json().catch(() => ({}));
-        sendResponse({ sucesso: true, data });
-      } catch (err) {
-        console.error("Erro salvarResumo:", err);
-        sendResponse({ sucesso: false, erro: err.toString() });
-      }
-    })();
-    return true;
-  }
-
-  // === 5. SUGERIR DOCUMENTAÇÃO (Debug Endpoint) ===
-  if (request.action === "sugerirDocumentacao") {
-    (async () => {
-      try {
-        const { resumo } = request;
-
-        const resp = await fetch(`${API_BASE_URL}/api/gemini/documentacoes`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ resumo })
-        });
-
-        if (!resp.ok) throw new Error(`Erro na API (${resp.status})`);
-
-        const data = await resp.json();
-        // Endpoint novo retorna: { documentacoesSugeridas: [...] }
-        sendResponse({ sucesso: true, docs: data.documentacoesSugeridas || [] });
-      } catch (err) {
-        console.error("Erro sugerirDocumentacao:", err);
-        sendResponse({ sucesso: false, erro: err.toString() });
-      }
-    })();
-    return true;
-  }
 });
