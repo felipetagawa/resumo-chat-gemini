@@ -338,6 +338,57 @@ function capturarTextoChat() {
 }
 
 
+// === FUNÇÃO AUXILIAR: EXTRAIR PROBLEMA DO RESUMO ===
+function extrairProblemaDoResumo(resumoCompleto) {
+  // Tenta extrair apenas a seção de problema/dúvida do resumo
+  const linhas = resumoCompleto.split('\n');
+  let problema = '';
+  let capturando = false;
+
+  // Palavras-chave que indicam início da seção de problema
+  const inicioPalavrasChave = [
+    'problema:', 'dúvida:', 'questão:', 'issue:', 'erro:',
+    'situação:', 'contexto:', 'descrição:', 'relato:'
+  ];
+
+  // Palavras-chave que indicam fim da seção de problema (início de solução)
+  const fimPalavrasChave = [
+    'solução:', 'resolução:', 'resposta:', 'solution:',
+    'correção:', 'procedimento:', 'passos:', 'como resolver:'
+  ];
+
+  for (let linha of linhas) {
+    const linhaLower = linha.toLowerCase().trim();
+
+    // Verifica se é início da seção de problema
+    if (inicioPalavrasChave.some(kw => linhaLower.startsWith(kw))) {
+      capturando = true;
+      problema += linha + '\n';
+      continue;
+    }
+
+    // Verifica se chegou na seção de solução (para de capturar)
+    if (fimPalavrasChave.some(kw => linhaLower.startsWith(kw))) {
+      break;
+    }
+
+    // Se está capturando e a linha não está vazia, adiciona
+    if (capturando && linha.trim()) {
+      problema += linha + '\n';
+    }
+  }
+
+  // Se não encontrou seção específica, tenta pegar os primeiros parágrafos
+  if (!problema.trim()) {
+    const primeirosParagrafos = linhas.slice(0, Math.min(10, linhas.length));
+    problema = primeirosParagrafos
+      .filter(l => l.trim())
+      .join('\n');
+  }
+
+  return problema.trim() || resumoCompleto;
+}
+
 // === FUNÇÃO DE EXIBIR O POPUP (RESUMO) - Auto-Save & Docs (From Feature) ===
 function exibirResumo(texto) {
   const popupAntigo = document.getElementById("geminiResumoPopup");
@@ -498,7 +549,12 @@ function exibirResumo(texto) {
     container.style.display = "flex";
     lista.innerHTML = "<div style='color:#666; font-style:italic;'>Analisando resumo e buscando docs...</div>";
 
-    chrome.runtime.sendMessage({ action: "sugerirDocumentacao", resumo: texto }, (resp) => {
+    // Extrai apenas o problema/dúvida do resumo completo
+    const apenasProblema = extrairProblemaDoResumo(texto);
+
+    console.log("📤 Enviando para /documentacoes (apenas problema):", apenasProblema);
+
+    chrome.runtime.sendMessage({ action: "sugerirDocumentacao", resumo: apenasProblema }, (resp) => {
       jaCarregouDocs = true;
       btn.textContent = "✅ Documentação Carregada";
       // Mantém botão desabilitado após carregar
