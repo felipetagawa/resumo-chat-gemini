@@ -702,11 +702,11 @@ function criarAcordeon(titulo, aberto = true, id = "") {
         border-top: none;
         border-radius: 0 0 6px 6px;
         background: white;
-        max-height: ${aberto ? '1000px' : '0'};
-        overflow: hidden;
+        max-height: ${aberto ? 'none' : '0'};
+        overflow: ${aberto ? 'visible' : 'hidden'};
         opacity: ${aberto ? '1' : '0'};
         transition: all 0.3s ease;
-        margin-top: ${aberto ? '0' : '-1px'}; /* Corrige o espaçamento quando fechado */
+        margin-top: ${aberto ? '0' : '-1px'};
     `;
     
     if (aberto) {
@@ -730,7 +730,8 @@ function criarAcordeon(titulo, aberto = true, id = "") {
         
         if (isOpen) {
             content.style.padding = '15px 15px 5px 15px';
-            content.style.maxHeight = '1000px';
+            content.style.maxHeight = 'none';
+            content.style.overflow = 'visible';
             content.style.opacity = '1';
             content.style.border = '1px solid #e2e8f0';
             content.style.borderTop = 'none';
@@ -738,6 +739,7 @@ function criarAcordeon(titulo, aberto = true, id = "") {
         } else {
             content.style.padding = '0';
             content.style.maxHeight = '0';
+            content.style.overflow = 'hidden';
             content.style.opacity = '0';
             content.style.border = 'none';
             content.style.marginTop = '-1px';
