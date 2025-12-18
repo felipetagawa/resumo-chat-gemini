@@ -781,19 +781,15 @@ function carregarEMostrarMensagens() {
         `;
     container.appendChild(instructions);
   });
-
-
-
-
 }
 
 function criarAcordeon(titulo, aberto = true, id = "") {
-  const container = document.createElement("div");
-  container.id = id;
-  container.style = "margin-bottom: 10px;";
-
-  const header = document.createElement("div");
-  header.style = `
+    const container = document.createElement("div");
+    container.id = id;
+    container.style = "margin-bottom: 10px;";
+    
+    const header = document.createElement("div");
+    header.style = `
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -808,78 +804,80 @@ function criarAcordeon(titulo, aberto = true, id = "") {
         color: #334155;
         transition: background 0.2s;
     `;
-
-  header.innerHTML = `
+    
+    header.innerHTML = `
         <span>${titulo}</span>
         <span style="font-size: 18px; transition: transform 0.3s;">${aberto ? '−' : '+'}</span>
     `;
-
-  const content = document.createElement("div");
-  content.style = `
+    
+    const content = document.createElement("div");
+    content.style = `
         border: 1px solid #e2e8f0;
         border-top: none;
         border-radius: 0 0 6px 6px;
         background: white;
-        max-height: ${aberto ? '1000px' : '0'};
-        overflow: hidden;
+        max-height: ${aberto ? 'none' : '0'};
+        overflow: ${aberto ? 'visible' : 'hidden'};
         opacity: ${aberto ? '1' : '0'};
         transition: all 0.3s ease;
-        margin-top: ${aberto ? '0' : '-1px'}; /* Corrige o espaçamento quando fechado */
+        margin-top: ${aberto ? '0' : '-1px'};
     `;
-
-  if (aberto) {
-    content.style.padding = '15px 15px 5px 15px';
-    content.style.borderTop = 'none';
-  } else {
-    content.style.padding = '0';
-    content.style.border = 'none';
-  }
-
-  let isOpen = aberto;
-
-  function toggleAcordeon() {
-    isOpen = !isOpen;
-
-    const icon = header.querySelector('span:last-child');
-    icon.textContent = isOpen ? '−' : '+';
-
-    header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
-    header.style.borderRadius = isOpen ? '6px 6px 0 0' : '6px';
-
-    if (isOpen) {
-      content.style.padding = '15px 15px 5px 15px';
-      content.style.maxHeight = '1000px';
-      content.style.opacity = '1';
-      content.style.border = '1px solid #e2e8f0';
-      content.style.borderTop = 'none';
-      content.style.marginTop = '0';
+    
+    if (aberto) {
+        content.style.padding = '15px 15px 5px 15px';
+        content.style.borderTop = 'none';
     } else {
-      content.style.padding = '0';
-      content.style.maxHeight = '0';
-      content.style.opacity = '0';
-      content.style.border = 'none';
-      content.style.marginTop = '-1px';
+        content.style.padding = '0';
+        content.style.border = 'none';
     }
-  }
-
-  header.addEventListener('click', toggleAcordeon);
-
-  header.addEventListener('mouseenter', () => {
-    header.style.background = isOpen ? '#e2e8f0' : '#f1f5f9';
-  });
-
-  header.addEventListener('mouseleave', () => {
-    header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
-  });
-
-  container.appendChild(header);
-  container.appendChild(content);
-
-  return {
-    container: container,
-    content: content,
-    toggle: toggleAcordeon
-  };
+    
+    let isOpen = aberto;
+    
+    function toggleAcordeon() {
+        isOpen = !isOpen;
+        
+        const icon = header.querySelector('span:last-child');
+        icon.textContent = isOpen ? '−' : '+';
+        
+        header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
+        header.style.borderRadius = isOpen ? '6px 6px 0 0' : '6px';
+        
+        if (isOpen) {
+            content.style.padding = '15px 15px 5px 15px';
+            content.style.maxHeight = 'none';
+            content.style.overflow = 'visible';
+            content.style.opacity = '1';
+            content.style.border = '1px solid #e2e8f0';
+            content.style.borderTop = 'none';
+            content.style.marginTop = '0';
+        } else {
+            content.style.padding = '0';
+            content.style.maxHeight = '0';
+            content.style.overflow = 'hidden';
+            content.style.opacity = '0';
+            content.style.border = 'none';
+            content.style.marginTop = '-1px';
+        }
+    }
+    
+    header.addEventListener('click', toggleAcordeon);
+    
+    header.addEventListener('mouseenter', () => {
+        header.style.background = isOpen ? '#e2e8f0' : '#f1f5f9';
+    });
+    
+    header.addEventListener('mouseleave', () => {
+        header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
+    });
+    
+    container.appendChild(header);
+    container.appendChild(content);
+    
+    return {
+        container: container,
+        content: content,
+        toggle: toggleAcordeon
+    };
 }
 
 function criarCardMensagemPopup(text, isCustom, index, customMessagesList) {
