@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "https://gemini-resumo-298442462030.southamerica-east1.run.app";
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const responder = (data) => {
