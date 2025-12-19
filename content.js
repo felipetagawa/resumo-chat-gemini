@@ -168,6 +168,11 @@ setInterval(() => {
 
   if (urlAtualCorreta && !botoesExistem) {
     criarBotoesFlutuantes();
+  } else if (urlAtualCorreta) {
+    // Check for notifications if we are on the correct URL
+    if (typeof verificarNotificacoesChat === 'function') {
+      verificarNotificacoesChat();
+    }
   } else if (!urlAtualCorreta && botoesExistem) {
     botoesExistem.remove();
     const popup = document.getElementById("geminiResumoPopup");
@@ -184,6 +189,150 @@ setInterval(() => {
 function criarBotoesFlutuantes() {
   if (document.getElementById("containerBotoesGemini")) return;
 
+  // Injetar estilos CSS para os botões
+  if (!document.getElementById("gemini-styles")) {
+    const style = document.createElement("style");
+    style.id = "gemini-styles";
+    style.textContent = `
+      @keyframes gradient-shift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes fadeOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+
+      .gemini-floating-btn {
+        position: relative;
+        background: #ffffff;
+        color: #3c4043;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 14px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 500;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 190px;
+        text-align: left;
+        margin-bottom: 8px;
+        background-clip: padding-box;
+      }
+
+      .gemini-floating-btn::before {
+        content: '';
+        position: absolute;
+        top: -2px; left: -2px; right: -2px; bottom: -2px;
+        background: linear-gradient(90deg, #0ea5e9, #3b82f6, #6366f1, #8b5cf6, #0ea5e9);
+        background-size: 300% 300%;
+        border-radius: 8px;
+        z-index: -1;
+        animation: gradient-shift 4s ease infinite;
+        opacity: 0.8;
+      }
+
+      .gemini-floating-btn:hover {
+        background: #f8f9fa;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+        transform: translateY(-2px);
+      }
+
+      .gemini-floating-btn:hover::before {
+        animation: gradient-shift 2s ease infinite;
+        opacity: 1;
+      }
+
+      .gemini-floating-btn .icon {
+        font-size: 16px;
+        min-width: 20px;
+        text-align: center;
+      }
+
+      /* Agenda Modal Styles */
+      #geminiAgendaModal {
+        position: fixed;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 800px; height: 600px;
+        background: white;
+        z-index: 1000000;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        display: flex; flex-direction: column;
+        font-family: 'Segoe UI', sans-serif;
+        border: 1px solid #dadce0;
+      }
+
+      .agenda-header {
+        background: #f8f9fa;
+        padding: 15px 20px;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex; justify-content: space-between; align-items: center;
+        border-radius: 12px 12px 0 0;
+      }
+
+      .agenda-tabs {
+        display: flex; gap: 10px; padding: 10px 20px;
+        background: #fff; border-bottom: 1px solid #e0e0e0;
+      }
+
+      .agenda-tab {
+        padding: 8px 16px; border-radius: 20px;
+        cursor: pointer; background: #f1f3f4;
+        color: #555; font-weight: 500; transition: all 0.2s;
+        font-size: 13px;
+      }
+
+      .agenda-tab:hover { background: #e2e6ea; }
+      .agenda-tab.active { background: #e8f0fe; color: #1a73e8; font-weight: 600; }
+
+      .agenda-body {
+        flex: 1; overflow-y: auto; padding: 20px; background: #fff;
+        border-radius: 0 0 12px 12px;
+      }
+
+      /* Calendar Styles */
+      .calendar-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+      .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+      .calendar-day-header { font-weight: bold; text-align: center; color: #777; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; }
+      .calendar-day {
+        border: 1px solid #eee; min-height: 80px; padding: 6px; border-radius: 6px;
+        cursor: pointer; transition: background 0.2s; position: relative;
+      }
+      .calendar-day:hover { background: #f9f9f9; border-color: #ddd; }
+      .calendar-day.today { border-color: #1a73e8; background: #f0f7ff; }
+      .day-number { font-size: 12px; color: #555; font-weight: 600; margin-bottom: 4px; display: block; text-align: right; }
+      .event-marker {
+        display: block; background: #e8f0fe; color: #1a73e8;
+        font-size: 10px; padding: 2px 4px; border-radius: 3px;
+        margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+
+      /* CRM Styles */
+      .crm-controls { margin-bottom: 20px; display: flex; gap: 10px; }
+      .crm-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      .crm-table th { text-align: left; padding: 12px; border-bottom: 2px solid #eee; color: #444; font-weight: 600; }
+      .crm-table td { padding: 12px; border-bottom: 1px solid #eee; color: #333; }
+      .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+      .status-pending { background: #fff3e0; color: #e65100; }
+      .status-resolved { background: #e6fffa; color: #00695c; }
+      .action-btn { border: none; background: none; cursor: pointer; opacity: 0.6; transition: opacity 0.2s; font-size: 16px; margin-right: 8px; }
+      .action-btn:hover { opacity: 1; }
+    `;
+    document.head.appendChild(style);
+  }
+
   const container = document.createElement("div");
   container.id = "containerBotoesGemini";
   Object.assign(container.style, {
@@ -193,59 +342,39 @@ function criarBotoesFlutuantes() {
     zIndex: "999998",
     display: "flex",
     flexDirection: "column",
-    gap: "8px"
+    gap: "0" // Gap handled by margin-bottom in CSS
   });
 
-  const estiloBotao = {
-    background: "#fff",
-    color: "#333",
-    border: "1px solid #ccc",
-    borderRadius: "8px",
-    padding: "10px 16px",
-    fontSize: "14px",
-    cursor: "pointer",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-    textAlign: "left"
+  const createButton = (id, text, icon, onClick) => {
+    const btn = document.createElement("button");
+    btn.id = id;
+    btn.className = "gemini-floating-btn";
+    btn.innerHTML = `<span class="icon">${icon}</span> ${text}`;
+    btn.addEventListener("click", onClick);
+    return btn;
   };
 
-  const botaoDocs = document.createElement("button");
-  botaoDocs.id = "btnConsultarDocs";
-  botaoDocs.textContent = "📚 Consultar Docs";
-  Object.assign(botaoDocs.style, estiloBotao);
-  Object.assign(botaoDocs.style, {
-    background: "#fff",
-    color: "#d93025",
-    border: "1px solid #d93025",
-  });
-
-  botaoDocs.addEventListener("click", () => {
+  // Botão Docs
+  const botaoDocs = createButton("btnConsultarDocs", "Consultar Docs", "📚", () => {
     exibirPainelConsultaDocs();
   });
 
-  const botaoResumo = document.createElement("button");
-  botaoResumo.id = "btnResumoGemini";
-  botaoResumo.textContent = "🧠 Gerar Relatório";
-  Object.assign(botaoResumo.style, estiloBotao);
-  Object.assign(botaoResumo.style, {
-    background: "#fff",
-    color: "#4285F4",
-    border: "1px solid #4285F4",
-  });
-
-  botaoResumo.addEventListener("click", async () => {
-    botaoResumo.disabled = true;
-    botaoResumo.textContent = "⏳ Gerando resumo...";
+  // Botão Resumo
+  const botaoResumo = createButton("btnResumoGemini", "Gerar Relatório", "🧠", async () => {
+    const btn = document.getElementById("btnResumoGemini");
+    btn.disabled = true;
+    btn.innerHTML = `<span class="icon">⏳</span> Gerando...`;
 
     const texto = capturarTextoChat();
     if (!texto) {
       alert("Não foi possível capturar o texto do chat.");
-      botaoResumo.disabled = false;
-      botaoResumo.textContent = "🧠 Gerar Relatório";
+      btn.disabled = false;
+      btn.innerHTML = `<span class="icon">🧠</span> Gerar Relatório`;
       return;
     }
     chrome.runtime.sendMessage({ action: "gerarResumo", texto }, (response) => {
-      botaoResumo.disabled = false;
-      botaoResumo.textContent = "🧠 Gerar Relatório";
+      btn.disabled = false;
+      btn.innerHTML = `<span class="icon">🧠</span> Gerar Relatório`;
 
       if (chrome.runtime.lastError) {
         alert("Erro de comunicação: " + chrome.runtime.lastError.message);
@@ -260,30 +389,22 @@ function criarBotoesFlutuantes() {
     });
   });
 
-  const botaoDica = document.createElement("button");
-  botaoDica.id = "btnDica";
-  botaoDica.textContent = "💡 Dicas Inteligentes";
-  Object.assign(botaoDica.style, estiloBotao);
-  Object.assign(botaoDica.style, {
-    background: "#fff",
-    color: "#C9A227",
-    border: "1px solid #C9A227",
-  });
-
-  botaoDica.addEventListener("click", async () => {
-    botaoDica.disabled = true;
-    botaoDica.textContent = "⏳ Pensando...";
+  // Botão Dica
+  const botaoDica = createButton("btnDica", "Dicas Inteligentes", "💡", async () => {
+    const btn = document.getElementById("btnDica");
+    btn.disabled = true;
+    btn.innerHTML = `<span class="icon">⏳</span> Pensando...`;
 
     const texto = capturarTextoChat();
     if (!texto) {
       alert("Não foi possível capturar o texto do chat.");
-      botaoDica.disabled = false;
-      botaoDica.textContent = "💡 Dicas Inteligentes";
+      btn.disabled = false;
+      btn.innerHTML = `<span class="icon">💡</span> Dicas Inteligentes`;
       return;
     }
     chrome.runtime.sendMessage({ action: "gerarDica", texto }, (response) => {
-      botaoDica.disabled = false;
-      botaoDica.textContent = "💡 Dicas Inteligentes";
+      btn.disabled = false;
+      btn.innerHTML = `<span class="icon">💡</span> Dicas Inteligentes`;
 
       if (chrome.runtime.lastError) {
         alert("Erro de comunicação: " + chrome.runtime.lastError.message);
@@ -298,23 +419,22 @@ function criarBotoesFlutuantes() {
     });
   });
 
-  const botaoMessages = document.createElement("button");
-  botaoMessages.id = "btnMessages";
-  botaoMessages.textContent = "💬 Mensagens Padrão";
-  Object.assign(botaoMessages.style, estiloBotao);
-  Object.assign(botaoMessages.style, {
-    background: "#fff",
-    color: "#2F2F2F",
-    border: "1px solid #2F2F2F",
+  // Botão Mensagens
+  const botaoMessages = createButton("btnMessages", "Mensagens Padrão", "💬", () => {
+    mostrarPopupMensagens();
   });
 
-  botaoMessages.addEventListener("click", () => {
-    mostrarPopupMensagens();
+  // Botão Agenda
+  const botaoAgenda = createButton("btnAgenda", "Agenda & Gestão", "📅", () => {
+    if (typeof exibirAgenda === 'function') {
+      exibirAgenda();
+    }
   });
 
   container.appendChild(botaoResumo);
   container.appendChild(botaoDica);
   container.appendChild(botaoMessages);
+  container.appendChild(botaoAgenda);
   container.appendChild(botaoDocs);
 
   document.body.appendChild(container);
@@ -416,14 +536,14 @@ function exibirResumo(texto, tipo = "resumo") {
   right:20px;
   z-index:999999;
   background:#fff;
-  border:2px solid #4285F4;
+  border:1px solid #dadce0;
   border-radius:8px;
   padding:16px;
   width:380px;
   max-height:500px;
   overflow-y:auto;
-  box-shadow:0 4px 15px rgba(66,133,244,0.35);
-  font-family:Arial, sans-serif;
+  box-shadow:0 4px 15px rgba(0,0,0,0.15);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-size:14px;
   display:flex;
   flex-direction:column;
@@ -431,7 +551,7 @@ function exibirResumo(texto, tipo = "resumo") {
 
   popup.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-      <b style="font-size:16px; color:#4285F4;">${titulo}</b>
+      <b style="font-size:16px; color:#3c4043;">${titulo}</b>
       <button id="fecharResumoFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
     </div>
     
@@ -440,22 +560,23 @@ function exibirResumo(texto, tipo = "resumo") {
       background: #f9f9f9;
       border: 1px solid #eee;
       border-radius: 4px;
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', sans-serif;
       flex: 1;
       overflow-y: auto;
       margin-bottom: 12px;
       line-height: 1.5;
+      color: #333;
     "></div>
 
     <div style="display:flex; gap:8px;">
       <button id="copiarResumoFlutuante" style="
-        flex: 1; padding: 8px; background: #4285F4;
-        color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight:bold;
+        flex: 1; padding: 8px; background: #fff;
+        color: #3c4043; border: 1px solid #dadce0; border-radius: 6px; cursor: pointer; font-weight:500; font-family: 'Segoe UI', sans-serif;
       ">📋 Copiar</button>
       
       <button id="exportarResumo" style="
-        flex: 1; padding: 8px; background: #34A853;
-        color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight:bold;
+        flex: 1; padding: 8px; background: #fff;
+        color: #3c4043; border: 1px solid #dadce0; border-radius: 6px; cursor: pointer; font-weight:500; font-family: 'Segoe UI', sans-serif;
       ">💾 Salvar .txt</button>
     </div>
   `;
@@ -563,14 +684,14 @@ function exibirDica(dicaData) {
     right:20px;
     z-index:999999;
     background:#fff;
-    border:2px solid #e08002;
+    border:1px solid #dadce0;
     border-radius:8px;
     padding:16px;
     width:400px;
     max-height:500px;
     overflow-y:auto;
-    box-shadow:0 4px 15px rgba(224,128,2,0.35);
-    font-family:Arial, sans-serif;
+    box-shadow:0 4px 15px rgba(0,0,0,0.15);
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 14px;
     display: flex;
     flex-direction: column;
@@ -578,21 +699,22 @@ function exibirDica(dicaData) {
 
   popup.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-      <b style="font-size:16px; color:#B06000;">💡 Dicas Inteligentes</b>
-      <button id="fecharDicaFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer; color:#B06000;">&times;</button>
+      <b style="font-size:16px; color:#3c4043;">💡 Dicas Inteligentes</b>
+      <button id="fecharDicaFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer; color:#5f6368;">&times;</button>
     </div>
     
     <div id="conteudoDica" style="
       padding: 10px;
-      background: #FEF7E0;
-      border: 1px solid #f1d7a1;
+      background: #f8f9fa;
+      border: 1px solid #eee;
       border-radius: 4px;
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', sans-serif;
       flex: 1;
       overflow-y: auto;
       margin-bottom: 12px;
       white-space: pre-wrap;
       line-height: 1.4;
+      color: #333;
     "></div>
   `;
 
@@ -1102,4 +1224,373 @@ function exibirPainelConsultaDocs() {
   });
 
   setTimeout(() => inputBusca.focus(), 100);
+}
+
+function exibirNotas() {
+  // Deprecated - merging into exibirAgenda in this update
+}
+
+// --- Notification System ---
+let lastCheckedClientName = "";
+
+function verificarNotificacoesChat() {
+  // Tries to identify the potential client header in the page
+  const headerSelectors = [
+    // Standard headers often used in varied chat layouts or material designs
+    "header .truncate",
+    ".conversation-header .name",
+    ".room-name",
+    ".chat-header .title",
+    // Fallback attempts
+    "h1",
+    "h2",
+    ".v-toolbar__title",
+    ".item-title"
+  ];
+
+  let headerElement = null;
+  for (const sel of headerSelectors) {
+    const el = document.querySelector(sel);
+    if (el && el.innerText.trim()) {
+      headerElement = el;
+      break;
+    }
+  }
+
+  if (!headerElement) return;
+
+  const currentClientName = headerElement.innerText.trim();
+
+  // Simple debounce/check to avoid spamming logic
+  if (currentClientName && currentClientName !== lastCheckedClientName) {
+    lastCheckedClientName = currentClientName;
+    checkAndShowNotification(currentClientName);
+  }
+}
+
+function checkAndShowNotification(clientName) {
+  chrome.storage.local.get(["usuarioAgendaCRM"], (data) => {
+    const atendimentos = data.usuarioAgendaCRM || [];
+    const target = clientName.toLowerCase();
+
+    // Find pending items for this client
+    const matches = atendimentos.filter(a =>
+      a.cliente && a.cliente.toLowerCase().includes(target) &&
+      a.status !== 'resolvido'
+    );
+
+    if (matches.length > 0) {
+      exibirNotificacaoSistema(clientName, matches);
+    }
+  });
+}
+
+function exibirNotificacaoSistema(clientName, matches) {
+  if (document.getElementById("gemini-notification-toast")) return;
+
+  const toast = document.createElement("div");
+  toast.id = "gemini-notification-toast";
+  // The 'slideIn' animation is defined in the injected CSS
+  toast.style = `
+    position: fixed; top: 90px; right: 20px; background: #fff;
+    border-left: 6px solid #f59e0b; padding: 16px 20px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15); border-radius: 6px;
+    z-index: 1000000; font-family: 'Segoe UI', sans-serif;
+    animation: slideIn 0.5s ease-out; min-width: 300px;
+  `;
+
+  const count = matches.length;
+  const msgMain = count === 1 ? "1 Pendência Encontrada" : `${count} Pendências Encontradas`;
+  const subject = matches[0].assunto;
+  const note = count > 1 ? `e mais ${count - 1} item(ns)...` : subject;
+
+  toast.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:start;">
+       <div>
+         <div style="font-weight:700; color:#333; margin-bottom:4px; font-size:14px;">🔔 Lembrete: ${clientName}</div>
+         <div style="color:#e65100; font-weight:600; font-size:13px; margin-bottom:2px;">${msgMain}</div>
+         <div style="color:#555; font-size:13px;">${note}</div>
+       </div>
+       <button id="closeToast" style="background:none; border:none; cursor:pointer; color:#999; font-size:18px;">&times;</button>
+    </div>
+    <div style="margin-top:10px; text-align:right;">
+        <button id="btnVerAgendaToast" style="background:#f59e0b; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:12px;">Ver Agenda</button>
+    </div>
+  `;
+
+  document.body.appendChild(toast);
+
+  toast.querySelector("#closeToast").addEventListener("click", () => {
+    toast.remove();
+  });
+
+  toast.querySelector("#btnVerAgendaToast").addEventListener("click", () => {
+    exibirAgenda();
+    toast.remove();
+  });
+
+  // Auto dismiss after 8 seconds
+  setTimeout(() => {
+    if (document.body.contains(toast)) {
+      toast.style.animation = "fadeOut 0.5s ease-in";
+      setTimeout(() => toast.remove(), 450);
+    }
+  }, 8000);
+}
+
+// --- Unified Agenda Implementation ---
+
+function exibirAgenda() {
+  const popupAntigo = document.getElementById("geminiAgendaModal");
+  if (popupAntigo) popupAntigo.remove();
+
+  const popup = document.createElement("div");
+  popup.id = "geminiAgendaModal";
+  // Styles handled by CSS class #geminiAgendaModal
+
+  popup.innerHTML = `
+      <div class="agenda-header">
+        <div style="font-size: 18px; font-weight: 600; color: #3c4043; display: flex; align-items: center; gap: 10px;">
+          📅 Agenda & Gestão
+        </div>
+        <button id="fecharAgendaM" style="background:none; border:none; font-size:24px; color:#5f6368; cursor:pointer;">&times;</button>
+      </div>
+      <div class="agenda-tabs">
+        <div class="agenda-tab active" data-tab="calendario">📅 Calendário</div>
+        <div class="agenda-tab" data-tab="crm">📋 Atendimentos (CRM)</div>
+      </div>
+      <div class="agenda-body">
+        <div id="tab-calendario" class="tab-content" style="display:block;">
+           <div id="calendar-container"></div>
+        </div>
+        <div id="tab-crm" class="tab-content" style="display:none;">
+           <div id="crm-container"></div>
+        </div>
+      </div>
+    `;
+
+  document.body.appendChild(popup);
+
+  // Close functionality
+  popup.querySelector("#fecharAgendaM").addEventListener("click", () => popup.remove());
+
+  // Tab Switching
+  const tabs = popup.querySelectorAll('.agenda-tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      popup.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+      const target = popup.querySelector(`#tab-${tab.dataset.tab}`);
+      if (target) target.style.display = 'block';
+    });
+  });
+
+  // Initialize Components
+  iniciarCalendario(popup.querySelector("#calendar-container"));
+  iniciarCRM(popup.querySelector("#crm-container"));
+}
+
+function iniciarCalendario(container) {
+  const date = new Date();
+  let currentMonth = date.getMonth();
+  let currentYear = date.getFullYear();
+  let eventsCache = {};
+
+  const loadEvents = (cb) => {
+    chrome.storage.local.get(["usuarioAgendaEvents"], (data) => {
+      eventsCache = data.usuarioAgendaEvents || {};
+      cb();
+    });
+  };
+
+  const saveEvent = (year, month, day, text) => {
+    const key = `${year}-${month}-${day}`;
+    if (!eventsCache[key]) eventsCache[key] = [];
+    eventsCache[key].push(text);
+    chrome.storage.local.set({ usuarioAgendaEvents: eventsCache }, () => {
+      render();
+    });
+  };
+
+  const render = () => {
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+    container.innerHTML = `
+            <div class="calendar-controls">
+                <button id="prevMonth" style="border:none; background:none; cursor:pointer; font-size:18px; padding:5px;">◀</button>
+                <div style="font-weight:700; font-size:16px; color:#333;">${monthNames[currentMonth]} ${currentYear}</div>
+                <button id="nextMonth" style="border:none; background:none; cursor:pointer; font-size:18px; padding:5px;">▶</button>
+            </div>
+            <div class="calendar-grid">
+                ${['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => `<div class="calendar-day-header">${d}</div>`).join('')}
+            </div>
+        `;
+
+    const grid = container.querySelector('.calendar-grid');
+
+    // Empty slots
+    for (let i = 0; i < firstDay; i++) {
+      grid.appendChild(document.createElement('div'));
+    }
+
+    // Days
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dayEl = document.createElement('div');
+      dayEl.className = 'calendar-day';
+
+      const isToday = i === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
+      if (isToday) dayEl.classList.add('today');
+
+      // Check content
+      const key = `${currentYear}-${currentMonth}-${i}`;
+      const dayEvents = eventsCache[key] || [];
+
+      let eventsHtml = '';
+      dayEvents.forEach(evt => {
+        eventsHtml += `<span class="event-marker" title="${evt}">${evt}</span>`;
+      });
+
+      dayEl.innerHTML = `
+           <span class="day-number">${i}</span>
+           <div class="day-events">${eventsHtml}</div>
+        `;
+
+      dayEl.addEventListener('click', () => {
+        const novo = prompt(`Adicionar evento para ${i}/${currentMonth + 1}:`);
+        if (novo && novo.trim()) {
+          saveEvent(currentYear, currentMonth, i, novo.trim());
+        }
+      });
+
+      grid.appendChild(dayEl);
+    }
+
+    container.querySelector("#prevMonth").addEventListener('click', () => {
+      currentMonth--;
+      if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+      render();
+    });
+    container.querySelector("#nextMonth").addEventListener('click', () => {
+      currentMonth++;
+      if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+      render();
+    });
+  };
+
+  loadEvents(render);
+}
+
+function iniciarCRM(container) {
+  container.innerHTML = `
+        <div class="crm-controls">
+            <button id="btnAddCrm" style="background:#1a73e8; color:white; border:none; padding:10px 16px; border-radius:6px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.1);">+ Novo Atendimento</button>
+            <div style="flex:1;"></div>
+            <input type="text" id="filtroCrm" placeholder="Filtrar por nome..." style="padding:8px; border:1px solid #ccc; border-radius:4px; font-size:13px;">
+        </div>
+        <div style="overflow-x:auto; border:1px solid #eee; border-radius:6px;">
+            <table class="crm-table">
+                <thead style="background:#f8f9fa;">
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Assunto/Pendência</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="crmBody"></tbody>
+            </table>
+        </div>
+    `;
+
+  const tbody = container.querySelector("#crmBody");
+  const filtroInput = container.querySelector("#filtroCrm");
+
+  const renderTable = (dados, filtro = "") => {
+    tbody.innerHTML = "";
+
+    const filtrados = dados.filter(d =>
+      d.cliente.toLowerCase().includes(filtro.toLowerCase()) ||
+      d.assunto.toLowerCase().includes(filtro.toLowerCase())
+    );
+
+    if (filtrados.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:24px; color:#777;">Nenhum registro encontrado.</td></tr>`;
+      return;
+    }
+
+    filtrados.forEach((item, index) => {
+      // We use the original index from the main array implies we need to handle reference,
+      // but for simplicity in this version, we will re-map indices or just stick to simple rendering.
+      // Actually, to edit/delete reliably with filter, we should better store ID, but for now let's map back.
+      const originalIndex = dados.indexOf(item);
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+            <td><strong>${item.cliente}</strong></td>
+            <td>${item.assunto}</td>
+            <td><span class="status-badge ${item.status === 'pendente' ? 'status-pending' : 'status-resolved'}">${item.status}</span></td>
+            <td>
+                <button class="action-btn btn-resolve" data-idx="${originalIndex}" title="${item.status === 'pendente' ? 'Marcar Resolvido' : 'Reabrir'}">
+                   ${item.status === 'pendente' ? '✅' : '↩️'}
+                </button>
+                <button class="action-btn btn-delete" data-idx="${originalIndex}" title="Excluir">🗑️</button>
+            </td>
+        `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('.btn-resolve').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(btn.dataset.idx);
+        dados[idx].status = dados[idx].status === 'pendente' ? 'resolvido' : 'pendente';
+        salvarCRM(dados);
+        renderTable(dados, filtroInput.value);
+      });
+    });
+
+    tbody.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        if (confirm("Tem certeza que deseja remover este registro?")) {
+          const idx = parseInt(btn.dataset.idx);
+          dados.splice(idx, 1);
+          salvarCRM(dados);
+          renderTable(dados, filtroInput.value);
+        }
+      });
+    });
+  };
+
+  const salvarCRM = (dados) => {
+    chrome.storage.local.set({ usuarioAgendaCRM: dados });
+  };
+
+  chrome.storage.local.get(["usuarioAgendaCRM"], (data) => {
+    const dados = data.usuarioAgendaCRM || [];
+    renderTable(dados);
+
+    container.querySelector("#btnAddCrm").addEventListener('click', () => {
+      const cliente = prompt("Nome do Cliente:");
+      if (!cliente) return;
+      const assunto = prompt("O que está pendente ou foi tratado?");
+      if (!assunto) return;
+
+      dados.push({
+        cliente: cliente.trim(),
+        assunto: assunto.trim(),
+        status: 'pendente',
+        data: new Date().toISOString()
+      });
+      salvarCRM(dados);
+      renderTable(dados, filtroInput.value);
+    });
+
+    filtroInput.addEventListener('input', (e) => {
+      renderTable(dados, e.target.value);
+    });
+  });
 }

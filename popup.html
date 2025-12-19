@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8" />
   <title>Resumo Gemini</title>
@@ -240,15 +241,15 @@
   <script src="popup.js"></script>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       const accordionHeaders = document.querySelectorAll('.accordion-header');
-      
+
       accordionHeaders.forEach(header => {
         header.addEventListener('click', () => {
           const targetId = header.getAttribute('data-target');
           const content = document.getElementById(targetId);
           const icon = header.querySelector('.accordion-icon');
-          
+
           if (content.classList.contains('open')) {
             content.classList.remove('open');
             header.classList.remove('open');
@@ -265,13 +266,13 @@
         const targetId = header.getAttribute('data-target');
         const content = document.getElementById(targetId);
         const savedState = localStorage.getItem(targetId);
-        
+
         if (savedState === 'closed') {
           content.classList.remove('open');
           header.classList.remove('open');
           header.querySelector('.accordion-icon').textContent = '+';
         }
-        
+
         header.addEventListener('click', () => {
           const isOpen = content.classList.contains('open');
           localStorage.setItem(targetId, isOpen ? 'open' : 'closed');
@@ -280,4 +281,5 @@
     });
   </script>
 </body>
+
 </html>
