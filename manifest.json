@@ -28,7 +28,24 @@
       "matches": [
         "https://softeninformatica.sz.chat/*"
       ],
+      "css": [
+        "styles/main.css",
+        "styles/buttons.css",
+        "styles/modals.css",
+        "styles/calendar.css"
+      ],
       "js": [
+        "utils/storage.js",
+        "utils/messaging.js",
+        "utils/dom-helpers.js",
+        "modules/ui-builder.js",
+        "modules/shortcuts.js",
+        "modules/chat-capture.js",
+        "modules/summary.js",
+        "modules/messages.js",
+        "modules/docs.js",
+        "modules/agenda.js",
+        "modules/notifications.js",
         "content.js"
       ],
       "run_at": "document_end"
