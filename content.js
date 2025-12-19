@@ -329,6 +329,196 @@ function criarBotoesFlutuantes() {
       .status-resolved { background: #e6fffa; color: #00695c; }
       .action-btn { border: none; background: none; cursor: pointer; opacity: 0.6; transition: opacity 0.2s; font-size: 16px; margin-right: 8px; }
       .action-btn:hover { opacity: 1; }
+
+      /* Modal Form Styles */
+      .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000001;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.2s ease;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      .modal-form-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        animation: slideUp 0.3s ease;
+      }
+
+      @keyframes slideUp {
+        from { transform: translateY(30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+
+      .modal-form-header {
+        background: #f8f9fa;
+        padding: 16px 20px;
+        border-bottom: 1px solid #e0e0e0;
+        border-radius: 12px 12px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .modal-form-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #3c4043;
+      }
+
+      .modal-close-btn {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #5f6368;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: background 0.2s;
+      }
+
+      .modal-close-btn:hover {
+        background: #e0e0e0;
+      }
+
+      .modal-form-body {
+        padding: 20px;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        color: #444;
+        margin-bottom: 6px;
+      }
+
+      .form-label.required::after {
+        content: ' *';
+        color: #d93025;
+      }
+
+      .form-input,
+      .form-textarea,
+      .form-select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #dadce0;
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: 'Segoe UI', sans-serif;
+        color: #3c4043;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+      }
+
+      .form-input:focus,
+      .form-textarea:focus,
+      .form-select:focus {
+        outline: none;
+        border-color: #1a73e8;
+        box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+      }
+
+      .form-textarea {
+        min-height: 80px;
+        resize: vertical;
+      }
+
+      .form-row {
+        display: flex;
+        gap: 12px;
+      }
+
+      .form-row .form-group {
+        flex: 1;
+      }
+
+      .modal-form-footer {
+        padding: 16px 20px;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        background: #f8f9fa;
+        border-radius: 0 0 12px 12px;
+      }
+
+      .btn-primary,
+      .btn-secondary,
+      .btn-danger {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .btn-primary {
+        background: #1a73e8;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #1557b0;
+        box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+      }
+
+      .btn-secondary {
+        background: #f1f3f4;
+        color: #3c4043;
+      }
+
+      .btn-secondary:hover {
+        background: #e2e6ea;
+      }
+
+      .btn-danger {
+        background: #d93025;
+        color: white;
+      }
+
+      .btn-danger:hover {
+        background: #b32017;
+        box-shadow: 0 2px 8px rgba(217, 48, 37, 0.3);
+      }
+
+      /* Overdue Event Indicator */
+      .event-marker.overdue {
+        background: #fce4ec;
+        color: #c62828;
+        border-left: 3px solid #d32f2f;
+      }
+
+      .calendar-day.has-overdue {
+        border-color: #f44336;
+        background: #ffebee;
+      }
+
     `;
     document.head.appendChild(style);
   }
@@ -1391,25 +1581,274 @@ function exibirAgenda() {
   iniciarCRM(popup.querySelector("#crm-container"));
 }
 
+// --- Auxiliary Functions for Calendar and CRM ---
+
+function gerarIdUnico() {
+  return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+function formatarDataEvento(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const dia = String(date.getDate()).padStart(2, '0');
+  const mes = String(date.getMonth() + 1).padStart(2, '0');
+  const ano = date.getFullYear();
+  return `${dia}/${mes}/${ano}`;
+}
+
+function compararDatas(dataEvento) {
+  if (!dataEvento) return false;
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const evento = new Date(dataEvento);
+  evento.setHours(0, 0, 0, 0);
+  return evento < hoje;
+}
+
+function criarModalFormulario(config) {
+  // config: { title, fields: [{name, label, type, required, value, options}], onSave, onDelete }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+
+  const modalContainer = document.createElement('div');
+  modalContainer.className = 'modal-form-container';
+
+  modalContainer.innerHTML = `
+    <div class="modal-form-header">
+      <div class="modal-form-title">${config.title}</div>
+      <button class="modal-close-btn">&times;</button>
+    </div>
+    <div class="modal-form-body">
+      <form id="modalForm">
+        ${config.fields.map(field => {
+    if (field.type === 'textarea') {
+      return `
+              <div class="form-group">
+                <label class="form-label ${field.required ? 'required' : ''}">${field.label}</label>
+                <textarea 
+                  class="form-textarea" 
+                  name="${field.name}" 
+                  ${field.required ? 'required' : ''}
+                  placeholder="${field.placeholder || ''}"
+                >${field.value || ''}</textarea>
+              </div>
+            `;
+    } else if (field.type === 'select') {
+      return `
+              <div class="form-group">
+                <label class="form-label ${field.required ? 'required' : ''}">${field.label}</label>
+                <select class="form-select" name="${field.name}" ${field.required ? 'required' : ''}>
+                  ${field.options.map(opt =>
+        `<option value="${opt.value}" ${opt.value === field.value ? 'selected' : ''}>${opt.label}</option>`
+      ).join('')}
+                </select>
+              </div>
+            `;
+    } else {
+      return `
+              <div class="form-group ${field.halfWidth ? 'form-group-half' : ''}">
+                <label class="form-label ${field.required ? 'required' : ''}">${field.label}</label>
+                <input 
+                  type="${field.type || 'text'}" 
+                  class="form-input" 
+                  name="${field.name}"
+                  value="${field.value || ''}"
+                  ${field.required ? 'required' : ''}
+                  placeholder="${field.placeholder || ''}"
+                />
+              </div>
+            `;
+    }
+  }).join('')}
+      </form>
+    </div>
+    <div class="modal-form-footer">
+      ${config.onDelete ? '<button class="btn-danger" id="btnDeleteModal">Excluir</button><div style="flex:1;"></div>' : ''}
+      <button class="btn-secondary" id="btnCancelModal">Cancelar</button>
+      <button class="btn-primary" id="btnSaveModal">Salvar</button>
+    </div>
+  `;
+
+  overlay.appendChild(modalContainer);
+  document.body.appendChild(overlay);
+
+  // Event handlers
+  const closeModal = () => overlay.remove();
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeModal();
+  });
+
+  modalContainer.querySelector('.modal-close-btn').addEventListener('click', closeModal);
+  modalContainer.querySelector('#btnCancelModal').addEventListener('click', closeModal);
+
+  if (config.onDelete) {
+    modalContainer.querySelector('#btnDeleteModal').addEventListener('click', () => {
+      if (confirm('Tem certeza que deseja excluir este item?')) {
+        config.onDelete();
+        closeModal();
+      }
+    });
+  }
+
+  modalContainer.querySelector('#btnSaveModal').addEventListener('click', () => {
+    const form = modalContainer.querySelector('#modalForm');
+    if (form.checkValidity()) {
+      const formData = {};
+      config.fields.forEach(field => {
+        const input = form.querySelector(`[name="${field.name}"]`);
+        formData[field.name] = input.value;
+      });
+      config.onSave(formData);
+      closeModal();
+    } else {
+      form.reportValidity();
+    }
+  });
+
+  // Focus first input
+  setTimeout(() => {
+    const firstInput = modalContainer.querySelector('.form-input, .form-textarea, .form-select');
+    if (firstInput) firstInput.focus();
+  }, 100);
+}
+
+function migrarEventosAntigos() {
+  chrome.storage.local.get(['usuarioAgendaEvents', 'usuarioAgendaEventsV2'], (data) => {
+    const oldEvents = data.usuarioAgendaEvents || {};
+    const newEvents = data.usuarioAgendaEventsV2 || {};
+
+    // Check if migration is needed
+    if (Object.keys(oldEvents).length > 0 && Object.keys(newEvents).length === 0) {
+      // Migrate old format to new format
+      Object.keys(oldEvents).forEach(key => {
+        const [year, month, day] = key.split('-');
+        const events = oldEvents[key];
+
+        events.forEach(eventText => {
+          const id = gerarIdUnico();
+          const date = `${year}-${String(parseInt(month) + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+          newEvents[id] = {
+            id: id,
+            title: eventText,
+            client: '',
+            problem: '',
+            date: date,
+            time: '',
+            notes: '',
+            createdAt: new Date().toISOString()
+          };
+        });
+      });
+
+      // Save migrated data
+      chrome.storage.local.set({ usuarioAgendaEventsV2: newEvents }, () => {
+        console.log('Events migrated successfully');
+      });
+    }
+  });
+}
+
+// Run migration on load
+migrarEventosAntigos();
+
 function iniciarCalendario(container) {
+
   const date = new Date();
   let currentMonth = date.getMonth();
   let currentYear = date.getFullYear();
   let eventsCache = {};
 
   const loadEvents = (cb) => {
-    chrome.storage.local.get(["usuarioAgendaEvents"], (data) => {
-      eventsCache = data.usuarioAgendaEvents || {};
+    chrome.storage.local.get(["usuarioAgendaEventsV2"], (data) => {
+      eventsCache = data.usuarioAgendaEventsV2 || {};
       cb();
     });
   };
 
-  const saveEvent = (year, month, day, text) => {
-    const key = `${year}-${month}-${day}`;
-    if (!eventsCache[key]) eventsCache[key] = [];
-    eventsCache[key].push(text);
-    chrome.storage.local.set({ usuarioAgendaEvents: eventsCache }, () => {
-      render();
+  const saveEvents = (cb) => {
+    chrome.storage.local.set({ usuarioAgendaEventsV2: eventsCache }, cb);
+  };
+
+  const saveEvent = (eventData) => {
+    const id = eventData.id || gerarIdUnico();
+    eventsCache[id] = {
+      ...eventData,
+      id: id,
+      createdAt: eventData.createdAt || new Date().toISOString()
+    };
+    saveEvents(() => render());
+  };
+
+  const deleteEvent = (eventId) => {
+    delete eventsCache[eventId];
+    saveEvents(() => render());
+  };
+
+  const abrirModalEvento = (eventData = null, dia = null) => {
+    const isEdit = eventData !== null;
+    const dataDefault = dia ? `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}` : '';
+
+    criarModalFormulario({
+      title: isEdit ? '✏️ Editar Evento' : '➕ Novo Evento',
+      fields: [
+        {
+          name: 'title',
+          label: 'Título do Evento',
+          type: 'text',
+          required: true,
+          value: eventData?.title || '',
+          placeholder: 'Ex: Reunião com cliente'
+        },
+        {
+          name: 'client',
+          label: 'Cliente',
+          type: 'text',
+          required: false,
+          value: eventData?.client || '',
+          placeholder: 'Nome do cliente (opcional)'
+        },
+        {
+          name: 'problem',
+          label: 'Problema/Descrição',
+          type: 'textarea',
+          required: false,
+          value: eventData?.problem || '',
+          placeholder: 'Descreva o motivo do agendamento...'
+        },
+        {
+          name: 'date',
+          label: 'Data',
+          type: 'date',
+          required: true,
+          value: eventData?.date || dataDefault
+        },
+        {
+          name: 'time',
+          label: 'Hora',
+          type: 'time',
+          required: false,
+          value: eventData?.time || ''
+        },
+        {
+          name: 'notes',
+          label: 'Observações',
+          type: 'textarea',
+          required: false,
+          value: eventData?.notes || '',
+          placeholder: 'Observações adicionais...'
+        }
+      ],
+      onSave: (formData) => {
+        saveEvent({
+          ...formData,
+          id: eventData?.id,
+          createdAt: eventData?.createdAt
+        });
+      },
+      onDelete: isEdit ? () => deleteEvent(eventData.id) : null
     });
   };
 
@@ -1446,25 +1885,44 @@ function iniciarCalendario(container) {
       const isToday = i === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
       if (isToday) dayEl.classList.add('today');
 
-      // Check content
-      const key = `${currentYear}-${currentMonth}-${i}`;
-      const dayEvents = eventsCache[key] || [];
+      // Get events for this day
+      const currentDayDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      const dayEvents = Object.values(eventsCache).filter(evt => evt.date === currentDayDate);
 
       let eventsHtml = '';
+      let hasOverdue = false;
+
       dayEvents.forEach(evt => {
-        eventsHtml += `<span class="event-marker" title="${evt}">${evt}</span>`;
+        const isOverdue = compararDatas(evt.date);
+        if (isOverdue) hasOverdue = true;
+
+        const displayText = evt.time ? `${evt.time} ${evt.title}` : evt.title;
+        eventsHtml += `<span class="event-marker ${isOverdue ? 'overdue' : ''}" data-event-id="${evt.id}" title="${evt.title}${evt.client ? ' - ' + evt.client : ''}">${displayText}</span>`;
       });
+
+      if (hasOverdue) dayEl.classList.add('has-overdue');
 
       dayEl.innerHTML = `
            <span class="day-number">${i}</span>
            <div class="day-events">${eventsHtml}</div>
         `;
 
-      dayEl.addEventListener('click', () => {
-        const novo = prompt(`Adicionar evento para ${i}/${currentMonth + 1}:`);
-        if (novo && novo.trim()) {
-          saveEvent(currentYear, currentMonth, i, novo.trim());
-        }
+      // Click on day number to add event
+      dayEl.querySelector('.day-number').addEventListener('click', (e) => {
+        e.stopPropagation();
+        abrirModalEvento(null, i);
+      });
+
+      // Click on event to edit
+      dayEl.querySelectorAll('.event-marker').forEach(marker => {
+        marker.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const eventId = marker.dataset.eventId;
+          const eventData = eventsCache[eventId];
+          if (eventData) {
+            abrirModalEvento(eventData);
+          }
+        });
       });
 
       grid.appendChild(dayEl);
@@ -1498,6 +1956,7 @@ function iniciarCRM(container) {
                     <tr>
                         <th>Cliente</th>
                         <th>Assunto/Pendência</th>
+                        <th>Data Agendada</th>
                         <th>Status</th>
                         <th>Ações</th>
                     </tr>
@@ -1510,6 +1969,106 @@ function iniciarCRM(container) {
   const tbody = container.querySelector("#crmBody");
   const filtroInput = container.querySelector("#filtroCrm");
 
+  const abrirModalCRM = (item = null, index = null) => {
+    const isEdit = item !== null;
+
+    criarModalFormulario({
+      title: isEdit ? '✏️ Editar Atendimento' : '➕ Novo Atendimento',
+      fields: [
+        {
+          name: 'cliente',
+          label: 'Nome do Cliente',
+          type: 'text',
+          required: true,
+          value: item?.cliente || '',
+          placeholder: 'Nome do cliente'
+        },
+        {
+          name: 'assunto',
+          label: 'Assunto/Pendência',
+          type: 'text',
+          required: true,
+          value: item?.assunto || '',
+          placeholder: 'Resumo do atendimento'
+        },
+        {
+          name: 'problema',
+          label: 'Problema Detalhado',
+          type: 'textarea',
+          required: false,
+          value: item?.problema || '',
+          placeholder: 'Descrição detalhada do problema...'
+        },
+        {
+          name: 'dataAgendada',
+          label: 'Data Agendada',
+          type: 'date',
+          required: false,
+          value: item?.dataAgendada || ''
+        },
+        {
+          name: 'horaAgendada',
+          label: 'Hora Agendada',
+          type: 'time',
+          required: false,
+          value: item?.horaAgendada || ''
+        },
+        {
+          name: 'observacoes',
+          label: 'Observações',
+          type: 'textarea',
+          required: false,
+          value: item?.observacoes || '',
+          placeholder: 'Observações adicionais...'
+        },
+        {
+          name: 'status',
+          label: 'Status',
+          type: 'select',
+          required: true,
+          value: item?.status || 'pendente',
+          options: [
+            { value: 'pendente', label: 'Pendente' },
+            { value: 'resolvido', label: 'Resolvido' }
+          ]
+        }
+      ],
+      onSave: (formData) => {
+        chrome.storage.local.get(["usuarioAgendaCRM"], (data) => {
+          const dados = data.usuarioAgendaCRM || [];
+
+          if (isEdit && index !== null) {
+            // Update existing
+            dados[index] = {
+              ...dados[index],
+              ...formData,
+              id: dados[index].id || gerarIdUnico(),
+              data: dados[index].data || new Date().toISOString()
+            };
+          } else {
+            // Add new
+            dados.push({
+              ...formData,
+              id: gerarIdUnico(),
+              data: new Date().toISOString()
+            });
+          }
+
+          salvarCRM(dados);
+          renderTable(dados, filtroInput.value);
+        });
+      },
+      onDelete: isEdit ? () => {
+        chrome.storage.local.get(["usuarioAgendaCRM"], (data) => {
+          const dados = data.usuarioAgendaCRM || [];
+          dados.splice(index, 1);
+          salvarCRM(dados);
+          renderTable(dados, filtroInput.value);
+        });
+      } : null
+    });
+  };
+
   const renderTable = (dados, filtro = "") => {
     tbody.innerHTML = "";
 
@@ -1519,29 +2078,40 @@ function iniciarCRM(container) {
     );
 
     if (filtrados.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:24px; color:#777;">Nenhum registro encontrado.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#777;">Nenhum registro encontrado.</td></tr>`;
       return;
     }
 
     filtrados.forEach((item, index) => {
-      // We use the original index from the main array implies we need to handle reference,
-      // but for simplicity in this version, we will re-map indices or just stick to simple rendering.
-      // Actually, to edit/delete reliably with filter, we should better store ID, but for now let's map back.
       const originalIndex = dados.indexOf(item);
+      const dataFormatada = item.dataAgendada ? formatarDataEvento(item.dataAgendada) : '-';
+      const horaDisplay = item.horaAgendada ? item.horaAgendada : '';
+      const dataCompleta = item.dataAgendada ? `${dataFormatada}${horaDisplay ? ' ' + horaDisplay : ''}` : '-';
+
+      const isOverdue = item.dataAgendada && item.status === 'pendente' && compararDatas(item.dataAgendada);
 
       const tr = document.createElement("tr");
+      tr.style = isOverdue ? 'background: #ffebee;' : '';
       tr.innerHTML = `
             <td><strong>${item.cliente}</strong></td>
-            <td>${item.assunto}</td>
+            <td>${item.assunto}${item.problema ? '<br><small style="color:#666;">' + item.problema.substring(0, 50) + (item.problema.length > 50 ? '...' : '') + '</small>' : ''}</td>
+            <td style="${isOverdue ? 'color:#d32f2f; font-weight:600;' : ''}">${dataCompleta}</td>
             <td><span class="status-badge ${item.status === 'pendente' ? 'status-pending' : 'status-resolved'}">${item.status}</span></td>
             <td>
+                <button class="action-btn btn-edit" data-idx="${originalIndex}" title="Editar">✏️</button>
                 <button class="action-btn btn-resolve" data-idx="${originalIndex}" title="${item.status === 'pendente' ? 'Marcar Resolvido' : 'Reabrir'}">
                    ${item.status === 'pendente' ? '✅' : '↩️'}
                 </button>
-                <button class="action-btn btn-delete" data-idx="${originalIndex}" title="Excluir">🗑️</button>
             </td>
         `;
       tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(btn.dataset.idx);
+        abrirModalCRM(dados[idx], idx);
+      });
     });
 
     tbody.querySelectorAll('.btn-resolve').forEach(btn => {
@@ -1550,17 +2120,6 @@ function iniciarCRM(container) {
         dados[idx].status = dados[idx].status === 'pendente' ? 'resolvido' : 'pendente';
         salvarCRM(dados);
         renderTable(dados, filtroInput.value);
-      });
-    });
-
-    tbody.querySelectorAll('.btn-delete').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        if (confirm("Tem certeza que deseja remover este registro?")) {
-          const idx = parseInt(btn.dataset.idx);
-          dados.splice(idx, 1);
-          salvarCRM(dados);
-          renderTable(dados, filtroInput.value);
-        }
       });
     });
   };
@@ -1574,19 +2133,7 @@ function iniciarCRM(container) {
     renderTable(dados);
 
     container.querySelector("#btnAddCrm").addEventListener('click', () => {
-      const cliente = prompt("Nome do Cliente:");
-      if (!cliente) return;
-      const assunto = prompt("O que está pendente ou foi tratado?");
-      if (!assunto) return;
-
-      dados.push({
-        cliente: cliente.trim(),
-        assunto: assunto.trim(),
-        status: 'pendente',
-        data: new Date().toISOString()
-      });
-      salvarCRM(dados);
-      renderTable(dados, filtroInput.value);
+      abrirModalCRM();
     });
 
     filtroInput.addEventListener('input', (e) => {
@@ -1594,3 +2141,138 @@ function iniciarCRM(container) {
     });
   });
 }
+
+// --- Notification System for Overdue Events ---
+
+function verificarEventosVencidos() {
+  // Check calendar events
+  chrome.storage.local.get(['usuarioAgendaEventsV2'], (calData) => {
+    const calendarEvents = calData.usuarioAgendaEventsV2 || {};
+
+    // Check CRM appointments
+    chrome.storage.local.get(['usuarioAgendaCRM'], (crmData) => {
+      const crmItems = crmData.usuarioAgendaCRM || [];
+
+      const overdueCalendar = [];
+      const overdueCRM = [];
+
+      // Find overdue calendar events
+      Object.values(calendarEvents).forEach(evt => {
+        if (evt.date && compararDatas(evt.date)) {
+          overdueCalendar.push(evt);
+        }
+      });
+
+      // Find overdue CRM appointments
+      crmItems.forEach(item => {
+        if (item.dataAgendada && item.status === 'pendente' && compararDatas(item.dataAgendada)) {
+          overdueCRM.push(item);
+        }
+      });
+
+      const totalOverdue = overdueCalendar.length + overdueCRM.length;
+
+      if (totalOverdue > 0) {
+        // Check if we already showed notification recently (prevent spam)
+        chrome.storage.local.get(['lastOverdueNotification'], (notifData) => {
+          const lastNotif = notifData.lastOverdueNotification || 0;
+          const now = Date.now();
+
+          // Only show notification if 30 minutes have passed since last one
+          if (now - lastNotif > 30 * 60 * 1000) {
+            exibirNotificacaoEventoVencido(overdueCalendar, overdueCRM);
+            chrome.storage.local.set({ lastOverdueNotification: now });
+          }
+        });
+      }
+    });
+  });
+}
+
+function exibirNotificacaoEventoVencido(calendarEvents, crmEvents) {
+  // Remove existing notification if any
+  const existingToast = document.getElementById('gemini-overdue-toast');
+  if (existingToast) existingToast.remove();
+
+  const total = calendarEvents.length + crmEvents.length;
+  if (total === 0) return;
+
+  const toast = document.createElement('div');
+  toast.id = 'gemini-overdue-toast';
+  toast.style = `
+    position: fixed; top: 90px; right: 20px; background: #fff;
+    border-left: 6px solid #d32f2f; padding: 16px 20px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15); border-radius: 6px;
+    z-index: 1000000; font-family: 'Segoe UI', sans-serif;
+    animation: slideIn 0.5s ease-out; min-width: 320px; max-width: 400px;
+  `;
+
+  let detailsHtml = '';
+
+  if (calendarEvents.length > 0) {
+    detailsHtml += `<div style="margin-top: 8px;">
+      <strong style="color:#d32f2f;">📅 Calendário (${calendarEvents.length}):</strong>
+      <ul style="margin: 4px 0 0 20px; padding: 0; font-size: 12px;">
+        ${calendarEvents.slice(0, 3).map(evt =>
+      `<li>${evt.title} ${evt.date ? '- ' + formatarDataEvento(evt.date) : ''}</li>`
+    ).join('')}
+        ${calendarEvents.length > 3 ? `<li><em>e mais ${calendarEvents.length - 3}...</em></li>` : ''}
+      </ul>
+    </div>`;
+  }
+
+  if (crmEvents.length > 0) {
+    detailsHtml += `<div style="margin-top: 8px;">
+      <strong style="color:#d32f2f;">📋 CRM (${crmEvents.length}):</strong>
+      <ul style="margin: 4px 0 0 20px; padding: 0; font-size: 12px;">
+        ${crmEvents.slice(0, 3).map(item =>
+      `<li>${item.cliente} - ${item.assunto}</li>`
+    ).join('')}
+        ${crmEvents.length > 3 ? `<li><em>e mais ${crmEvents.length - 3}...</em></li>` : ''}
+      </ul>
+    </div>`;
+  }
+
+  toast.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:start;">
+       <div style="flex:1;">
+         <div style="font-weight:700; color:#d32f2f; margin-bottom:4px; font-size:14px;">⚠️ Eventos Vencidos</div>
+         <div style="color:#555; font-size:13px; margin-bottom:2px;">Você tem ${total} evento(s) com data vencida</div>
+         ${detailsHtml}
+       </div>
+       <button id="closeOverdueToast" style="background:none; border:none; cursor:pointer; color:#999; font-size:18px; margin-left:10px;">&times;</button>
+    </div>
+    <div style="margin-top:12px; text-align:right;">
+        <button id="btnVerAgendaOverdue" style="background:#d32f2f; color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:12px;">Ver Agenda</button>
+    </div>
+  `;
+
+  document.body.appendChild(toast);
+
+  toast.querySelector('#closeOverdueToast').addEventListener('click', () => {
+    toast.remove();
+  });
+
+  toast.querySelector('#btnVerAgendaOverdue').addEventListener('click', () => {
+    exibirAgenda();
+    toast.remove();
+  });
+
+  // Auto dismiss after 15 seconds
+  setTimeout(() => {
+    if (document.body.contains(toast)) {
+      toast.style.animation = 'fadeOut 0.5s ease-in';
+      setTimeout(() => toast.remove(), 450);
+    }
+  }, 15000);
+}
+
+// Run verification every 5 minutes
+setInterval(() => {
+  verificarEventosVencidos();
+}, 5 * 60 * 1000);
+
+// Run initial check after 10 seconds (give time for page to load)
+setTimeout(() => {
+  verificarEventosVencidos();
+}, 10000);
