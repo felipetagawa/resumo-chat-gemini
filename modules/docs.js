@@ -1,10 +1,3 @@
-/**
- * ============================================
- * DOCS.JS - Consulta de Documentação
- * ============================================
- * Gerencia busca e exibição de documentação
- */
-
 const DocsModule = (() => {
     function exibirPainelConsultaDocs() {
         DOMHelpers.removeElement("geminiDocsPopup");
@@ -113,5 +106,4 @@ const DocsModule = (() => {
     };
 })();
 
-// Export
 window.DocsModule = DocsModule;

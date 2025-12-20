@@ -1,16 +1,6 @@
-/**
- * ============================================
- * NOTIFICATIONS.JS - Sistema de Notificações
- * ============================================
- * Gerencia notificações de chat e eventos vencidos
- */
-
 const NotificationsModule = (() => {
     let lastCheckedClientName = "";
 
-    /**
-     * Verifica notificações do chat
-     */
     function verificarNotificacoesChat() {
         const chatContainer = document.querySelector('.chats-list');
         if (!chatContainer) return;
@@ -29,9 +19,6 @@ const NotificationsModule = (() => {
         }
     }
 
-    /**
-     * Verifica e exibe notificação se houver match
-     */
     async function checkAndShowNotification(clientName) {
         const data = await StorageHelper.get(['usuarioAgendaEventsV2', 'usuarioAgendaCRM']);
 
@@ -40,14 +27,12 @@ const NotificationsModule = (() => {
 
         const matches = [];
 
-        // Check calendar events
         Object.values(calendarEvents).forEach(evt => {
             if (evt.client && evt.client.toLowerCase().includes(clientName.toLowerCase())) {
                 matches.push({ type: 'event', data: evt });
             }
         });
 
-        // Check CRM
         crmItems.forEach(item => {
             if (item.cliente && item.cliente.toLowerCase().includes(clientName.toLowerCase())) {
                 matches.push({ type: 'crm', data: item });
@@ -59,9 +44,6 @@ const NotificationsModule = (() => {
         }
     }
 
-    /**
-     * Exibe notificação
-     */
     function exibirNotificacaoSistema(clientName, matches) {
         DOMHelpers.removeElement('gemini-notification-toast');
 
@@ -116,9 +98,6 @@ const NotificationsModule = (() => {
         }, 10000);
     }
 
-    /**
-     * Verifica eventos vencidos
-     */
     async function verificarEventosVencidos() {
         const calData = await StorageHelper.get(['usuarioAgendaEventsV2']);
         const calendarEvents = calData.usuarioAgendaEventsV2 || {};
@@ -155,9 +134,6 @@ const NotificationsModule = (() => {
         }
     }
 
-    /**
-     * Exibe notificação de evento vencido
-     */
     function exibirNotificacaoEventoVencido(calendarEvents, crmEvents) {
         DOMHelpers.removeElement('gemini-overdue-toast');
 
@@ -233,16 +209,12 @@ const NotificationsModule = (() => {
         }, 15000);
     }
 
-    /**
-     * Inicializa sistema de notificações
-     */
     function init() {
-        // Verificação de eventos vencidos a cada 5 minutos
+
         setInterval(() => {
             verificarEventosVencidos();
         }, 5 * 60 * 1000);
 
-        // Verificação inicial após 10 segundos
         setTimeout(() => {
             verificarEventosVencidos();
         }, 10000);
@@ -255,5 +227,4 @@ const NotificationsModule = (() => {
     };
 })();
 
-// Export
 window.NotificationsModule = NotificationsModule;

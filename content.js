@@ -1,28 +1,12 @@
-/**
- * ============================================
- * CONTENT.JS - Orquestrador Principal
- * ============================================
- * Arquivo principal que inicializa e coordena todos os módulos
- * Refatorado de 2279 linhas para ~200 linhas
- */
-
-// URL alvo onde a extensão deve funcionar
 const TARGET_URL = "https://softeninformatica.sz.chat/user/agent";
 
-/**
- * Inicializa todos os módulos
- */
 function inicializarModulos() {
-  // Inicializa sistema de atalhos
+
   ShortcutsModule.init();
 
-  // Inicializa notificações
   NotificationsModule.init();
 }
 
-/**
- * Cria botões flutuantes
- */
 function criarBotoesFlutuantes() {
   if (DOMHelpers.exists("containerBotoesGemini")) return;
 
@@ -48,12 +32,10 @@ function criarBotoesFlutuantes() {
     return btn;
   };
 
-  // Botão Docs
   const botaoDocs = createButton("btnConsultarDocs", "Consultar Docs", "📚", () => {
     DocsModule.exibirPainelConsultaDocs();
   });
 
-  // Botão Resumo
   const botaoResumo = createButton("btnResumoGemini", "Gerar Relatório", "🧠", async () => {
     const btn = document.getElementById("btnResumoGemini");
     btn.disabled = true;
@@ -83,7 +65,6 @@ function criarBotoesFlutuantes() {
     }
   });
 
-  // Botão Dica
   const botaoDica = createButton("btnDica", "Dicas Inteligentes", "💡", async () => {
     const btn = document.getElementById("btnDica");
     btn.disabled = true;
@@ -113,12 +94,10 @@ function criarBotoesFlutuantes() {
     }
   });
 
-  // Botão Mensagens
   const botaoMessages = createButton("btnMessages", "Mensagens Padrão", "💬", () => {
     MessagesModule.mostrarPopupMensagens();
   });
 
-  // Botão Agenda
   const botaoAgenda = createButton("btnAgenda", "Agenda & Gestão", "📅", () => {
     AgendaModule.exibirAgenda();
   });
@@ -132,9 +111,6 @@ function criarBotoesFlutuantes() {
   document.body.appendChild(container);
 }
 
-/**
- * Listener para mensagens do background
- */
 MessagingHelper.addListener((request, sender, sendResponse) => {
   const botaoResumo = document.getElementById("btnResumoGemini");
   const botaoDica = document.getElementById("btnDica");
@@ -166,9 +142,6 @@ MessagingHelper.addListener((request, sender, sendResponse) => {
   return true;
 });
 
-/**
- * Monitora presença na URL correta e gerencia botões
- */
 setInterval(() => {
   const botoesExistem = DOMHelpers.exists("containerBotoesGemini");
   const urlAtualCorreta = window.location.href.startsWith(TARGET_URL);
@@ -176,10 +149,10 @@ setInterval(() => {
   if (urlAtualCorreta && !botoesExistem) {
     criarBotoesFlutuantes();
   } else if (urlAtualCorreta) {
-    // Verifica notificações se estamos na URL correta
+
     NotificationsModule.verificarNotificacoesChat();
   } else if (!urlAtualCorreta && botoesExistem) {
-    // Remove tudo se não estiver mais na URL correta
+
     DOMHelpers.removeElement("containerBotoesGemini");
     DOMHelpers.removeElement("geminiResumoPopup");
     DOMHelpers.removeElement("geminiDicaPopup");
@@ -188,9 +161,6 @@ setInterval(() => {
   }
 }, 2000);
 
-/**
- * Inicializa extensão quando o script carregar
- */
 inicializarModulos();
 
 console.log("✅ AtendeAI Manager: Extensão carregada e modularizada!");

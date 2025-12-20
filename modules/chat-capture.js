@@ -1,15 +1,4 @@
-/**
- * ============================================
- * CHAT-CAPTURE.JS - Captura de Texto do Chat
- * ============================================
- * Funções para capturar e processar texto do chat
- */
-
 const ChatCaptureModule = (() => {
-    /**
-     * Captura texto do chat
-     * @returns {string} Texto capturado
-     */
     function capturarTextoChat() {
         const mensagensDOM = document.querySelectorAll(".msg");
 
@@ -35,11 +24,6 @@ const ChatCaptureModule = (() => {
         return mensagens;
     }
 
-    /**
-     * Extrai problema do resumo
-     * @param {string} resumoCompleto - Resumo completo
-     * @returns {string} Problema extraído
-     */
     function extrairProblemaDoResumo(resumoCompleto) {
         const linhas = resumoCompleto.split('\n');
         let problema = '';
@@ -89,5 +73,4 @@ const ChatCaptureModule = (() => {
     };
 })();
 
-// Export
 window.ChatCaptureModule = ChatCaptureModule;

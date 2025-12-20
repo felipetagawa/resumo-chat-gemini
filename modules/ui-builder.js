@@ -1,18 +1,4 @@
-/**
- * ============================================
- * UI-BUILDER.JS - Construtores de Interface
- * ============================================
- * Funções auxiliares para construir elementos de UI
- */
-
 const UIBuilder = (() => {
-    /**
-     * Cria um acordeão expansível
-     * @param {string} titulo - Título do acordeão
-     * @param {boolean} aberto - Estado inicial
-     * @param {string} id - ID do container
-     * @returns {object} {container, content, toggle}
-     */
     function criarAcordeon(titulo, aberto = true, id = "") {
         const container = document.createElement("div");
         container.id = id;
@@ -110,10 +96,6 @@ const UIBuilder = (() => {
         };
     }
 
-    /**
-     * Cria modal de formulário
-     * @param {object} config - {title, fields, onSave, onDelete}
-     */
     function criarModalFormulario(config) {
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
@@ -180,7 +162,6 @@ const UIBuilder = (() => {
         overlay.appendChild(modalContainer);
         document.body.appendChild(overlay);
 
-        // Event handlers
         const closeModal = () => overlay.remove();
 
         overlay.addEventListener('click', (e) => {
@@ -214,16 +195,12 @@ const UIBuilder = (() => {
             }
         });
 
-        // Focus first input
         setTimeout(() => {
             const firstInput = modalContainer.querySelector('.form-input, .form-textarea, .form-select');
             if (firstInput) firstInput.focus();
         }, 100);
     }
 
-    /**
-     * Funções auxiliares de formatação
-     */
     function gerarIdUnico() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2);
     }
@@ -249,5 +226,4 @@ const UIBuilder = (() => {
     };
 })();
 
-// Export
 window.UIBuilder = UIBuilder;

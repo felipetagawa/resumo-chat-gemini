@@ -1,17 +1,7 @@
-/**
- * ============================================
- * SHORTCUTS.JS - Sistema de Atalhos de Mensagens
- * ============================================
- * Gerencia atalhos de texto para mensagens padrão
- */
-
 const ShortcutsModule = (() => {
     let messageShortcutsCache = {};
     let isReplacing = false;
 
-    /**
-     * Carrega atalhos do storage
-     */
     async function carregarAtalhosMensagens() {
         const data = await StorageHelper.get(["customMessages", "messageShortcuts"]);
         messageShortcutsCache = {};
@@ -24,7 +14,6 @@ const ShortcutsModule = (() => {
 
         const shortcuts = data.messageShortcuts || {};
 
-        // Atalhos fixos
         fixedMessages.forEach((msg, index) => {
             const shortcutKey = `fixed_${index}`;
             const shortcutValue = shortcuts[shortcutKey];
@@ -34,7 +23,6 @@ const ShortcutsModule = (() => {
             }
         });
 
-        // Mensagens customizadas
         const customMessages = data.customMessages || [];
         customMessages.forEach((msg, index) => {
             const shortcutKey = `custom_${index}`;
@@ -46,9 +34,6 @@ const ShortcutsModule = (() => {
         });
     }
 
-    /**
-     * Detecta e insere atalho no elemento
-     */
     function detectarEInserirAtalho(element) {
         if (isReplacing) return false;
 
@@ -103,11 +88,8 @@ const ShortcutsModule = (() => {
         return false;
     }
 
-    /**
-     * Inicializa event listeners
-     */
     function init() {
-        // Input event
+
         document.addEventListener('input', function (event) {
             const isTextArea = event.target.matches('textarea, [contenteditable="true"], div[contenteditable="true"], [role="textbox"]');
 
@@ -116,7 +98,6 @@ const ShortcutsModule = (() => {
             }
         });
 
-        // Keydown event
         document.addEventListener('keydown', function (event) {
             const isTextArea = event.target.matches('textarea, [contenteditable="true"], div[contenteditable="true"], [role="textbox"]');
 
@@ -142,10 +123,8 @@ const ShortcutsModule = (() => {
             }
         });
 
-        // Carrega atalhos inicialmente
         carregarAtalhosMensagens();
 
-        // Listener para mudanças no storage
         StorageHelper.addListener((changes, namespace) => {
             if (namespace === 'local' && (changes.messageShortcuts || changes.customMessages)) {
                 carregarAtalhosMensagens();
@@ -158,5 +137,4 @@ const ShortcutsModule = (() => {
     };
 })();
 
-// Export
 window.ShortcutsModule = ShortcutsModule;

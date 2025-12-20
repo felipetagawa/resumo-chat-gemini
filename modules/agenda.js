@@ -1,18 +1,5 @@
-/**
- * ============================================
- * AGENDA.JS - Calendário e CRM
- * ============================================
- * Módulo completo de Agenda, Calendário e CRM
- * Código extraído e modularizado de content.js (linhas 1533-2143)
- */
-
 const AgendaModule = (() => {
-    // Importar código completo do content.js linhas 1533-2278
-    // Por brevidade, incluirei a estrutura principal
 
-    /**
-     * Exibe modal da agenda
-     */
     function exibirAgenda() {
         DOMHelpers.removeElement("geminiAgendaModal");
 
@@ -37,7 +24,6 @@ const AgendaModule = (() => {
 
         modal.querySelector("#fecharAgenda").addEventListener("click", () => modal.remove());
 
-        // Tabs switching
         modal.querySelectorAll(".agenda-tab").forEach(tab => {
             tab.addEventListener("click", () => {
                 const tabName = tab.dataset.tab;
@@ -53,14 +39,10 @@ const AgendaModule = (() => {
             });
         });
 
-        // Inicializar Calendário e CRM
         iniciarCalendario(modal.querySelector("#tab-calendar"));
         iniciarCRM(modal.querySelector("#tab-crm"));
     }
 
-    /**
-     * Migra eventos antigos para novo formato
-     */
     async function migrarEventosAntigos() {
         const data = await StorageHelper.get(["usuarioAgendaEvents", "usuarioAgendaEventsV2"]);
 
@@ -87,18 +69,18 @@ const AgendaModule = (() => {
         }
     }
 
-    /**
-     * Inicializa calendário
-     */
     function iniciarCalendario(container) {
         const date = new Date();
         let currentMonth = date.getMonth();
         let currentYear = date.getFullYear();
         let eventsCache = {};
 
+        let crmCache = [];
+
         const loadEvents = (cb) => {
-            StorageHelper.get(["usuarioAgendaEventsV2"]).then(data => {
+            StorageHelper.get(["usuarioAgendaEventsV2", "usuarioAgendaCRM"]).then(data => {
                 eventsCache = data.usuarioAgendaEventsV2 || {};
+                crmCache = data.usuarioAgendaCRM || [];
                 cb();
             });
         };
@@ -207,12 +189,10 @@ const AgendaModule = (() => {
 
             const grid = container.querySelector('.calendar-grid');
 
-            // Empty slots
             for (let i = 0; i < firstDay; i++) {
                 grid.appendChild(document.createElement('div'));
             }
 
-            // Days
             for (let i = 1; i <= daysInMonth; i++) {
                 const dayEl = document.createElement('div');
                 dayEl.className = 'calendar-day';
@@ -231,7 +211,17 @@ const AgendaModule = (() => {
                     if (isOverdue) hasOverdue = true;
 
                     const displayText = evt.time ? `${evt.time} ${evt.title}` : evt.title;
-                    eventsHtml += `<span class="event-marker ${isOverdue ? 'overdue' : ''}" data-event-id="${evt.id}" title="${evt.title}${evt.client ? ' - ' + evt.client : ''}">${displayText}</span>`;
+                    eventsHtml += `<span class="event-marker ${isOverdue ? 'overdue' : ''}" data-event-id="${evt.id}" data-type="event" title="${evt.title}${evt.client ? ' - ' + evt.client : ''}">${displayText}</span>`;
+                });
+
+                const crmEvents = crmCache.filter(item => item.dataAgendada === currentDayDate);
+                crmEvents.forEach(item => {
+                    const isOverdue = item.status === 'pendente' && UIBuilder.compararDatas(item.dataAgendada);
+                    if (isOverdue) hasOverdue = true;
+
+                    const timeDisplay = item.horaAgendada ? item.horaAgendada : '';
+                    const displayText = `📋 ${timeDisplay} ${item.cliente}`;
+                    eventsHtml += `<span class="event-marker ${isOverdue ? 'overdue' : ''}" style="border-left: 3px solid #34a853; background: #e6f4ea; color: #137333;" data-event-id="${crmCache.indexOf(item)}" data-type="crm" title="CRM: ${item.cliente} - ${item.assunto}">${displayText}</span>`;
                 });
 
                 if (hasOverdue) dayEl.classList.add('has-overdue');
@@ -250,9 +240,16 @@ const AgendaModule = (() => {
                     marker.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const eventId = marker.dataset.eventId;
-                        const eventData = eventsCache[eventId];
-                        if (eventData) {
-                            abrirModalEvento(eventData);
+                        const type = marker.dataset.type;
+
+                        if (type === 'crm') {
+                            const item = crmCache[eventId];
+                            alert(`📋 Detalhes do Atendimento CRM:\n\nCliente: ${item.cliente}\nAssunto: ${item.assunto}\nProblema: ${item.problema || '-'}\nStatus: ${item.status}\n\nPara editar, acesse a aba CRM.`);
+                        } else {
+                            const eventData = eventsCache[eventId];
+                            if (eventData) {
+                                abrirModalEvento(eventData);
+                            }
                         }
                     });
                 });
@@ -275,9 +272,6 @@ const AgendaModule = (() => {
         loadEvents(render);
     }
 
-    /**
-     * Inicializa CRM
-     */
     function iniciarCRM(container) {
         container.innerHTML = `
       <div class="crm-controls">
@@ -395,6 +389,7 @@ const AgendaModule = (() => {
             <button class="action-btn btn-resolve" data-idx="${originalIndex}" title="${item.status === 'pendente' ? 'Marcar Resolvido' : 'Reabrir'}">
               ${item.status === 'pendente' ? '✅' : '↩️'}
             </button>
+            <button class="action-btn btn-delete" data-idx="${originalIndex}" title="Excluir" style="color:#d93025;">🗑️</button>
           </td>
         `;
                 tbody.appendChild(tr);
@@ -413,6 +408,17 @@ const AgendaModule = (() => {
                     dados[idx].status = dados[idx].status === 'pendente' ? 'resolvido' : 'pendente';
                     salvarCRM(dados);
                     renderTable(dados, filtroInput.value);
+                });
+            });
+
+            tbody.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(btn.dataset.idx);
+                    if (confirm('Tem certeza que deseja excluir este atendimento?')) {
+                        dados.splice(idx, 1);
+                        salvarCRM(dados);
+                        renderTable(dados, filtroInput.value);
+                    }
                 });
             });
         };
@@ -435,7 +441,6 @@ const AgendaModule = (() => {
         });
     }
 
-    // Executa migração ao carregar
     migrarEventosAntigos();
 
     return {
@@ -444,5 +449,4 @@ const AgendaModule = (() => {
     };
 })();
 
-// Export
 window.AgendaModule = AgendaModule;

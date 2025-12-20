@@ -1,8 +1,3 @@
-/* ============================================
-   CALENDAR.CSS - Calendário, Agenda e CRM
-   ============================================ */
-
-/* Agenda Modal */
 #geminiAgendaModal {
     position: fixed;
     top: 50%;
@@ -67,7 +62,6 @@
     border-radius: 0 0 12px 12px;
 }
 
-/* Calendar Styles */
 .calendar-controls {
     display: flex;
     justify-content: space-between;
@@ -143,7 +137,6 @@
     border-left: 3px solid #d32f2f;
 }
 
-/* CRM Styles */
 .crm-controls {
     margin-bottom: 20px;
     display: flex;

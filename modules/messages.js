@@ -1,15 +1,4 @@
-/**
- * ============================================
- * MESSAGES.JS - Mensagens Padrão
- * ============================================
- * Gerencia popup e envio de mensagens padrão
- */
-
 const MessagesModule = (() => {
-    /**
-     * Verificar mensagens no storage (continuará em outras partes do código devido ao tamanho)
-     * Esta é uma versão simplificada - o código completo está em content.js linhas 923-1323
-     */
 
     function mostrarPopupMensagens() {
         DOMHelpers.removeElement("popupMensagensPadrao");
@@ -68,7 +57,6 @@ const MessagesModule = (() => {
             "Pedimos que limpe o cache e reinicie o sistema antes de tentar novamente."
         ];
 
-        // Mensagens Fixas
         const fixedAcordeon = UIBuilder.criarAcordeon("📌 Mensagens Fixas", true, "acordeon-fixas");
         fixedMessages.forEach((msg, index) => {
             const card = criarCardMensagem(msg, false, index);
@@ -76,7 +64,6 @@ const MessagesModule = (() => {
         });
         container.appendChild(fixedAcordeon.container);
 
-        // Mensagens Personalizadas
         const customAcordeon = UIBuilder.criarAcordeon(`✨ Mensagens Personalizadas (${customMessagesList.length})`, true, "acordeon-custom");
 
         if (customMessagesList.length === 0) {
@@ -186,5 +173,4 @@ const MessagesModule = (() => {
     };
 })();
 
-// Export
 window.MessagesModule = MessagesModule;

@@ -1,14 +1,4 @@
-/**
- * ============================================
- * SUMMARY.JS - Resumos e Dicas Módulo
- * ============================================
- * Gerencia exibição e formatação de resumos e dicas
- */
-
 const SummaryModule = (() => {
-    /**
-     * Formata texto com negrito
-     */
     function formatarResumoComNegrito(texto) {
         let html = texto
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -19,9 +9,6 @@ const SummaryModule = (() => {
         return html;
     }
 
-    /**
-     * Formata texto para copiar
-     */
     function formatarResumoParaCopiar(texto) {
         let formatado = texto.replace(/\*\*/g, '');
 
@@ -33,9 +20,6 @@ const SummaryModule = (() => {
         return formatado.trim();
     }
 
-    /**
-     * Exibe popup de resumo
-     */
     function exibirResumo(texto, tipo = "resumo") {
         DOMHelpers.removeElement("geminiResumoPopup");
 
@@ -81,7 +65,6 @@ const SummaryModule = (() => {
         <b style="font-size:16px; color:#3c4043;">${titulo}</b>
         <button id="fecharResumoFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
       </div>
-      
       <div id="conteudoResumo" style="
         padding: 12px;
         background: #f9f9f9;
@@ -100,7 +83,6 @@ const SummaryModule = (() => {
           flex: 1; padding: 8px; background: #fff;
           color: #3c4043; border: 1px solid #dadce0; border-radius: 6px; cursor: pointer; font-weight:500; font-family: 'Segoe UI', sans-serif;
         ">📋 Copiar</button>
-        
         <button id="exportarResumo" style="
           flex: 1; padding: 8px; background: #fff;
           color: #3c4043; border: 1px solid #dadce0; border-radius: 6px; cursor: pointer; font-weight:500; font-family: 'Segoe UI', sans-serif;
@@ -141,9 +123,6 @@ const SummaryModule = (() => {
         });
     }
 
-    /**
-     * Exibe popup de dicas
-     */
     function exibirDica(dicaData) {
         DOMHelpers.removeElement("geminiDicaPopup");
 
@@ -210,7 +189,6 @@ const SummaryModule = (() => {
         <b style="font-size:16px; color:#3c4043;">💡 Dicas Inteligentes</b>
         <button id="fecharDicaFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer; color:#5f6368;">&times;</button>
       </div>
-      
       <div id="conteudoDica" style="
         padding: 10px;
         background: #f8f9fa;
@@ -240,5 +218,4 @@ const SummaryModule = (() => {
     };
 })();
 
-// Export
 window.SummaryModule = SummaryModule;

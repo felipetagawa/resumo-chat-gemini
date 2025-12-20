@@ -1,8 +1,3 @@
-/* ============================================
-   MODALS.CSS - Modais e Popups
-   ============================================ */
-
-/* Modal Overlay */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -17,7 +12,6 @@
     animation: fadeIn 0.2s ease;
 }
 
-/* Modal Form Container */
 .modal-form-container {
     background: white;
     border-radius: 12px;
@@ -69,7 +63,6 @@
     padding: 20px;
 }
 
-/* Form Elements */
 .form-group {
     margin-bottom: 16px;
 }
@@ -133,7 +126,6 @@
     border-radius: 0 0 12px 12px;
 }
 
-/* Buttons */
 .btn-primary,
 .btn-secondary,
 .btn-danger {
