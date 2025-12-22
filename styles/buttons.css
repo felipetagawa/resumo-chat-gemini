@@ -1,0 +1,53 @@
+.gemini-floating-btn {
+    position: relative;
+    background: #ffffff;
+    color: #3c4043;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 190px;
+    text-align: left;
+    margin-bottom: 8px;
+    background-clip: padding-box;
+}
+
+.gemini-floating-btn::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(90deg, #0ea5e9, #3b82f6, #6366f1, #8b5cf6, #0ea5e9);
+    background-size: 300% 300%;
+    border-radius: 8px;
+    z-index: -1;
+    animation: gradient-shift 4s ease infinite;
+    opacity: 0.8;
+}
+
+.gemini-floating-btn:hover {
+    background: #f8f9fa;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+    transform: translateY(-2px);
+}
+
+.gemini-floating-btn:hover::before {
+    animation: gradient-shift 2s ease infinite;
+    opacity: 1;
+}
+
+.gemini-floating-btn .icon {
+    font-size: 16px;
+    min-width: 20px;
+    text-align: center;
+}
