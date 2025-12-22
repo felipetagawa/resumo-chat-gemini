@@ -1,10 +1,10 @@
 const DocsModule = (() => {
-    function exibirPainelConsultaDocs() {
-        DOMHelpers.removeElement("geminiDocsPopup");
+  function exibirPainelConsultaDocs() {
+    DOMHelpers.removeElement("geminiDocsPopup");
 
-        const popup = document.createElement("div");
-        popup.id = "geminiDocsPopup";
-        popup.style = `
+    const popup = document.createElement("div");
+    popup.id = "geminiDocsPopup";
+    popup.style = `
       position: fixed;
       bottom: 130px;
       right: 20px;
@@ -21,7 +21,7 @@ const DocsModule = (() => {
       flex-direction: column;
     `;
 
-        popup.innerHTML = `
+    popup.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <b style="font-size:16px; color:#3c4043;">📚 Consultar Documentação</b>
         <button id="fecharDocsFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
@@ -48,62 +48,91 @@ const DocsModule = (() => {
       </div>
     `;
 
-        document.body.appendChild(popup);
+    document.body.appendChild(popup);
 
-        popup.querySelector("#fecharDocsFlutuante").addEventListener("click", () => popup.remove());
+    popup.querySelector("#fecharDocsFlutuante").addEventListener("click", () => popup.remove());
 
-        const inputBusca = popup.querySelector("#inputBuscaDocs");
-        const btnBuscar = popup.querySelector("#btnBuscarDocs");
-        const resultadosDiv = popup.querySelector("#resultadosDocs");
+    const inputBusca = popup.querySelector("#inputBuscaDocs");
+    const btnBuscar = popup.querySelector("#btnBuscarDocs");
+    const resultadosDiv = popup.querySelector("#resultadosDocs");
 
-        async function realizarBusca() {
-            const query = inputBusca.value.trim();
+    async function realizarBusca() {
+      const query = inputBusca.value.trim();
 
-            if (!query) {
-                resultadosDiv.innerHTML = '<p style="color:#999; text-align:center">Digite uma dúvida para buscar</p>';
-                return;
-            }
+      if (!query) {
+        resultadosDiv.innerHTML = '<p style="color:#999; text-align:center">Digite uma dúvida para buscar</p>';
+        return;
+      }
 
-            btnBuscar.disabled = true;
-            btnBuscar.textContent = "Buscando...";
-            resultadosDiv.innerHTML = '<p style="color:#999; text-align:center">🔍 Buscando documentação...</p>';
+      btnBuscar.disabled = true;
+      btnBuscar.textContent = "Buscando...";
+      resultadosDiv.innerHTML = '<p style="color:#999; text-align:center">🔍 Buscando documentação...</p>';
 
-            try {
-                const response = await MessagingHelper.send({
-                    action: "buscarDoc",
-                    query: query
-                });
-
-                if (response && response.resultado) {
-                    resultadosDiv.innerHTML = `
-            <div style="background:white; padding:12px; border-radius:6px; border:1px solid #e0e0e0;">
-              <div style="color:#444; line-height:1.6; white-space:pre-wrap;">${response.resultado}</div>
-            </div>
-          `;
-                } else if (response && response.erro) {
-                    resultadosDiv.innerHTML = `<p style="color:#d32f2f;">Erro: ${response.erro}</p>`;
-                } else {
-                    resultadosDiv.innerHTML = '<p style="color:#999;">Nenhum resultado encontrado</p>';
-                }
-            } catch (error) {
-                resultadosDiv.innerHTML = `<p style="color:#d32f2f;">Erro: ${error.message}</p>`;
-            } finally {
-                btnBuscar.disabled = false;
-                btnBuscar.textContent = "Buscar";
-            }
-        }
-
-        btnBuscar.addEventListener("click", realizarBusca);
-        inputBusca.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") realizarBusca();
+      try {
+        const response = await MessagingHelper.send({
+          action: "buscarDocumentacao",
+          query: query
         });
 
-        setTimeout(() => inputBusca.focus(), 100);
+        console.log("Resposta da busca de docs:", response);
+
+        if (response && response.sucesso && response.resultado) {
+          let resultado = response.resultado;
+
+          // Se for um array, pega o primeiro item (ou concatena se necessário, mas por enquanto vamos focar no primeiro que tiver conteúdo)
+          if (Array.isArray(resultado) && resultado.length > 0) {
+            resultado = resultado[0];
+          }
+
+          // Extrair o conteúdo
+          let textoExibir = '';
+          if (typeof resultado === 'string') {
+            textoExibir = resultado;
+          } else if (resultado.content) {
+            textoExibir = resultado.content;
+          } else if (resultado.resposta) {
+            textoExibir = resultado.resposta;
+          } else if (resultado.answer) {
+            textoExibir = resultado.answer;
+          } else {
+            // Caso falhe em encontrar os campos esperados, tenta mostrar o objeto formatado para debug ou fallback
+            textoExibir = JSON.stringify(resultado, null, 2);
+          }
+
+          // Formatar o texto: substituir \n por quebras de linha HTML
+          const textoFormatado = textoExibir.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+
+          resultadosDiv.innerHTML = `
+            <div style="background:white; padding:12px; border-radius:6px; border:1px solid #e0e0e0;">
+              <div style="color:#444; line-height:1.6;">${textoFormatado}</div>
+            </div>
+          `;
+        } else if (response && response.erro) {
+          resultadosDiv.innerHTML = `<p style="color:#d32f2f;">Erro: ${response.erro}</p>`;
+        } else {
+          console.log("Resposta sem resultado esperado:", response);
+          resultadosDiv.innerHTML = '<p style="color:#999;">Nenhum resultado encontrado</p>';
+        }
+      } catch (error) {
+        console.error("Erro ao buscar documentação:", error);
+        resultadosDiv.innerHTML = `<p style="color:#d32f2f;">Erro: ${error.message}</p>`;
+      } finally {
+        btnBuscar.disabled = false;
+        btnBuscar.textContent = "Buscar";
+      }
     }
 
-    return {
-        exibirPainelConsultaDocs
-    };
+    btnBuscar.addEventListener("click", realizarBusca);
+    inputBusca.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") realizarBusca();
+    });
+
+    setTimeout(() => inputBusca.focus(), 100);
+  }
+
+  return {
+    exibirPainelConsultaDocs
+  };
 })();
 
 window.DocsModule = DocsModule;

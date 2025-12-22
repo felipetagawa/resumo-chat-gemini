@@ -99,17 +99,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "buscarDocumentacao") {
     (async () => {
       try {
-        const { termo } = request;
+        const { query } = request;
         const url = new URL(`${API_BASE_URL}/api/docs/search`);
 
-        if (termo) url.searchParams.append('query', termo);
+        if (query) url.searchParams.append('query', query);
         url.searchParams.append('categoria', 'manuais');
 
         const resp = await fetch(url.toString());
         if (!resp.ok) throw new Error(`Erro na API (${resp.status})`);
 
         const data = await resp.json();
-        sendResponse({ sucesso: true, docs: data });
+        sendResponse({ sucesso: true, resultado: data });
       } catch (err) {
         console.error("Erro buscarDocumentacao:", err);
         sendResponse({ sucesso: false, erro: err.toString() });
