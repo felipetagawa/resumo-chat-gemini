@@ -27,17 +27,18 @@
     left: -2px;
     right: -2px;
     bottom: -2px;
-    background: linear-gradient(90deg, #0ea5e9, #3b82f6, #6366f1, #8b5cf6, #0ea5e9);
+    background: linear-gradient(90deg, #1e3a8a, #312e81, #4c1d95, #1e3a8a);
     background-size: 300% 300%;
     border-radius: 8px;
     z-index: -1;
     animation: gradient-shift 4s ease infinite;
-    opacity: 0.8;
+    opacity: 0.6;
 }
 
 .gemini-floating-btn:hover {
-    background: #f8f9fa;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+    background: transparent;
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(76, 29, 149, 0.4);
     transform: translateY(-2px);
 }
 
