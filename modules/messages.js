@@ -130,7 +130,7 @@ const MessagesModule = (() => {
     }
 
     function enviarMensagemParaChat(mensagem) {
-        const textAreas = document.querySelectorAll('textarea[placeholder*="Digite"], div[contenteditable="true"][role="textbox"]');
+        const textAreas = document.querySelectorAll('textarea[placeholder*="Digite"], div[contenteditable="true"][role="textbox"], div[contenteditable="true"][placeholder*="Digite"], #twemoji-textarea');
 
         let inputEncontrado = null;
 
