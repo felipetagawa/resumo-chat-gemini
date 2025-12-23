@@ -10,14 +10,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const creditsDialog = document.getElementById("creditsDialog");
   const closeCredits = document.getElementById("closeCredits");
   const customCount = document.getElementById("customCount");
+  const manualCallHistoryList = document.getElementById("manualCallHistoryList");
+  const btnLimparManual = document.getElementById("limparHistoricoManual");
 
   inicializarAcordeons();
 
-  chrome.storage.local.get(["customInstructions", "history"], (data) => {
+  chrome.storage.local.get(["customInstructions", "history", "chamado_manual_history"], (data) => {
     if (data.customInstructions) {
       customInstructionsInput.value = data.customInstructions;
     }
     renderHistory(data.history || []);
+    renderManualCallHistory(data.chamado_manual_history || []);
   });
 
   document.getElementById("salvar").addEventListener("click", () => {
@@ -31,10 +34,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   btnLimpar.addEventListener("click", () => {
-    if (confirm("Tem certeza que deseja apagar todo o histórico?")) {
+    if (confirm("Tem certeza que deseja apagar todo o histórico de resumos?")) {
       chrome.storage.local.set({ history: [] }, () => {
         renderHistory([]);
-        status.textContent = "🗑️ Histórico limpo.";
+        status.textContent = "🗑️ Histórico de resumos limpo.";
+        setTimeout(() => { status.textContent = ""; }, 2000);
+      });
+    }
+  });
+
+  btnLimparManual.addEventListener("click", () => {
+    if (confirm("Tem certeza que deseja apagar todo o histórico de chamados manuais?")) {
+      chrome.storage.local.set({ chamado_manual_history: [] }, () => {
+        renderManualCallHistory([]);
+        status.textContent = "🗑️ Histórico de chamados limpo.";
+        setTimeout(() => { status.textContent = ""; }, 2000);
       });
     }
   });
@@ -56,11 +70,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const dateStr = new Date(item.timestamp).toLocaleString("pt-BR");
 
       li.innerHTML = `
-        <div class="history-info">
-          <div class="history-date">${dateStr}</div>
-          <div class="history-preview" title="${item.summary}">${item.summary}</div>
+        <div class="history-info" style="flex: 1; min-width: 0;">
+          <div class="history-date" style="font-size: 11px; color: #666;">${dateStr}</div>
+          <div class="history-preview" title="${item.summary}" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.summary}</div>
         </div>
-        <div class="history-actions">
+        <div class="history-actions" style="margin-left: 10px;">
           <button class="btn-copy">Copiar</button>
           <button class="btn-view">Ver</button>
         </div>
@@ -79,6 +93,50 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
       historyList.appendChild(li);
+    });
+  }
+
+  function renderManualCallHistory(history) {
+    manualCallHistoryList.innerHTML = "";
+
+    if (!history || history.length === 0) {
+      manualCallHistoryList.innerHTML = "<div class='empty-history'>Nenhum chamado salvo ainda.</div>";
+      return;
+    }
+
+    const sortedHistory = [...history].sort((a, b) => b.timestamp - a.timestamp);
+
+    sortedHistory.forEach(item => {
+      const li = document.createElement("li");
+      li.className = "history-item";
+
+      const dateStr = new Date(item.timestamp).toLocaleString("pt-BR");
+      const previewText = item.text.replace(/\n/g, " ").substring(0, 100) + "...";
+
+      li.innerHTML = `
+        <div class="history-info" style="flex: 1; min-width: 0;">
+          <div class="history-date" style="font-size: 11px; color: #666;">${dateStr}</div>
+          <div class="history-preview" title="${item.text.replace(/"/g, '&quot;')}" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${previewText}</div>
+        </div>
+        <div class="history-actions" style="margin-left: 10px;">
+          <button class="btn-copy">Copiar</button>
+          <button class="btn-view">Ver</button>
+        </div>
+      `;
+
+      li.querySelector(".btn-copy").addEventListener("click", () => {
+        navigator.clipboard.writeText(item.text);
+        const btn = li.querySelector(".btn-copy");
+        const originalText = btn.textContent;
+        btn.textContent = "Copiado!";
+        setTimeout(() => btn.textContent = originalText, 1500);
+      });
+
+      li.querySelector(".btn-view").addEventListener("click", () => {
+        alert("Detalhes do Chamado:\n\n" + item.text);
+      });
+
+      manualCallHistoryList.appendChild(li);
     });
   }
 

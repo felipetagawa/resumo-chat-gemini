@@ -9,6 +9,7 @@
   "host_permissions": [
     "https://softeninformatica.sz.chat/*",
     "https://gemini-resumo-api-298442462030.southamerica-east1.run.app/*",
+    "https://gemini-resumo-298442462030.southamerica-east1.run.app/*",
     "https://generativelanguage.googleapis.com/*",
     "http://localhost:8080/*"
   ],
