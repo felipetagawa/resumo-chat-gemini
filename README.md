@@ -1,75 +1,131 @@
-# AtendeAI Manager
+# 🤖 AtendeAI Manager
 
-**AtendeAI Manager** (anteriormente *Resumo de Atendimentos - Gemini*) é uma extensão para Google Chrome projetada para otimizar o fluxo de atendimento na plataforma Sz.chat, utilizando inteligência artificial para gerar resumos, oferecer dicas inteligentes e gerenciar mensagens padrão.
+**Seu assistente inteligente para atendimentos no Sz.chat!**
 
-## 📥 Instalação
-
-A extensão está disponível na Chrome Web Store.
-
-[**🔗 Baixar AtendeAI Manager na Chrome Web Store**](https://chromewebstore.google.com/detail/resumo-de-atendimentos-ge/gogfjklhlmkfadlbolmolddmcglpmohg)
-
-1. Acesse o link acima.
-2. Clique em **"Usar no Chrome"**.
-3. Confirme a instalação clicando em **"Adicionar extensão"**.
+O AtendeAI Manager é uma extensão para Google Chrome que usa inteligência artificial para tornar seus atendimentos mais rápidos e eficientes. Com ela, você pode criar resumos automáticos, receber dicas inteligentes durante o atendimento e usar mensagens prontas com apenas um clique.
 
 ---
 
-## 🚀 Funcionalidades Principais
+## 📥 Como Instalar
 
-A extensão adiciona um painel de botões flutuantes na interface do Sz.chat, oferecendo as seguintes ferramentas:
+**Passo 1:** Acesse a Chrome Web Store clicando no link abaixo:
 
-### 1. 🧠 Gerar Relatório
-Utiliza a IA do Google Gemini para ler o histórico da conversa atual e gerar um resumo estruturado e profissional.
-*   **Como usar:** Abra um atendimento e clique no botão **"Gerar Relatório"**. O resumo será exibido em um popup flutuante, pronto para ser copiado ou salvo.
+### [**🔗 Baixar AtendeAI Manager**](https://chromewebstore.google.com/detail/resumo-de-atendimentos-ge/gogfjklhlmkfadlbolmolddmcglpmohg)
 
-### 2. 💡 Dicas Inteligentes
-Analisa o contexto do atendimento e sugere dicas, possíveis soluções ou identifica o humor do cliente.
-*   **Como usar:** Clique no botão **"Dicas Inteligentes"** para receber insights sobre o atendimento em andamento.
+**Passo 2:** Clique no botão **"Usar no Chrome"**
 
-### 3. 💬 Mensagens Padrão
-Permite o uso de atalhos rápidos para enviar mensagens pré-configuradas, agilizando as respostas.
-*   **Como usar:** Digite o atalho (ex: `/1`, `/a`) na caixa de texto do chat para inserir a mensagem correspondente automaticamente.
+**Passo 3:** Confirme clicando em **"Adicionar extensão"**
 
-### 4. 📚 Consultar Docs
-Permite realizar buscas na documentação oficial diretamente pela extensão.
-*   **Como usar:** Clique em **"Consultar Docs"** para abrir o painel de pesquisa e encontrar informações rapidamente.
+**Pronto!** A extensão será instalada automaticamente e estará pronta para usar.
 
 ---
 
-## ⚙️ Configuração
+## 🎯 Como Usar
 
-Você pode personalizar o comportamento da extensão através da página de Opções.
+Assim que você abrir o Sz.chat, uma barra de botões aparecerá no canto inferior direito da tela. Cada botão tem uma função especial para ajudar no seu atendimento:
 
-**Para acessar as configurações:**
-1. Clique com o botão direito no ícone da extensão na barra do navegador.
-2. Selecione **"Opções"**.
-3. Ou, clique no botão **"Mensagens Padrão"** no painel flutuante e acesse as configurações.
+### 🧠 Gerar Relatório
+**O que faz:** Lê toda a conversa e cria um resumo organizado automaticamente.
 
-### Opções Disponíveis:
+**Quando usar:** No final de cada atendimento, para registrar o que foi conversado.
 
-*   **Instruções da IA (Prompt Personalizado):**
-    *   Você pode definir instruções específicas que serão enviadas à IA junto com o chat. Isso permite ajustar o tom, o formato ou o foco das respostas geradas (ex: "Responda sempre de forma formal" ou "Foque em problemas técnicos").
-    *   Digite suas instruções no campo **"Prompt Personalizado"** e clique em **"Salvar Configurações"**.
+**Como usar:**
+1. Termine seu atendimento normalmente
+2. Clique no botão **"Gerar Relatório"**
+3. Aguarde alguns segundos
+4. Um resumo completo aparecerá na tela
+5. Copie e cole no ticket ou onde precisar
 
-*   **Gerenciar Mensagens Padrão:**
-    *   **Mensagens Fixas:** Visualize as mensagens padrão que já vêm com o sistema.
-    *   **Mensagens Personalizadas:** Adicione suas próprias mensagens.
-        1. Digite o texto da mensagem no campo "Digite a mensagem personalizada...".
-        2. Clique em **"Adicionar Mensagem"**.
-    *   **Configurar Atalhos:** Para cada mensagem (Fixa ou Personalizada), você pode definir um atalho rápido (letras ou números). Basta digitar o atalho desejado no campo "Atalho ex: /1" ao lado da mensagem.
+### 💡 Dicas Inteligentes
+**O que faz:** Analisa a conversa e sugere soluções ou identifica o humor do cliente.
+
+**Quando usar:** Durante o atendimento, quando precisar de ideias ou não souber como responder.
+
+**Como usar:**
+1. Clique em **"Dicas Inteligentes"** a qualquer momento
+2. A IA analisará a conversa
+3. Você receberá sugestões de resposta ou insights sobre o cliente
+
+### 💬 Mensagens Padrão
+**O que faz:** Permite enviar mensagens prontas rapidamente usando atalhos.
+
+**Quando usar:** Para responder perguntas frequentes sem precisar digitar sempre a mesma coisa.
+
+**Como usar:**
+- **Opção 1:** Clique no botão **"Mensagens Padrão"** e escolha a mensagem
+- **Opção 2:** Digite um atalho diretamente no chat (ex: `/1`, `/oi`)
+  - A mensagem será inserida automaticamente
+
+### 📚 Consultar Docs
+**O que faz:** Busca informações na documentação oficial.
+
+**Quando usar:** Quando tiver dúvidas técnicas durante o atendimento.
+
+**Como usar:**
+1. Clique em **"Consultar Docs"**
+2. Digite o que está procurando
+3. Os resultados aparecerão na tela
 
 ---
 
-## 📝 Tutorial de Uso Rápido
+## ⚙️ Personalizando a Extensão
 
-1. **Abra o Sz.chat** e entre em um atendimento.
-2. Os **botões flutuantes** aparecerão automaticamente no canto inferior direito da tela.
-3. Utilize o **Gerar Relatório** ao final de um atendimento para registrar o histórico no ticket.
-4. Utilize as **Mensagens Padrão** (via botões ou atalhos `/...`) para responder perguntas frequentes instantaneamente.
-5. Se tiver dúvidas técnicas, use o **Consultar Docs** ou peça **Dicas Inteligentes** para a IA.
+Você pode configurar a extensão do seu jeito! Veja como:
+
+### Como Acessar as Configurações:
+1. Clique com o **botão direito** no ícone da extensão (no topo do navegador)
+2. Selecione **"Opções"**
+
+### O que Você Pode Configurar:
+
+#### 📝 Personalizar o Tom da IA
+Você pode ensinar a IA a responder do jeito que você prefere:
+- Digite instruções no campo **"Prompt Personalizado"**
+- Exemplos:
+  - "Responda sempre de forma amigável e informal"
+  - "Foque apenas em problemas técnicos"
+  - "Seja breve e direto nas respostas"
+- Clique em **"Salvar Configurações"**
+
+#### ⚡ Criar Suas Próprias Mensagens Rápidas
+1. Vá até a seção **"Mensagens Personalizadas"**
+2. Digite sua mensagem no campo de texto
+3. Clique em **"Adicionar Mensagem"**
+4. Defina um atalho (ex: `/oi`, `/1`, `/a`)
+5. Agora você pode usar o atalho no chat!
+
+**Dica:** Crie mensagens para situações que acontecem com frequência, como:
+- Saudações de bom dia
+- Pedidos de informações adicionais
+- Despedidas
+- Agradecimentos
 
 ---
 
-## 👨‍💻 Créditos
+## � Guia Rápido para Começar
 
-**Desenvolvidor por:** Felipe Okamoto & Diego Martins
+**Primeira vez usando?** Siga este passo a passo:
+
+1. ✅ **Instale a extensão** (link no topo deste guia)
+2. ✅ **Abra o Sz.chat** no seu navegador
+3. ✅ **Entre em um atendimento** de teste
+4. ✅ **Veja os botões** que apareceram no canto da tela
+5. ✅ **Experimente cada função** para se familiarizar
+6. ✅ **Configure suas mensagens padrão** na página de opções
+7. ✅ **Pronto!** Agora você está pronto para atender mais rápido e melhor
+
+
+## 💡 Dicas de Uso
+
+- **Use os atalhos:** Economize tempo criando atalhos para mensagens que você usa muito
+- **Personalize o tom:** Configure a IA para responder do jeito que combina com você
+
+---
+
+## 👨‍💻 Desenvolvido por
+
+Felipe Okamoto & Diego Martins
+
+---
+
+**Gostou da extensão?** Deixe uma avaliação na Chrome Web Store! ⭐
