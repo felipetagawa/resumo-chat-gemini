@@ -7,6 +7,14 @@ function inicializarModulos() {
   NotificationsModule.init();
 }
 
+const getIconHTML = (icon, text) => {
+  if (typeof icon === "string" && (icon.endsWith(".png") || icon.endsWith(".jpg") || icon.endsWith(".svg"))) {
+    const iconUrl = chrome.runtime.getURL(icon);
+    return `<span class="icon"><img src="${iconUrl}" alt="${text} icon" style="width: 16px; height: 16px; vertical-align: middle;"></span>`;
+  }
+  return `<span class="icon">${icon}</span>`;
+};
+
 function criarBotoesFlutuantes() {
   if (DOMHelpers.exists("containerBotoesGemini")) return;
 
@@ -27,12 +35,13 @@ function criarBotoesFlutuantes() {
     const btn = document.createElement("button");
     btn.id = id;
     btn.className = "gemini-floating-btn";
-    btn.innerHTML = `<span class="icon">${icon}</span> ${text}`;
+
+    btn.innerHTML = `${getIconHTML(icon, text)} ${text}`;
     btn.addEventListener("click", onClick);
     return btn;
   };
 
-  const botaoResumo = createButton("btnResumoGemini", "Gerar Relatório", "🧠", async () => {
+  const botaoResumo = createButton("btnResumoGemini", "Gerar Relatório", "relatorio.png", async () => {
     const btn = document.getElementById("btnResumoGemini");
     btn.disabled = true;
     btn.innerHTML = `<span class="icon">⏳</span> Gerando...`;
@@ -41,7 +50,7 @@ function criarBotoesFlutuantes() {
     if (!texto) {
       alert("Não foi possível capturar o texto do chat.");
       btn.disabled = false;
-      btn.innerHTML = `<span class="icon">🧠</span> Gerar Relatório`;
+      btn.innerHTML = `${getIconHTML("relatorio.png", "Gerar Relatório")} Gerar Relatório`;
       return;
     }
 
@@ -57,7 +66,7 @@ function criarBotoesFlutuantes() {
       alert("Erro de comunicação: " + error.message);
     } finally {
       btn.disabled = false;
-      btn.innerHTML = `<span class="icon">🧠</span> Gerar Relatório`;
+      btn.innerHTML = `${getIconHTML("relatorio.png", "Gerar Relatório")} Gerar Relatório`;
     }
   });
 
@@ -65,7 +74,7 @@ function criarBotoesFlutuantes() {
   const containerDropdown = document.createElement("div");
   containerDropdown.className = "gemini-dropdown";
 
-  const botaoMain = createButton("btnAssistenteIA", "Assistente IA", "🤖", (e) => {
+  const botaoMain = createButton("btnAssistenteIA", "Assistente IA", "icon48.png", (e) => {
     e.stopPropagation();
     containerDropdown.classList.toggle("active");
   });
@@ -129,11 +138,11 @@ function criarBotoesFlutuantes() {
 
   // --- Fim Botão Unificado ---
 
-  const botaoMessages = createButton("btnMessages", "Mensagens Padrão", "💬", () => {
+  const botaoMessages = createButton("btnMessages", "Mensagens Padrão", "mensagem-padrao.png", () => {
     MessagesModule.mostrarPopupMensagens();
   });
 
-  const botaoAgenda = createButton("btnAgenda", "Agenda & Gestão", "📅", () => {
+  const botaoAgenda = createButton("btnAgenda", "Agenda & Gestão", "agenda.png", () => {
     AgendaModule.exibirAgenda();
   });
 
@@ -152,12 +161,12 @@ MessagingHelper.addListener((request, sender, sendResponse) => {
 
   if (botaoResumo) {
     botaoResumo.disabled = false;
-    botaoResumo.innerHTML = `<span class="icon">🧠</span> Gerar Relatório`;
+    botaoResumo.innerHTML = `${getIconHTML("relatorio.png", "Gerar Relatório")} Gerar Relatório`;
   }
 
   if (botaoMessages) {
     botaoMessages.disabled = false;
-    botaoMessages.innerHTML = `<span class="icon">💬</span> Mensagens Padrão`;
+    botaoMessages.innerHTML = `${getIconHTML("mensagem-padrao.png", "Mensagens Padrão")} Mensagens Padrão`;
   }
 
   if (botaoDica) {
