@@ -32,7 +32,8 @@
         "styles/main.css",
         "styles/buttons.css",
         "styles/modals.css",
-        "styles/calendar.css"
+        "styles/calendar.css",
+        "styles/called.css"
       ],
       "js": [
         "utils/storage.js",
@@ -45,6 +46,7 @@
         "modules/messages.js",
         "modules/docs.js",
         "modules/agenda.js",
+        "modules/called.js",
         "modules/notifications.js",
         "content.js"
       ],

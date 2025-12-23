@@ -41,6 +41,10 @@ function criarBotoesFlutuantes() {
     return btn;
   };
 
+  const botaoDocs = createButton("btnConsultarDocs", "Consultar Docs", "📚", () => {
+    DocsModule.exibirPainelConsultaDocs();
+  });
+
   const botaoResumo = createButton("btnResumoGemini", "Gerar Relatório", "relatorio.png", async () => {
     const btn = document.getElementById("btnResumoGemini");
     btn.disabled = true;
@@ -70,37 +74,7 @@ function criarBotoesFlutuantes() {
     }
   });
 
-
-  const containerDropdown = document.createElement("div");
-  containerDropdown.className = "gemini-dropdown";
-
-  const botaoMain = createButton("btnAssistenteIA", "Assistente IA", "icon48.png", (e) => {
-    e.stopPropagation();
-    containerDropdown.classList.toggle("active");
-  });
-  botaoMain.onclick = null;
-
-  const dropdownContent = document.createElement("div");
-  dropdownContent.className = "gemini-dropdown-content";
-
-  document.addEventListener("click", () => {
-    containerDropdown.classList.remove("active");
-  });
-
-  const itemDocs = document.createElement("button");
-  itemDocs.className = "gemini-dropdown-item";
-  itemDocs.id = "btnConsultarDocsLoop";
-  itemDocs.innerHTML = `<span class="icon">📚</span> Consultar Docs`;
-  itemDocs.onclick = () => {
-    DocsModule.exibirPainelConsultaDocs();
-  };
-
-  const itemDica = document.createElement("button");
-  itemDica.className = "gemini-dropdown-item";
-  itemDica.id = "btnDica";
-  itemDica.innerHTML = `<span class="icon">💡</span> Dicas Inteligentes`;
-
-  itemDica.onclick = async () => {
+  const botaoDica = createButton("btnDica", "Dicas Inteligentes", "💡", async () => {
     const btn = document.getElementById("btnDica");
     btn.disabled = true;
     const textoOriginal = btn.innerHTML;
@@ -128,15 +102,7 @@ function criarBotoesFlutuantes() {
       btn.disabled = false;
       btn.innerHTML = `<span class="icon">💡</span> Dicas Inteligentes`;
     }
-  };
-
-  dropdownContent.appendChild(itemDocs);
-  dropdownContent.appendChild(itemDica);
-
-  containerDropdown.appendChild(botaoMain);
-  containerDropdown.appendChild(dropdownContent);
-
-  // --- Fim Botão Unificado ---
+  });
 
   const botaoMessages = createButton("btnMessages", "Mensagens Padrão", "mensagem-padrao.png", () => {
     MessagesModule.mostrarPopupMensagens();
@@ -146,10 +112,16 @@ function criarBotoesFlutuantes() {
     AgendaModule.exibirAgenda();
   });
 
+  const botaoChamadoManual = createButton("btnChamadoManual", "Chamado Manual", "📝", () => {
+    CalledModule.exibirChamadoManual();
+  });
+
   container.appendChild(botaoResumo);
-  container.appendChild(botaoMessages);
+  container.appendChild(botaoDica);
   container.appendChild(botaoAgenda);
-  container.appendChild(containerDropdown);
+  container.appendChild(botaoMessages);
+  container.appendChild(botaoChamadoManual);
+  container.appendChild(botaoDocs);
 
   document.body.appendChild(container);
 }
