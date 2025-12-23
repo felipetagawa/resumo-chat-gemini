@@ -415,6 +415,283 @@ const AgendaModule = (() => {
             });
         };
 
+    const abrirModalVisualizacao = (eventData) => {
+            const statusLabel = getStatusLabel(eventData.status);
+            const statusColor = getStatusColor(eventData.status);
+            const statusIcon = getStatusIcon(eventData.status);
+            
+            const modalContent = `
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 10px;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <h3 style="margin: 0 0 5px 0; color: #333; font-size: 18px; font-weight: 600; word-break: break-word;">${eventData.title || 'Sem título'}</h3>
+                                ${eventData.client ? `<p style="margin: 0 0 10px 0; color: #666; font-size: 14px; word-break: break-word;"><strong>Cliente:</strong> ${eventData.client}</p>` : ''}
+                            </div>
+                            <span style="display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 12px; background: ${statusColor}20; color: ${statusColor}; font-size: 12px; font-weight: 500; border: 1px solid ${statusColor}40; white-space: nowrap;">
+                                ${statusIcon} ${statusLabel}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Data:</strong></p>
+                            <p style="margin: 0; font-size: 14px; color: #333; word-break: break-word;">${eventData.date || 'Não definida'}</p>
+                        </div>
+                        ${eventData.time ? `
+                        <div>
+                            <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Hora:</strong></p>
+                            <p style="margin: 0; font-size: 14px; color: #333; word-break: break-word;">${eventData.time}</p>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${eventData.problem ? `
+                    <div style="margin-bottom: 15px;">
+                        <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Problema/Descrição:</strong></p>
+                        <div style="
+                            margin: 0;
+                            font-size: 14px;
+                            color: #333;
+                            line-height: 1.5;
+                            padding: 8px;
+                            background: #f8f9fa;
+                            border-radius: 4px;
+                            word-break: break-word;
+                            overflow-wrap: break-word;
+                        ">
+                            ${eventData.problem.split('\n').map(line => line.trim()).filter(line => line).join(' ')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${eventData.notes ? `
+                    <div style="margin-bottom: 15px;">
+                        <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Observações:</strong></p>
+                        <div style="
+                            margin: 0;
+                            font-size: 14px;
+                            color: #333;
+                            line-height: 1.5;
+                            padding: 8px;
+                            background: #f8f9fa;
+                            border-radius: 4px;
+                            word-break: break-word;
+                            overflow-wrap: break-word;
+                        ">
+                            ${eventData.notes.split('\n').map(line => line.trim()).filter(line => line).join(' ')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${eventData.createdAt ? `
+                    <div style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
+                        <p style="margin: 0; font-size: 12px; color: #999; word-break: break-word;"><strong>Criado em:</strong> ${eventData.createdAt}</p>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            const existingModal = document.getElementById('viewEventModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            const modalDiv = document.createElement('div');
+            modalDiv.id = 'viewEventModal';
+            modalDiv.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 2147483647;
+                padding: 20px;
+                box-sizing: border-box;
+            `;
+            
+            modalDiv.innerHTML = `
+                <div style="
+                    background: white;
+                    border-radius: 8px;
+                    width: 100%;
+                    max-width: min(500px, 95vw);
+                    max-height: min(85vh, 90%);
+                    overflow-y: auto;
+                    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+                    border: 1px solid #ddd;
+                    position: relative;
+                    display: flex;
+                    flex-direction: column;
+                ">
+                    <div style="
+                        padding: 15px 20px;
+                        border-bottom: 1px solid #eee;
+                        background: #f8f9fa;
+                        border-radius: 8px 8px 0 0;
+                        position: sticky;
+                        top: 0;
+                        z-index: 1;
+                        flex-shrink: 0;
+                    ">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                            <h2 style="
+                                margin: 0;
+                                font-size: clamp(16px, 4vw, 18px);
+                                color: #333;
+                                font-weight: 600;
+                                word-break: break-word;
+                            ">Visualização de Evento</h2>
+                            <button id="closeViewModal" style="
+                            border: none;
+                            background: transparent;
+                            color: #333;
+                            font-size: 24px;
+                            cursor: pointer;
+                            width: 32px;
+                            height: 32px;
+                            min-width: 32px;
+                            min-height: 32px;
+                            border-radius: 4px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;    
+                            padding: 0;
+                            line-height: 1;
+                            flex-shrink: 0;
+                            font-weight: 500;
+                            transition: background-color 0.2s;
+                        ">×</button>
+                        </div>
+                    </div>
+                    
+                    <div style="
+                        padding: 20px;
+                        flex: 1;
+                        overflow-y: auto;
+                        box-sizing: border-box;
+                    ">
+                        ${modalContent}
+                    </div>
+                    
+                    <div style="
+                        padding: 15px 20px;
+                        border-top: 1px solid #eee;
+                        background: #f8f9fa;
+                        border-radius: 0 0 8px 8px;
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 10px;
+                        justify-content: flex-end;
+                        position: sticky;
+                        bottom: 0;
+                        flex-shrink: 0;
+                    ">
+                        <button id="editEventBtn" style="
+                            padding: 8px 16px;
+                            background: #4CAF50;
+                            color: white;
+                            border: none;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: clamp(13px, 3vw, 14px);
+                            font-weight: 500;
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                            white-space: nowrap;
+                            flex: 1;
+                            min-width: 100px;
+                            justify-content: center;
+                        ">
+                            Editar
+                        </button>
+                        <button id="deleteEventBtn" style="
+                            padding: 8px 16px;
+                            background: #f44336;
+                            color: white;
+                            border: none;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: clamp(13px, 3vw, 14px);
+                            font-weight: 500;
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                            white-space: nowrap;
+                            flex: 1;
+                            min-width: 100px;
+                            justify-content: center;
+                        ">
+                            Excluir
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modalDiv);
+            
+            const closeModal = () => {
+                if (modalDiv && modalDiv.parentNode) {
+                    modalDiv.parentNode.removeChild(modalDiv);
+                }
+            };
+            
+            const closeBtn1 = modalDiv.querySelector('#closeViewModal');
+            const closeBtn2 = modalDiv.querySelector('#closeViewModal2');
+            const editBtn = modalDiv.querySelector('#editEventBtn');
+            const deleteBtn = modalDiv.querySelector('#deleteEventBtn');
+            
+            if (closeBtn1) closeBtn1.addEventListener('click', closeModal);
+            if (closeBtn2) closeBtn2.addEventListener('click', closeModal);
+            
+            if (editBtn) {
+                editBtn.addEventListener('click', () => {
+                    closeModal();
+                    setTimeout(() => {
+                        abrirModalEvento(eventData);
+                    }, 50);
+                });
+            }
+            
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', async () => {
+                    if (confirm('Tem certeza que deseja excluir este evento?')) {
+                        await deletarEventoCompleto(eventData.id);
+                        closeModal();
+                        setTimeout(() => {
+                            loadAndRender();
+                        }, 50);
+                    }
+                });
+            }
+            
+            modalDiv.addEventListener('click', (e) => {
+                if (e.target === modalDiv) {
+                    closeModal();
+                }
+            });
+            
+            const handleEscKey = (e) => {
+                if (e.key === 'Escape') {
+                    closeModal();
+                    document.removeEventListener('keydown', handleEscKey);
+                }
+            };
+            
+            document.addEventListener('keydown', handleEscKey);
+            
+            modalDiv._escListener = handleEscKey;
+            
+            setTimeout(() => {
+                if (closeBtn1) closeBtn1.focus();
+            }, 10);
+        };
+
         const abrirModalEvento = (eventData = null, dia = null) => {
             const isEdit = eventData !== null;
             const dataDefault = dia ? `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}` : '';
@@ -504,15 +781,15 @@ const AgendaModule = (() => {
                 "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
             container.innerHTML = `
-        <div class="calendar-controls">
-          <button id="prevMonth" style="border:none; background:none; cursor:pointer; font-size:18px; padding:5px;">◀</button>
-          <div style="font-weight:700; font-size:16px; color:#333;">${monthNames[currentMonth]} ${currentYear}</div>
-          <button id="nextMonth" style="border:none; background:none; cursor:pointer; font-size:18px; padding:5px;">▶</button>
-        </div>
-        <div class="calendar-grid">
-          ${['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => `<div class="calendar-day-header">${d}</div>`).join('')}
-        </div>
-      `;
+            <div class="calendar-controls">
+            <button id="prevMonth" style="border:none; background:none; cursor:pointer; font-size:18px; padding:5px;">◀</button>
+            <div style="font-weight:700; font-size:16px; color:#333;">${monthNames[currentMonth]} ${currentYear}</div>
+            <button id="nextMonth" style="border:none; background:none; cursor:pointer; font-size:18px; padding:5px;">▶</button>
+            </div>
+            <div class="calendar-grid">
+            ${['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => `<div class="calendar-day-header">${d}</div>`).join('')}
+            </div>
+        `;
 
             const grid = container.querySelector('.calendar-grid');
 
@@ -544,18 +821,18 @@ const AgendaModule = (() => {
                     eventsHtml += `
                         <div class="event-marker ${isOverdue ? 'overdue' : ''}" 
                             data-event-id="${evt.id}" 
-                            title="${evt.title}${evt.client ? ' - ' + evt.client : ''}\nStatus: ${getStatusLabel(evt.status)}"
-                            style="border-left: 3px solid ${statusColor}; background: ${statusColor}20; color: ${statusColor}; margin-top: 2px;">
-                            ${statusIcon} ${displayText}
+                            title="Clique para ver detalhes\n${evt.title}${evt.client ? ' - ' + evt.client : ''}\nStatus: ${getStatusLabel(evt.status)}"
+                            style="border-left: 3px solid ${statusColor}; background: ${statusColor}20; color: ${statusColor}; margin-top: 2px; cursor: pointer; padding: 2px 5px; border-radius: 3px;">
+                            ${statusIcon} ${displayText.length > 20 ? displayText.substring(0, 20) + '...' : displayText}
                         </div>`;
                 });
 
                 if (hasOverdue) dayEl.classList.add('has-overdue');
 
                 dayEl.innerHTML = `
-          <span class="day-number">${i}</span>
-          <div class="day-events">${eventsHtml}</div>
-        `;
+            <span class="day-number" style="cursor: pointer; padding: 2px 5px; border-radius: 3px; display: inline-block;">${i}</span>
+            <div class="day-events">${eventsHtml}</div>
+            `;
 
                 dayEl.querySelector('.day-number').addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -568,7 +845,10 @@ const AgendaModule = (() => {
                         const eventId = marker.dataset.eventId;
                         const eventData = Object.values(eventsCache).find(evt => evt.id === eventId);
                         if (eventData) {
-                            abrirModalEvento(eventData);
+                            console.log('Abrindo modal para evento:', eventData);
+                            abrirModalVisualizacao(eventData);
+                        } else {
+                            console.error('Evento não encontrado:', eventId);
                         }
                     });
                 });
@@ -927,40 +1207,40 @@ const AgendaModule = (() => {
     function iniciarKanban(container) {
     container.innerHTML = `
         <div class="kanban-header">
-            <button id="btnAddKanban" style="background:#1a73e8; color:white; border:none; padding:10px 16px; border-radius:6px; font-weight:600; cursor:pointer; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">+ Novo Card</button>
-            <div style="display:flex; gap:10px; margin-bottom:20px; align-items:center;">
-                <input type="text" id="filtroKanban" placeholder="Filtrar cards..." style="padding:8px; border:1px solid #ccc; border-radius:4px; font-size:13px; flex:1;">
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <div style="font-size:12px; color:#666;">De:</div>
-                    <input type="date" id="dataInicioKanban" style="padding:8px; border:1px solid #ccc; border-radius:4px; font-size:13px;">
-                    <div style="font-size:12px; color:#666;">Até:</div>
-                    <input type="date" id="dataFimKanban" style="padding:8px; border:1px solid #ccc; border-radius:4px; font-size:13px;">
+            <div style="display:flex; gap:10px; margin-bottom:15px; align-items:center; flex-wrap:wrap;">
+                <button id="btnAddKanban" style="background:#1a73e8; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:600; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,0.1); font-size:12px; white-space:nowrap;">+ Novo Card</button>
+                <input type="text" id="filtroKanban" placeholder="Filtrar..." style="padding:6px; border:1px solid #ccc; border-radius:4px; font-size:12px; width:180px; flex-shrink:0;">
+                <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+                    <div style="font-size:11px; color:#666; white-space:nowrap;">De:</div>
+                    <input type="date" id="dataInicioKanban" style="padding:4px 6px; border:1px solid #ccc; border-radius:4px; font-size:11px; width:110px; flex-shrink:0;">
+                    <div style="font-size:11px; color:#666; white-space:nowrap;">Até:</div>
+                    <input type="date" id="dataFimKanban" style="padding:4px 6px; border:1px solid #ccc; border-radius:4px; font-size:11px; width:110px; flex-shrink:0;">
                 </div>
             </div>
         </div>
-        <div class="kanban-board" style="display: flex; gap: 20px; overflow-x: auto; padding: 10px 0;">
-            <div class="kanban-column" data-status="todo" style="flex: 1; min-width: 300px; background: #f5f5f5; border-radius: 8px; padding: 15px;">
-                <div class="kanban-column-header" style="background: #ff6b6b; color: white; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+        <div class="kanban-board" style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; min-height: 450px;">
+            <div class="kanban-column" data-status="todo" style="flex: 1; min-width: 220px; max-width: 240px; background: #f5f5f5; border-radius: 6px; padding: 8px;">
+                <div class="kanban-column-header" style="background: #ff6b6b; color: white; padding: 6px 8px; border-radius: 4px; margin-bottom: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
                     <span>📋 A Fazer</span>
-                    <span class="column-count" style="background: rgba(255,255,255,0.3); padding: 2px 8px; border-radius: 12px; font-size: 12px;">0</span>
+                    <span class="column-count" style="background: rgba(255,255,255,0.3); padding: 1px 5px; border-radius: 10px; font-size: 10px;">0</span>
                 </div>
-                <div class="kanban-cards" data-status="todo" style="min-height: 200px; transition: all 0.3s;"></div>
+                <div class="kanban-cards" data-status="todo" style="min-height: 80px; transition: all 0.3s; border: 2px dashed transparent; border-radius: 4px;"></div>
             </div>
             
-            <div class="kanban-column" data-status="inprogress" style="flex: 1; min-width: 300px; background: #f5f5f5; border-radius: 8px; padding: 15px;">
-                <div class="kanban-column-header" style="background: #4ecdc4; color: white; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+            <div class="kanban-column" data-status="inprogress" style="flex: 1; min-width: 220px; max-width: 240px; background: #f5f5f5; border-radius: 6px; padding: 8px;">
+                <div class="kanban-column-header" style="background: #4ecdc4; color: white; padding: 6px 8px; border-radius: 4px; margin-bottom: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
                     <span>⚡ Em Progresso</span>
-                    <span class="column-count" style="background: rgba(255,255,255,0.3); padding: 2px 8px; border-radius: 12px; font-size: 12px;">0</span>
+                    <span class="column-count" style="background: rgba(255,255,255,0.3); padding: 1px 5px; border-radius: 10px; font-size: 10px;">0</span>
                 </div>
-                <div class="kanban-cards" data-status="inprogress" style="min-height: 200px; transition: all 0.3s;"></div>
+                <div class="kanban-cards" data-status="inprogress" style="min-height: 80px; transition: all 0.3s; border: 2px dashed transparent; border-radius: 4px;"></div>
             </div>
             
-            <div class="kanban-column" data-status="done" style="flex: 1; min-width: 300px; background: #f5f5f5; border-radius: 8px; padding: 15px;">
-                <div class="kanban-column-header" style="background: #1dd1a1; color: white; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+            <div class="kanban-column" data-status="done" style="flex: 1; min-width: 220px; max-width: 240px; background: #f5f5f5; border-radius: 6px; padding: 8px;">
+                <div class="kanban-column-header" style="background: #1dd1a1; color: white; padding: 6px 8px; border-radius: 4px; margin-bottom: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
                     <span>✅ Concluído</span>
-                    <span class="column-count" style="background: rgba(255,255,255,0.3); padding: 2px 8px; border-radius: 12px; font-size: 12px;">0</span>
+                    <span class="column-count" style="background: rgba(255,255,255,0.3); padding: 1px 5px; border-radius: 10px; font-size: 10px;">0</span>
                 </div>
-                <div class="kanban-cards" data-status="done" style="min-height: 200px; transition: all 0.3s;"></div>
+                <div class="kanban-cards" data-status="done" style="min-height: 80px; transition: all 0.3s; border: 2px dashed transparent; border-radius: 4px;"></div>
             </div>
         </div>
     `;
@@ -979,6 +1259,332 @@ const AgendaModule = (() => {
     
     dataInicioKanban.value = formatarDataParaInput(primeiroDiaMes);
     dataFimKanban.value = formatarDataParaInput(ultimoDiaMes);
+
+    const getInsertPosition = (container, y, draggedCardId) => {
+        const cards = Array.from(container.querySelectorAll('.kanban-card'));
+        const otherCards = cards.filter(card => card.dataset.id !== draggedCardId);
+        
+        if (otherCards.length === 0) return 0;
+        
+        for (let i = 0; i < otherCards.length; i++) {
+            const card = otherCards[i];
+            const rect = card.getBoundingClientRect();
+            if (y < rect.top + rect.height / 2) {
+                return i;
+            }
+        }
+        
+        return otherCards.length;
+    };
+
+    const reordenarCardsNaColuna = async (status, movedCardId, newPosition) => {
+        const eventsCache = await obterTodosEventos();
+        const allCards = Object.values(eventsCache);
+        const columnCards = allCards.filter(card => card.status === status);
+        
+        const movedCard = columnCards.find(card => card.id === movedCardId);
+        if (!movedCard) return;
+        
+        const otherCards = columnCards.filter(card => card.id !== movedCardId);
+        
+        otherCards.sort((a, b) => (a.order || 0) - (b.order || 0));
+        
+        const reorderedCards = [];
+        let currentOrder = 0;
+        
+        for (let i = 0; i <= otherCards.length; i++) {
+            if (i === newPosition) {
+                reorderedCards.push({
+                    ...movedCard,
+                    order: currentOrder
+                });
+                currentOrder++;
+            }
+            
+            if (i < otherCards.length) {
+                reorderedCards.push({
+                    ...otherCards[i],
+                    order: currentOrder
+                });
+                currentOrder++;
+            }
+        }
+        
+        for (const card of reorderedCards) {
+            await salvarEventoCompleto(card);
+        }
+    };
+
+    const abrirModalVisualizacaoKanban = (eventData) => {
+        const statusLabel = getStatusLabel(eventData.status);
+        const statusColor = getStatusColor(eventData.status);
+        const statusIcon = getStatusIcon(eventData.status);
+        
+        const modalContent = `
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                    <div>
+                        <h3 style="margin: 0 0 5px 0; color: #333; font-size: 18px; font-weight: 600; word-break: break-word;">${eventData.title || 'Sem título'}</h3>
+                        ${eventData.client ? `<p style="margin: 0 0 10px 0; color: #666; font-size: 14px; word-break: break-word;"><strong>Cliente:</strong> ${eventData.client}</p>` : ''}
+                    </div>
+                    <span style="display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 12px; background: ${statusColor}20; color: ${statusColor}; font-size: 12px; font-weight: 500; border: 1px solid ${statusColor}40; white-space: nowrap;">
+                        ${statusIcon} ${statusLabel}
+                    </span>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Data:</strong></p>
+                        <p style="margin: 0; font-size: 14px; color: #333; word-break: break-word;">${eventData.date || 'Não definida'}</p>
+                    </div>
+                    ${eventData.time ? `
+                    <div>
+                        <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Hora:</strong></p>
+                        <p style="margin: 0; font-size: 14px; color: #333; word-break: break-word;">${eventData.time}</p>
+                    </div>
+                    ` : ''}
+                </div>
+                
+                ${eventData.problem ? `
+                <div style="margin-bottom: 15px;">
+                    <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Problema/Descrição:</strong></p>
+                    <div style="
+                        margin: 0;
+                        font-size: 14px;
+                        color: #333;
+                        line-height: 1.5;
+                        padding: 8px;
+                        background: #f8f9fa;
+                        border-radius: 4px;
+                        word-break: break-word;
+                        overflow-wrap: break-word;
+                    ">
+                        ${eventData.problem.split('\n').map(line => line.trim()).filter(line => line).join(' ')}
+                    </div>
+                </div>
+                ` : ''}
+                
+                ${eventData.notes ? `
+                <div style="margin-bottom: 15px;">
+                    <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Observações:</strong></p>
+                    <div style="
+                        margin: 0;
+                        font-size: 14px;
+                        color: #333;
+                        line-height: 1.5;
+                        padding: 8px;
+                        background: #f8f9fa;
+                        border-radius: 4px;
+                        word-break: break-word;
+                        overflow-wrap: break-word;
+                    ">
+                        ${eventData.notes.split('\n').map(line => line.trim()).filter(line => line).join(' ')}
+                    </div>
+                </div>
+                ` : ''}
+                
+                ${eventData.createdAt ? `
+                <div style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
+                    <p style="margin: 0; font-size: 12px; color: #999; word-break: break-word;"><strong>Criado em:</strong> ${eventData.createdAt}</p>
+                </div>
+                ` : ''}
+            </div>
+        `;
+        
+        const existingModal = document.getElementById('viewEventModalKanban');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        const modalDiv = document.createElement('div');
+        modalDiv.id = 'viewEventModalKanban';
+        modalDiv.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2147483647;
+            padding: 20px;
+            box-sizing: border-box;
+        `;
+        
+        modalDiv.innerHTML = `
+            <div style="
+                background: white;
+                border-radius: 8px;
+                width: 100%;
+                max-width: min(500px, 95vw);
+                max-height: min(85vh, 90%);
+                overflow-y: auto;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+                border: 1px solid #ddd;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+            ">
+                <div style="
+                    padding: 15px 20px;
+                    border-bottom: 1px solid #eee;
+                    background: #f8f9fa;
+                    border-radius: 8px 8px 0 0;
+                    position: sticky;
+                    top: 0;
+                    z-index: 2147483647;
+                    flex-shrink: 0;
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                        <h2 style="
+                            margin: 0;
+                            font-size: clamp(16px, 4vw, 18px);
+                            color: #333;
+                            font-weight: 600;
+                            word-break: break-word;
+                        ">Visualização de Evento</h2>
+                        <button id="closeViewModalKanban" style="
+                            border: none;
+                            background: transparent;
+                            color: #333;
+                            font-size: 24px;
+                            cursor: pointer;
+                            width: 32px;
+                            height: 32px;
+                            min-width: 32px;
+                            min-height: 32px;
+                            border-radius: 4px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            padding: 0;
+                            line-height: 1;
+                            flex-shrink: 0;
+                            font-weight: 500;
+                            transition: background-color 0.2s;
+                        ">×</button>
+                    </div>
+                </div>
+                
+                <div style="
+                    padding: 20px;
+                    flex: 1;
+                    overflow-y: auto;
+                    box-sizing: border-box;
+                ">
+                    ${modalContent}
+                </div>
+                
+                <div style="
+                    padding: 15px 20px;
+                    border-top: 1px solid #eee;
+                    background: #f8f9fa;
+                    border-radius: 0 0 8px 8px;
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                    justify-content: flex-end;
+                    position: sticky;
+                    bottom: 0;
+                    flex-shrink: 0;
+                ">
+                    <button id="editEventBtnKanban" style="
+                        padding: 8px 16px;
+                        background: #4CAF50;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: clamp(13px, 3vw, 14px);
+                        font-weight: 500;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        white-space: nowrap;
+                        flex: 1;
+                        min-width: 100px;
+                        justify-content: center;
+                    ">
+                        Editar
+                    </button>
+                    <button id="deleteEventBtnKanban" style="
+                        padding: 8px 16px;
+                        background: #f44336;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: clamp(13px, 3vw, 14px);
+                        font-weight: 500;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        white-space: nowrap;
+                        flex: 1;
+                        min-width: 100px;
+                        justify-content: center;
+                    ">
+                        Excluir
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modalDiv);
+        
+        const closeModal = () => {
+            if (modalDiv && modalDiv.parentNode) {
+                modalDiv.parentNode.removeChild(modalDiv);
+            }
+        };
+        
+        const closeBtn1 = modalDiv.querySelector('#closeViewModalKanban');
+        const closeBtn2 = modalDiv.querySelector('#closeViewModalKanban2');
+        const editBtn = modalDiv.querySelector('#editEventBtnKanban');
+        const deleteBtn = modalDiv.querySelector('#deleteEventBtnKanban');
+        
+        if (closeBtn1) closeBtn1.addEventListener('click', closeModal);
+        if (closeBtn2) closeBtn2.addEventListener('click', closeModal);
+        
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                closeModal();
+                setTimeout(() => {
+                    abrirModalKanban(eventData);
+                }, 50);
+            });
+        }
+        
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                if (confirm('Tem certeza que deseja excluir este evento?')) {
+                    await deletarEventoCompleto(eventData.id);
+                    closeModal();
+                    setTimeout(() => {
+                        renderKanban(filtroKanban.value);
+                    }, 50);
+                }
+            });
+        }
+        
+        modalDiv.addEventListener('click', (e) => {
+            if (e.target === modalDiv) {
+                closeModal();
+            }
+        });
+        
+        const handleEscKey = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', handleEscKey);
+            }
+        };
+        
+        document.addEventListener('keydown', handleEscKey);
+        
+        modalDiv._escListener = handleEscKey;
+    };
 
     const aplicarFiltroDataKanban = (cards) => {
         const dataInicioVal = dataInicioKanban.value;
@@ -1007,25 +1613,11 @@ const AgendaModule = (() => {
         return cardsFiltrados;
     };
 
-    const ordenarPorDataMaisProxima = (cards) => {
-        const hoje = new Date();
-        
+    const ordenarPorOrdem = (cards) => {
         return cards.sort((a, b) => {
-            if (a.date && b.date) {
-                const dataA = new Date(a.date);
-                const dataB = new Date(b.date);
-                
-                const diffA = Math.abs(dataA - hoje);
-                const diffB = Math.abs(dataB - hoje);
-                
-                return diffA - diffB;
-            }
-            
-            if (a.date && !b.date) return -1;
-            
-            if (!a.date && b.date) return 1;
-            
-            return 0;
+            const orderA = a.order || 0;
+            const orderB = b.order || 0;
+            return orderA - orderB;
         });
     };
 
@@ -1034,8 +1626,6 @@ const AgendaModule = (() => {
             let allCards = Object.values(eventsCache);
             
             allCards = aplicarFiltroDataKanban(allCards);
-
-            allCards = ordenarPorDataMaisProxima(allCards);
             
             const columns = container.querySelectorAll('.kanban-column');
             
@@ -1045,6 +1635,7 @@ const AgendaModule = (() => {
                 const countElement = column.querySelector('.column-count');
                 
                 let filteredCards = allCards.filter(card => card.status === status);
+                filteredCards = ordenarPorOrdem(filteredCards);
                 
                 if (filtroTexto) {
                     filteredCards = filteredCards.filter(card => 
@@ -1055,55 +1646,100 @@ const AgendaModule = (() => {
                 }
                 
                 countElement.textContent = filteredCards.length;
-                
                 cardsContainer.innerHTML = '';
                 
-                filteredCards.forEach(card => {
+                filteredCards.forEach((card, index) => {
+                    if (card.order !== index) {
+                        card.order = index;
+                    }
+                    
                     const cardEl = document.createElement('div');
                     cardEl.className = 'kanban-card';
                     cardEl.dataset.id = card.id;
+                    cardEl.dataset.status = card.status;
+                    cardEl.dataset.order = card.order || 0;
                     cardEl.draggable = true;
                     cardEl.style.cssText = `
                         background: white;
-                        border-radius: 8px;
-                        padding: 15px;
-                        margin-bottom: 10px;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        border-radius: 4px;
+                        padding: 6px;
+                        margin-bottom: 4px;
+                        box-shadow: 0 1px 2px rgba(0,0,0,0.08);
                         cursor: grab;
-                        border-left: 4px solid ${getStatusColor(card.status)};
+                        border-left: 2px solid ${getStatusColor(card.status)};
                         transition: all 0.2s;
+                        user-select: none;
+                        position: relative;
                     `;
                     
                     const isOverdue = card.date && card.status !== 'done' && UIBuilder.compararDatas(card.date);
-                    const overdueStyle = isOverdue ? 'color: #d32f2f; font-weight: 600;' : '';
+                    
+                    const dataFormatada = card.date ? 
+                        new Date(card.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) :
+                        '';
+                    
+                    const atualizacaoFormatada = card.updatedAt ? 
+                        new Date(card.updatedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) :
+                        '';
                     
                     cardEl.innerHTML = `
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                            <h4 style="margin: 0; font-size: 14px; color: #333; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">${card.title}</h4>
-                            <button class="btn-edit-kanban" data-id="${card.id}" style="background: none; border: none; cursor: pointer; font-size: 12px; color: #666; flex-shrink: 0;">✏️</button>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3px;">
+                            <h4 style="margin: 0; font-size: 11px; color: #333; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">${card.title}</h4>
+                            <button class="btn-edit-kanban" data-id="${card.id}" style="background: none; border: none; cursor: pointer; font-size: 9px; color: #666; flex-shrink: 0; padding: 1px 3px; border-radius: 2px; transition: background 0.2s; line-height: 1; z-index: 10;">✏️</button>
                         </div>
-                        ${card.client ? `<div style="font-size: 12px; color: #666; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><strong>Cliente:</strong> ${card.client}</div>` : ''}
-                        ${card.problem ? `<div style="font-size: 12px; color: #777; margin-bottom: 8px; max-height: 40px; overflow: hidden; word-break: break-word; line-height: 1.3;">${card.problem}</div>` : ''}
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                            <div style="font-size: 11px; color: #999; ${overdueStyle}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;">
-                                ${card.date ? UIBuilder.formatarDataEvento(card.date) : 'Sem data'}
-                                ${card.time ? ` ${card.time}` : ''}
+                        ${card.client ? `<div style="font-size: 9px; color: #666; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px;"><strong>C:</strong> ${card.client}</div>` : ''}
+                        ${card.problem ? `<div style="font-size: 9px; color: #777; margin-bottom: 4px; max-height: 24px; overflow: hidden; word-break: break-word; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${card.problem.split('\n').map(line => line.trim()).filter(line => line).join(' ')}</div>` : ''}
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                            <div style="font-size: 8px; color: ${isOverdue ? '#d32f2f' : '#999'}; font-weight: ${isOverdue ? '600' : 'normal'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70px;">
+                                ${dataFormatada}
+                                ${card.time ? `<br><span style="font-size:7px;">${card.time}</span>` : ''}
                                 ${isOverdue ? ' ⚠️' : ''}
                             </div>
-                            <div style="font-size: 11px; color: #999; flex-shrink: 0;">${new Date(card.updatedAt || card.createdAt).toLocaleDateString()}</div>
+                            <div style="font-size: 8px; color: #999; flex-shrink: 0; text-align: right;">
+                                ${atualizacaoFormatada}
+                            </div>
                         </div>
                     `;
                     
-                    cardEl.addEventListener('dragstart', handleDragStart);
-                    cardEl.addEventListener('click', (e) => {
-                        if (!e.target.closest('.btn-edit-kanban')) {
-                            abrirModalKanban(card);
+                    let mouseDownTime = 0;
+                    let startX = 0;
+                    let startY = 0;
+                    
+                    cardEl.addEventListener('mousedown', (e) => {
+                        mouseDownTime = Date.now();
+                        startX = e.clientX;
+                        startY = e.clientY;
+                    });
+                    
+                    cardEl.addEventListener('mouseup', (e) => {
+                        const clickDuration = Date.now() - mouseDownTime;
+                        const moveX = Math.abs(e.clientX - startX);
+                        const moveY = Math.abs(e.clientY - startY);
+                        
+                        if (clickDuration < 200 && moveX < 5 && moveY < 5) {
+                            if (!e.target.closest('.btn-edit-kanban')) {
+                                abrirModalVisualizacaoKanban(card);
+                            }
                         }
                     });
                     
+                    cardEl.addEventListener('dragstart', handleDragStart);
+                    cardEl.addEventListener('dragend', handleDragEnd);
+                    
                     cardEl.querySelector('.btn-edit-kanban').addEventListener('click', (e) => {
                         e.stopPropagation();
+                        e.preventDefault();
                         abrirModalKanban(card);
+                    });
+                    
+                    cardEl.addEventListener('mouseenter', () => {
+                        cardEl.style.transform = 'translateY(-1px)';
+                        cardEl.style.boxShadow = '0 2px 4px rgba(0,0,0,0.12)';
+                    });
+                    
+                    cardEl.addEventListener('mouseleave', () => {
+                        cardEl.style.transform = 'translateY(0)';
+                        cardEl.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)';
                     });
                     
                     cardsContainer.appendChild(cardEl);
@@ -1122,51 +1758,95 @@ const AgendaModule = (() => {
     const handleDragStart = (e) => {
         draggedCard = e.target;
         e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', draggedCard.dataset.id);
+        
         setTimeout(() => {
-            e.target.style.opacity = '0.4';
+            draggedCard.style.opacity = '0.4';
         }, 0);
+    };
+
+    const handleDragEnd = (e) => {
+        if (draggedCard) {
+            draggedCard.style.opacity = '1';
+        }
+        
+        document.querySelectorAll('.kanban-cards').forEach(container => {
+            container.style.border = '2px dashed transparent';
+            container.style.backgroundColor = '';
+        });
+        
+        draggedCard = null;
     };
 
     const handleDragOver = (e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
-        return false;
+        
+        const cardsContainer = e.target.closest('.kanban-cards');
+        if (cardsContainer) {
+            cardsContainer.style.border = '2px dashed #1a73e8';
+        }
     };
 
     const handleDrop = async (e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        if (draggedCard) {
-            const newStatus = e.target.closest('.kanban-cards').dataset.status;
-            const cardId = draggedCard.dataset.id;
-            
-            const eventsCache = await obterTodosEventos();
-            const card = eventsCache[cardId];
-            
-            if (card) {
+        if (!draggedCard) return;
+        
+        const cardsContainer = e.target.closest('.kanban-cards');
+        if (!cardsContainer) return;
+        
+        const newStatus = cardsContainer.dataset.status;
+        const cardId = draggedCard.dataset.id;
+        const oldStatus = draggedCard.closest('.kanban-cards').dataset.status;
+        
+        cardsContainer.style.border = '2px dashed transparent';
+        cardsContainer.style.backgroundColor = '';
+        
+        const newPosition = getInsertPosition(cardsContainer, e.clientY, cardId);
+        
+        const eventsCache = await obterTodosEventos();
+        const card = eventsCache[cardId];
+        
+        if (card) {
+            if (oldStatus !== newStatus) {
+                const cardsNovaColuna = Object.values(eventsCache)
+                    .filter(c => c.status === newStatus)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+                
+                const newOrder = cardsNovaColuna.length > 0 ? 
+                    Math.max(...cardsNovaColuna.map(c => c.order || 0)) + 1 : 0;
+                
                 await salvarEventoCompleto({
                     ...card,
-                    status: newStatus
+                    status: newStatus,
+                    order: newOrder,
+                    updatedAt: new Date().toISOString()
                 });
-                
-                renderKanban(filtroKanban.value);
+            } else {
+                await reordenarCardsNaColuna(newStatus, cardId, newPosition);
             }
             
-            draggedCard.style.opacity = '1';
-            draggedCard = null;
+            renderKanban(filtroKanban.value);
         }
-        
-        e.target.closest('.kanban-cards').style.backgroundColor = '';
     };
 
     const handleDragEnter = (e) => {
         e.preventDefault();
-        e.target.closest('.kanban-cards').style.backgroundColor = 'rgba(0,0,0,0.05)';
+        const cardsContainer = e.target.closest('.kanban-cards');
+        if (cardsContainer) {
+            cardsContainer.style.border = '2px dashed #1a73e8';
+            cardsContainer.style.backgroundColor = 'rgba(26, 115, 232, 0.03)';
+        }
     };
 
     const handleDragLeave = (e) => {
-        e.target.closest('.kanban-cards').style.backgroundColor = '';
+        const cardsContainer = e.target.closest('.kanban-cards');
+        if (cardsContainer && !cardsContainer.contains(e.relatedTarget)) {
+            cardsContainer.style.border = '2px dashed transparent';
+            cardsContainer.style.backgroundColor = '';
+        }
     };
 
     const abrirModalKanban = (cardData = null) => {
@@ -1230,7 +1910,9 @@ const AgendaModule = (() => {
                 await salvarEventoCompleto({
                     ...formData,
                     id: cardData?.id,
-                    createdAt: cardData?.createdAt
+                    createdAt: cardData?.createdAt,
+                    order: cardData?.order || 0,
+                    updatedAt: new Date().toISOString()
                 });
                 renderKanban(filtroKanban.value);
             },
@@ -1273,7 +1955,6 @@ const AgendaModule = (() => {
             </div>
             
             <div class="notes-list" id="notesList" style="flex: 1; overflow-y: auto; padding: 16px 20px; background: #f8f9fa; min-height: 250px;">
-                <!-- Notas serão exibidas aqui -->
                 <div style="text-align: center; padding: 40px 20px; color: #777;">
                     <div style="font-size: 48px; margin-bottom: 8px;">📝</div>
                     <h3 style="margin: 0 0 8px 0; color: #555; font-weight: 500;">Nenhuma nota ainda</h3>
