@@ -59,7 +59,10 @@
         "icon48.png",
         "agenda.png",
         "relatorio.png",
-        "mensagem-padrao.png"
+        "mensagem-padrao.png",
+        "chamado-manual.png",
+        "docs.png",
+        "dicas-inteligentes.png"
       ],
       "matches": [
         "https://softeninformatica.sz.chat/*"

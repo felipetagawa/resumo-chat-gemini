@@ -41,7 +41,7 @@ function criarBotoesFlutuantes() {
     return btn;
   };
 
-  const botaoDocs = createButton("btnConsultarDocs", "Consultar Docs", "📚", () => {
+  const botaoDocs = createButton("btnConsultarDocs", "Consultar Docs", "docs.png", () => {
     DocsModule.exibirPainelConsultaDocs();
   });
 
@@ -74,7 +74,37 @@ function criarBotoesFlutuantes() {
     }
   });
 
-  const botaoDica = createButton("btnDica", "Dicas Inteligentes", "💡", async () => {
+
+  const containerDropdown = document.createElement("div");
+  containerDropdown.className = "gemini-dropdown";
+
+  const botaoMain = createButton("btnAssistenteIA", "Assistente IA", "icon48.png", (e) => {
+    e.stopPropagation();
+    containerDropdown.classList.toggle("active");
+  });
+  botaoMain.onclick = null;
+
+  const dropdownContent = document.createElement("div");
+  dropdownContent.className = "gemini-dropdown-content";
+
+  document.addEventListener("click", () => {
+    containerDropdown.classList.remove("active");
+  });
+
+  const itemDocs = document.createElement("button");
+  itemDocs.className = "gemini-dropdown-item";
+  itemDocs.id = "btnConsultarDocsLoop";
+  itemDocs.innerHTML = `${getIconHTML("docs.png", "Consultar Docs")} Consultar Docs`;
+  itemDocs.onclick = () => {
+    DocsModule.exibirPainelConsultaDocs();
+  };
+
+  const itemDica = document.createElement("button");
+  itemDica.className = "gemini-dropdown-item";
+  itemDica.id = "btnDica";
+  itemDica.innerHTML = `${getIconHTML("dicas-inteligentes.png", "Dicas Inteligentes")} Dicas Inteligentes`;
+
+  itemDica.onclick = async () => {
     const btn = document.getElementById("btnDica");
     btn.disabled = true;
     const textoOriginal = btn.innerHTML;
@@ -100,9 +130,17 @@ function criarBotoesFlutuantes() {
       alert("Erro de comunicação: " + error.message);
     } finally {
       btn.disabled = false;
-      btn.innerHTML = `<span class="icon">💡</span> Dicas Inteligentes`;
+      btn.innerHTML = `${getIconHTML("dicas-inteligentes.png", "Dicas Inteligentes")} Dicas Inteligentes`;
     }
-  });
+  };
+
+  dropdownContent.appendChild(itemDocs);
+  dropdownContent.appendChild(itemDica);
+
+  containerDropdown.appendChild(botaoMain);
+  containerDropdown.appendChild(dropdownContent);
+
+  // --- Fim Botão Unificado ---
 
   const botaoMessages = createButton("btnMessages", "Mensagens Padrão", "mensagem-padrao.png", () => {
     MessagesModule.mostrarPopupMensagens();
@@ -112,16 +150,15 @@ function criarBotoesFlutuantes() {
     AgendaModule.exibirAgenda();
   });
 
-  const botaoChamadoManual = createButton("btnChamadoManual", "Chamado Manual", "📝", () => {
+  const botaoChamadoManual = createButton("btnChamadoManual", "Chamado Manual", "chamado-manual.png", () => {
     CalledModule.exibirChamadoManual();
   });
 
   container.appendChild(botaoResumo);
-  container.appendChild(botaoDica);
-  container.appendChild(botaoAgenda);
   container.appendChild(botaoMessages);
+  container.appendChild(botaoAgenda);
   container.appendChild(botaoChamadoManual);
-  container.appendChild(botaoDocs);
+  container.appendChild(containerDropdown);
 
   document.body.appendChild(container);
 }
@@ -143,7 +180,7 @@ MessagingHelper.addListener((request, sender, sendResponse) => {
 
   if (botaoDica) {
     botaoDica.disabled = false;
-    botaoDica.innerHTML = `<span class="icon">💡</span> Dicas Inteligentes`;
+    botaoDica.innerHTML = `${getIconHTML("dicas-inteligentes.png", "Dicas Inteligentes")} Dicas Inteligentes`;
   }
 
   if (request.action === "exibirResumo") {
