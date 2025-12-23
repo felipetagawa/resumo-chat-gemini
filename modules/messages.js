@@ -1,8 +1,12 @@
 const MessagesModule = (() => {
 
-    function mostrarPopupMensagens() {
-        DOMHelpers.removeElement("popupMensagensPadrao");
-        carregarEMostrarMensagens();
+    function toggleMensagens() {
+        const existente = document.getElementById("popupMensagensPadrao");
+        if (existente) {
+            existente.remove();
+        } else {
+            carregarEMostrarMensagens();
+        }
     }
 
     async function carregarEMostrarMensagens() {
@@ -11,8 +15,9 @@ const MessagesModule = (() => {
 
         const data = await StorageHelper.get(["customMessages", "messageShortcuts"]);
         const customMessagesList = data.customMessages || [];
+        const shortcuts = data.messageShortcuts || {};
 
-        renderizarMensagens(popup, customMessagesList);
+        renderizarMensagens(popup, customMessagesList, shortcuts);
     }
 
     function criarPopupMensagens() {
@@ -48,7 +53,7 @@ const MessagesModule = (() => {
         return popup;
     }
 
-    function renderizarMensagens(popup, customMessagesList) {
+    function renderizarMensagens(popup, customMessagesList, shortcuts = {}) {
         const container = popup.querySelector("#conteudoMensagens");
 
         const fixedMessages = [
@@ -63,7 +68,9 @@ const MessagesModule = (() => {
 
         const fixedAcordeon = UIBuilder.criarAcordeon("📌 Mensagens Fixas", true, "acordeon-fixas");
         fixedMessages.forEach((msg, index) => {
-            const card = criarCardMensagem(msg, false, index);
+            const key = `fixed_${index}`;
+            const shortcut = shortcuts[key];
+            const card = criarCardMensagem(msg, false, shortcut, index);
             fixedAcordeon.content.appendChild(card);
         });
         container.appendChild(fixedAcordeon.container);
@@ -74,14 +81,16 @@ const MessagesModule = (() => {
             customAcordeon.content.innerHTML = `<p style="color:#999; text-align:center; padding:20px;">Nenhuma mensagem personalizada. Configure em Opções.</p>`;
         } else {
             customMessagesList.forEach((msg, index) => {
-                const card = criarCardMensagem(msg, true, index, customMessagesList);
+                const key = `custom_${index}`;
+                const shortcut = shortcuts[key];
+                const card = criarCardMensagem(msg, true, shortcut, index);
                 customAcordeon.content.appendChild(card);
             });
         }
         container.appendChild(customAcordeon.container);
     }
 
-    function criarCardMensagem(text, isCustom, index, customMessagesList = []) {
+    function criarCardMensagem(text, isCustom, shortcut = null, index = -1) {
         const card = document.createElement("div");
         card.style = `
       background: #f8f9fa;
@@ -95,12 +104,67 @@ const MessagesModule = (() => {
     `;
 
         card.innerHTML = `
-      <div style="font-size:13px; color:#333; line-height:1.4;">${text}</div>
-      <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end;">
+      <div style="font-size:13px; color:#333; line-height:1.4; padding-right: 20px;">
+        ${shortcut ? `<span style="background:#1a73e8; padding:2px 8px; border-radius:12px; font-weight:bold; font-size:11px; margin-right:8px; color:#ffffff; box-shadow: 0 2px 4px rgba(26,115,232,0.3); border: 1px solid #1557b0;">/${shortcut}</span>` : ''}
+        ${text}
+      </div>
+      <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end; align-items:center;">
+        ${isCustom ? `<button class="btn-excluir" style="background:transparent; border:none; color:#d93025; font-size:12px; cursor:pointer; margin-right:auto;">Excluir</button>` : ''}
         <button class="btn-enviar" style="background:#1a73e8; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px;">Enviar</button>
         <button class="btn-copiar" style="background:#f1f3f4; color:#3c4043; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px;">Copiar</button>
       </div>
     `;
+
+        if (isCustom) {
+            card.querySelector(".btn-excluir").addEventListener("click", async (e) => {
+                e.stopPropagation();
+                if (confirm("Excluir mensagem personalizada?")) {
+                    const data = await StorageHelper.get(["customMessages", "messageShortcuts"]);
+                    let newMessages = data.customMessages || [];
+                    newMessages.splice(index, 1);
+                    await StorageHelper.set({ customMessages: newMessages });
+
+                    // Remover atalho associado
+                    let newShortcuts = data.messageShortcuts || {};
+                    delete newShortcuts[`custom_${index}`];
+                    // Update keys for subsequent items?
+                    // If we remove index 1, index 2 becomes 1.
+                    // This is tricky. The keys depend on index.
+                    // If we splice, indices shift.
+                    // We must rebuild shortcuts map or just accept they might break/shift?
+                    // Better to rebuild or just clear shortcuts for custom messages to be safe?
+                    // Or re-map.
+                    // For now, simpler approach: just save messages.
+                    // The shortcuts logic relies on index. If indices shift, shortcuts point to wrong messages.
+                    // We should probably reassign shortcuts.
+                    // Given complexity, maybe just notify user they might need to reconfigure shortcuts?
+                    // Or intelligent shift:
+                    //   custom_0 -> keep
+                    //   custom_1 -> deleted
+                    //   custom_2 -> becomes custom_1.
+                    //   So we must move custom_2 shortcut to custom_1.
+
+                    const cleanShortcuts = {};
+                    Object.keys(newShortcuts).forEach(key => {
+                        if (key.startsWith("fixed_")) {
+                            cleanShortcuts[key] = newShortcuts[key];
+                        } else if (key.startsWith("custom_")) {
+                            const idx = parseInt(key.split("_")[1]);
+                            if (idx < index) {
+                                cleanShortcuts[key] = newShortcuts[key];
+                            } else if (idx > index) {
+                                cleanShortcuts[`custom_${idx - 1}`] = newShortcuts[key];
+                            }
+                        }
+                    });
+
+                    await StorageHelper.set({ messageShortcuts: cleanShortcuts });
+
+                    toggleMensagens(); // Reload
+                    toggleMensagens();
+                }
+            });
+        }
 
         card.querySelector(".btn-enviar").addEventListener("click", (e) => {
             e.stopPropagation();
@@ -173,7 +237,7 @@ const MessagesModule = (() => {
     }
 
     return {
-        mostrarPopupMensagens
+        toggleMensagens
     };
 })();
 

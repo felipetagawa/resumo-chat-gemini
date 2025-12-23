@@ -143,7 +143,7 @@ function criarBotoesFlutuantes() {
   // --- Fim Botão Unificado ---
 
   const botaoMessages = createButton("btnMessages", "Mensagens Padrão", "mensagem-padrao.png", () => {
-    MessagesModule.mostrarPopupMensagens();
+    MessagesModule.toggleMensagens();
   });
 
   const botaoAgenda = createButton("btnAgenda", "Agenda & Gestão", "agenda.png", () => {

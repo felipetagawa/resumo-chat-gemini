@@ -328,10 +328,33 @@ document.addEventListener("DOMContentLoaded", async () => {
         `;
       btnDelete.onclick = () => {
         if (confirm("Tem certeza que deseja excluir esta mensagem?")) {
+          const shortcutKey = `custom_${index}`;
+
           list.splice(index, 1);
           chrome.storage.local.set({ customMessages: list }, () => {
-            chrome.storage.local.get(["customMessages"], data => {
-              renderCustomMessages(data.customMessages || []);
+            // Sincronizar atalhos
+            chrome.storage.local.get(["messageShortcuts"], (data) => {
+              const shortcuts = data.messageShortcuts || {};
+              const cleanShortcuts = {};
+
+              Object.keys(shortcuts).forEach(key => {
+                if (key.startsWith("fixed_")) {
+                  cleanShortcuts[key] = shortcuts[key];
+                } else if (key.startsWith("custom_")) {
+                  const idx = parseInt(key.split("_")[1]);
+                  if (idx < index) {
+                    cleanShortcuts[key] = shortcuts[key];
+                  } else if (idx > index) {
+                    cleanShortcuts[`custom_${idx - 1}`] = shortcuts[key];
+                  }
+                }
+              });
+
+              chrome.storage.local.set({ messageShortcuts: cleanShortcuts }, () => {
+                chrome.storage.local.get(["customMessages"], data => {
+                  renderCustomMessages(data.customMessages || []);
+                });
+              });
             });
           });
         }
