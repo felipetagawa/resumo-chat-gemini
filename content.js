@@ -15,7 +15,7 @@ const getIconHTML = (icon, text) => {
   return `<span class="icon">${icon}</span>`;
 };
 
-function criarBotoesFlutuantes() {
+async function criarBotoesFlutuantes() {
   if (DOMHelpers.exists("containerBotoesGemini")) return;
 
   const container = DOMHelpers.createElement("div", {
@@ -154,11 +154,17 @@ function criarBotoesFlutuantes() {
     CalledModule.exibirChamadoManual();
   });
 
-  container.appendChild(botaoResumo);
-  container.appendChild(botaoMessages);
-  container.appendChild(botaoAgenda);
-  container.appendChild(botaoChamadoManual);
-  container.appendChild(containerDropdown);
+  const visibility = await new Promise(resolve => {
+    chrome.storage.local.get(["buttonVisibility"], (data) => {
+      resolve(data.buttonVisibility || {});
+    });
+  });
+
+  if (visibility.btnResumo !== false) container.appendChild(botaoResumo);
+  if (visibility.btnMessages !== false) container.appendChild(botaoMessages);
+  if (visibility.btnAgenda !== false) container.appendChild(botaoAgenda);
+  if (visibility.btnChamadoManual !== false) container.appendChild(botaoChamadoManual);
+  if (visibility.btnAssistenteIA !== false) container.appendChild(containerDropdown);
 
   document.body.appendChild(container);
 }

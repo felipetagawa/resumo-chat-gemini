@@ -700,28 +700,28 @@ const AgendaModule = (() => {
                 title: isEdit ? '✏️ Editar Evento' : '➕ Novo Evento',
                 fields: [
                     {
+                        name: 'client',
+                        label: 'Nome do Cliente',
+                        type: 'text',
+                        required: true,
+                        value: eventData?.client || '',
+                        placeholder: 'Nome do cliente'
+                    },
+                    {
                         name: 'title',
-                        label: 'Título do Evento',
+                        label: 'Assunto/Pendência',
                         type: 'text',
                         required: true,
                         value: eventData?.title || '',
-                        placeholder: 'Ex: Reunião com cliente'
-                    },
-                    {
-                        name: 'client',
-                        label: 'Cliente',
-                        type: 'text',
-                        required: false,
-                        value: eventData?.client || '',
-                        placeholder: 'Nome do cliente (opcional)'
+                        placeholder: 'Resumo do atendimento'
                     },
                     {
                         name: 'problem',
-                        label: 'Problema/Descrição',
+                        label: 'Problema Detalhado',
                         type: 'textarea',
                         required: false,
                         value: eventData?.problem || '',
-                        placeholder: 'Descreva o motivo do agendamento...'
+                        placeholder: 'Descrição detalhada do problema...'
                     },
                     {
                         name: 'date',
@@ -765,10 +765,14 @@ const AgendaModule = (() => {
                         createdAt: eventData?.createdAt
                     });
                     loadAndRender();
+                    atualizarCRMSeAberto();
+                    atualizarKanbanSeAberto();
                 },
                 onDelete: isEdit ? async () => {
                     await deletarEventoCompleto(eventData.id);
                     loadAndRender();
+                    atualizarCRMSeAberto();
+                    atualizarKanbanSeAberto();
                 } : null
             });
         };
@@ -830,12 +834,16 @@ const AgendaModule = (() => {
                 if (hasOverdue) dayEl.classList.add('has-overdue');
 
                 dayEl.innerHTML = `
-            <span class="day-number" style="cursor: pointer; padding: 2px 5px; border-radius: 3px; display: inline-block;">${i}</span>
+            <span class="day-number" style="padding: 2px 5px; border-radius: 3px; display: inline-block;">${i}</span>
             <div class="day-events">${eventsHtml}</div>
             `;
 
-                dayEl.querySelector('.day-number').addEventListener('click', (e) => {
-                    e.stopPropagation();
+                // Adiciona o evento de clique na CÉLULA inteira
+                dayEl.style.cursor = 'pointer';
+                dayEl.addEventListener('click', (e) => {
+                    // Se o clique foi em um evento, não abre o modal de novo evento
+                    if (e.target.closest('.event-marker')) return;
+
                     abrirModalEvento(null, i);
                 });
 

@@ -15,10 +15,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   inicializarAcordeons();
 
-  chrome.storage.local.get(["customInstructions", "history", "chamado_manual_history"], (data) => {
+  chrome.storage.local.get(["customInstructions", "history", "chamado_manual_history", "buttonVisibility"], (data) => {
     if (data.customInstructions) {
       customInstructionsInput.value = data.customInstructions;
     }
+
+    // Carregar visibilidade dos botões
+    const visibility = data.buttonVisibility || {};
+    document.getElementById("checkBtnResumo").checked = visibility.btnResumo !== false;
+    document.getElementById("checkBtnMessages").checked = visibility.btnMessages !== false;
+    document.getElementById("checkBtnAgenda").checked = visibility.btnAgenda !== false;
+    document.getElementById("checkBtnChamadoManual").checked = visibility.btnChamadoManual !== false;
+    document.getElementById("checkBtnAssistenteIA").checked = visibility.btnAssistenteIA !== false;
+
     renderHistory(data.history || []);
     renderManualCallHistory(data.chamado_manual_history || []);
   });
@@ -30,6 +39,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       status.textContent = "✅ Configurações salvas!";
       status.style.color = "green";
       setTimeout(() => { status.textContent = ""; }, 2000);
+    });
+  });
+
+  // Salvar Visibilidade
+  document.getElementById("salvarVisibilidade").addEventListener("click", () => {
+    const visibility = {
+      btnResumo: document.getElementById("checkBtnResumo").checked,
+      btnMessages: document.getElementById("checkBtnMessages").checked,
+      btnAgenda: document.getElementById("checkBtnAgenda").checked,
+      btnChamadoManual: document.getElementById("checkBtnChamadoManual").checked,
+      btnAssistenteIA: document.getElementById("checkBtnAssistenteIA").checked
+    };
+
+    chrome.storage.local.set({ buttonVisibility: visibility }, () => {
+      const statusVis = document.getElementById("statusVisibilidade");
+      statusVis.textContent = "✅ Preferências de visibilidade salvas! Recarregue a página para aplicar.";
+      statusVis.style.color = "green";
+      setTimeout(() => { statusVis.textContent = ""; }, 3000);
     });
   });
 

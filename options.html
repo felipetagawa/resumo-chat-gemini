@@ -424,6 +424,30 @@
   </div>
 
   <div class="card">
+    <h2>👁️ Visibilidade dos Botões</h2>
+    <div
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 5px;">
+      <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+        <input type="checkbox" id="checkBtnResumo" checked> Gerar Relatório
+      </label>
+      <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+        <input type="checkbox" id="checkBtnMessages" checked> Mensagens Padrão
+      </label>
+      <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+        <input type="checkbox" id="checkBtnAgenda" checked> Agenda & Gestão
+      </label>
+      <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+        <input type="checkbox" id="checkBtnChamadoManual" checked> Chamado Manual
+      </label>
+      <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+        <input type="checkbox" id="checkBtnAssistenteIA" checked> Assistente IA
+      </label>
+    </div>
+    <button id="salvarVisibilidade" class="btn-primary" style="margin-top: 15px;">Salvar Visibilidade</button>
+    <div id="statusVisibilidade" style="font-size: 13px; margin-top: 8px; min-height: 20px;"></div>
+  </div>
+
+  <div class="card">
     <h2>💬 Mensagens Padrão</h2>
 
     <div class="accordion" id="fixedAccordion">
