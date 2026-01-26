@@ -1,0 +1,73 @@
+{
+  "manifest_version": 3,
+  "name": "AtendeAI Manager",
+  "version": "1.4.1",
+  "description": "Gera resumos estruturados de atendimentos usando Gemini.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://softeninformatica.sz.chat/*",
+    "https://gemini-resumo-api-298442462030.southamerica-east1.run.app/*",
+    "https://gemini-resumo-298442462030.southamerica-east1.run.app/*",
+    "https://generativelanguage.googleapis.com/*",
+    "http://localhost:8080/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://softeninformatica.sz.chat/*"
+      ],
+      "css": [
+        "styles/main.css",
+        "styles/buttons.css",
+        "styles/modals.css",
+        "styles/calendar.css",
+        "styles/called.css"
+      ],
+      "js": [
+        "utils/storage.js",
+        "utils/messaging.js",
+        "utils/dom-helpers.js",
+        "modules/ui-builder.js",
+        "modules/shortcuts.js",
+        "modules/chat-capture.js",
+        "modules/summary.js",
+        "modules/messages.js",
+        "modules/docs.js",
+        "modules/agenda.js",
+        "modules/called.js",
+        "modules/notifications.js",
+        "content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icon48.png",
+        "agenda.png",
+        "relatorio.png",
+        "mensagem-padrao.png",
+        "chamado-manual.png",
+        "docs.png",
+        "dicas-inteligentes.png"
+      ],
+      "matches": [
+        "https://softeninformatica.sz.chat/*"
+      ]
+    }
+  ]
+}

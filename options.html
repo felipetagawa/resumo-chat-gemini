@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configurações - Resumo Gemini</title>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+      background-color: #f4f6f8;
+      color: #333;
+    }
+
+    h1 {
+      font-size: 22px;
+      color: #4285F4;
+      margin-bottom: 25px;
+    }
+
+    h2 {
+      font-size: 17px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 6px;
+    }
+
+    h3 {
+      font-size: 14px;
+      margin: 18px 0 10px;
+      color: #555;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 70px;
+      padding: 5px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-family: inherit;
+      resize: vertical;
+      margin-top: 6px;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    button {
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      margin-top: 10px;
+      transition: background .2s;
+    }
+
+    .btn-primary {
+      background: #4285F4;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #3367d6;
+    }
+
+    .message-card {
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+      border: 1px solid #ddd;
+      transition: all 0.2s ease;
+    }
+
+    .message-card.fixed {
+      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+      border-color: #d1d5db;
+    }
+
+    .message-card.custom {
+      background: linear-gradient(135deg, #eef4ff 0%, #dbeafe 100%);
+      border-color: #93c5fd;
+    }
+
+    .fixed {
+      background: #f9fafb;
+    }
+
+    .custom {
+      background: #eef4ff;
+      border-color: #c9ddff;
+    }
+
+    .message-text {
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin-bottom: 12px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .message-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .shortcut-config {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      background: #f8fafc;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    .btn-test-shortcut {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-test-shortcut:hover {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .btn-copy {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .btn-copy:hover {
+      background: #bfdbfe;
+    }
+
+    .btn-edit {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .btn-edit:hover {
+      background: #d1d5db;
+    }
+
+    .btn-delete {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .btn-delete:hover {
+      background: #fecaca;
+    }
+
+    .btn-backup {
+      background: #10b981;
+      color: #fff;
+      margin-top: 15px;
+    }
+
+    .btn-backup:hover {
+      background: #059669;
+    }
+
+    #historyList {
+      list-style: none;
+      padding: 0;
+    }
+
+    .history-item {
+      background: #fff;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-preview {
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 400px;
+    }
+
+    .history-actions button {
+      background: #eee;
+      font-size: 12px;
+      margin-left: 5px;
+    }
+
+    #limparHistorico {
+      background: #e74c3c;
+      color: #fff;
+    }
+
+    #limparHistorico:hover {
+      background: #c0392b;
+    }
+
+    .accordion {
+      margin-bottom: 15px;
+    }
+
+    .accordion-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 15px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      font-size: 14px;
+      color: #334155;
+      transition: all 0.2s ease;
+    }
+
+    .accordion-header:hover {
+      background: #f1f5f9;
+    }
+
+    .accordion-header.open {
+      background: #f1f5f9;
+      border-radius: 8px 8px 0 0;
+      border-bottom: none;
+    }
+
+    .accordion-icon {
+      font-size: 18px;
+      font-weight: bold;
+      transition: transform 0.3s ease;
+    }
+
+    .accordion-content {
+      border: 1px solid #e2e8f0;
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      background: white;
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+
+    .accordion-content.open {
+      max-height: 420px;
+      opacity: 1;
+      padding: 15px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+
+    .accordion-count {
+      background: #e2e8f0;
+      color: #475569;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-left: 8px;
+    }
+  </style>
+
+  <dialog id="creditsDialog" style="
+  border: none;
+  border-radius: 14px;
+  padding: 0;
+  width: 460px;
+  max-width: 92%;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.25);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+">
+
+    <div style="
+    padding: 18px 20px;
+    background: #4285F4;
+    color: #fff;
+    border-radius: 14px 14px 0 0;
+  ">
+      <h2 style="margin:0; font-size:18px;">
+        Créditos do Sistema
+        <span style="font-size:13px; font-weight:normal; opacity:.9;">
+          — v1.2
+        </span>
+      </h2>
+    </div>
+
+    <div style="padding: 20px; background:#fff;">
+
+      <div style="
+      margin-bottom: 16px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    ">
+        <div style="font-size:13px; color:#6b7280; margin-bottom:4px;">
+          Idealizador e Proprietário
+        </div>
+        <div style="font-size:15px; font-weight:600;">
+          Felipe Okamoto
+        </div>
+      </div>
+
+      <div style="
+      margin-bottom: 12px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #eef4ff;
+      border: 1px solid #c9ddff;
+    ">
+        <div style="font-size:13px; color:#1e40af; margin-bottom:6px;">
+          Front-end
+        </div>
+        <div style="font-size:14px;">
+          Diego Martins<br>
+          Felipe Okamoto
+        </div>
+      </div>
+
+      <div style="
+      padding: 14px;
+      border-radius: 10px;
+      background: #eef4ff;
+      border: 1px solid #c9ddff;
+    ">
+        <div style="font-size:13px; color:#1e40af; margin-bottom:6px;">
+          Back-end
+        </div>
+        <div style="font-size:14px;">
+          Diego Martins<br>
+          Felipe Okamoto
+        </div>
+      </div>
+
+      <div style="
+      display:flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+    ">
+        <button id="closeCredits" class="btn-primary">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+</head>
+
+<body>
+
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:25px;">
+    <h1 style="margin:0;">⚙️ Configurações</h1>
+
+    <a href="#" id="openCredits" style="
+    font-size: 13px;
+    color: #4285F4;
+    text-decoration: none;
+    cursor: pointer;
+    font-weight: 500;
+  ">
+      Créditos do sistema – v1.2
+    </a>
+  </div>
+
+  <div class="card">
+    <h2>🧠 Instruções da IA</h2>
+
+    <label for="customInstructions">Prompt Personalizado</label>
+    <textarea id="customInstructions"></textarea>
+
+    <div class="hint">
+      Essas instruções serão enviadas junto com o chat para guiar o comportamento da IA.
+    </div>
+
+    <button id="salvar" class="btn-primary">Salvar Configurações</button>
+    <div id="status"></div>
+  </div>
+
+  <div class="card">
+    <h2>💬 Mensagens Padrão</h2>
+
+    <div class="accordion" id="fixedAccordion">
+      <div class="accordion-header open" data-target="fixedContent">
+        <span>Mensagens Fixas <span class="accordion-count">
+            <span class="accordion-icon">−</span>
+      </div>
+      <div class="accordion-content open" id="fixedContent">
+        <div id="fixedMessages"></div>
+      </div>
+    </div>
+
+    <div class="accordion" id="customAccordion">
+      <div class="accordion-header" data-target="customContent">
+        <span>Mensagens Personalizadas <span class="accordion-count" id="customCount">0</span></span>
+        <span class="accordion-icon">+</span>
+      </div>
+      <div class="accordion-content" id="customContent">
+        <div id="customMessages"></div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; align-items: center; margin-top: 20px;">
+      <textarea id="newMessage" placeholder="Digite a mensagem personalizada..." style="flex: 1;"></textarea>
+      <button id="addMessage" class="btn-primary" style="height: fit-content;">Adicionar Mensagem</button>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 15px;">
+      <button id="backupMessages" class="btn-backup" style="flex: 1;">Backup Mensagens (.TXT)</button>
+      <button id="limparTodosAtalhos" class="btn-delete" style="flex: 1;">Limpar Atalhos</button>
+    </div>
+
+    <div id="statusAtalhos" style="font-size: 12px; margin-top: 8px; color: #666; min-height: 20px;"></div>
+  </div>
+
+  <div class="card">
+    <h2>🗂️ Histórico de Resumos</h2>
+    <ul id="historyList"></ul>
+    <button id="limparHistorico" style="background: #e74c3c; color: #fff;">Limpar Histórico de Resumos</button>
+  </div>
+
+  <div class="card">
+    <h2>📝 Histórico de Chamados Manuais</h2>
+    <ul id="manualCallHistoryList"></ul>
+    <button id="limparHistoricoManual" style="background: #e74c3c; color: #fff;">Limpar Histórico de Chamados</button>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+
+</html>
