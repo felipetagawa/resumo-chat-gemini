@@ -109,7 +109,7 @@ const NotificationsModule = (() => {
         const overdueCRM = [];
 
         Object.values(calendarEvents).forEach(evt => {
-            if (evt.date && UIBuilder.compararDatas(evt.date)) {
+            if (evt.date && evt.status !== 'done' && UIBuilder.compararDatas(evt.date)) {
                 overdueCalendar.push(evt);
             }
         });
