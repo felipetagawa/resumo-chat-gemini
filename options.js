@@ -257,7 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getAllowedTabsBySector(sector) {
     if (sector === "suporte") {
-      return new Set(["sec-home", "sec-mensagens", "sec-ia", "sec-historico"]);
+      return new Set(["sec-mensagens", "sec-ia", "sec-historico"]);
     }
 
     if (sector === "preatendimento") {
@@ -363,7 +363,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function applyPreAtendimentoMessagesUI() {
-    if (!isPreAtendimento()) return;
+    if (!isPreAtendimento()) {
+      // Se for SUPORTE, garantir que tudo esteja visivel
+      if (el.customMessagesContainer) el.customMessagesContainer.style.display = "block";
+      const addRow = document.querySelector(".add-message-row");
+      if (addRow) addRow.style.display = "flex";
+      if (el.btnBackupMessages) el.btnBackupMessages.style.display = "flex";
+      if (el.btnLimparTodosAtalhos) el.btnLimparTodosAtalhos.style.display = "flex";
+      return;
+    }
 
     const customTitle = document.querySelector('#sec-mensagens h3:nth-of-type(2)');
     if (customTitle) customTitle.style.display = "none";
@@ -434,11 +442,14 @@ document.addEventListener("DOMContentLoaded", () => {
     try { el.nameDialog?.close(); } catch (e) { }
   }
 
-  function initNameOnboarding() {
-    const current = getUserName();
-    setNameUI(current);
-    const currentName = getUserName();
-    const currentSector = getUserSector();
+  async function initNameOnboarding() {
+    const data = await storageGet([NAME_KEY, SECTOR_KEY]);
+    const currentName = sanitizeName(data[NAME_KEY]);
+    const currentSector = String(data[SECTOR_KEY] || "").trim().toLowerCase();
+
+    // Sync to localStorage just in case other parts rely on it (though they shouldn't)
+    if (currentName) localStorage.setItem(NAME_KEY, currentName);
+    if (currentSector) localStorage.setItem(SECTOR_KEY, currentSector);
 
     setNameUI(currentName);
 
@@ -903,20 +914,12 @@ document.addEventListener("DOMContentLoaded", () => {
     el.fixedMessagesContainer.innerHTML = "";
 
     if (isPreAtendimento()) {
-      const shortcuts = await getShortcuts();
-
-      PRE_FIXED_MESSAGES.forEach((m, i) => {
-        shortcuts[`fixed_${i}`] = String(m.shortcut || "");
-      });
-
-      await setShortcuts(shortcuts);
-
       PRE_FIXED_MESSAGES.forEach((m, index) => {
         const resolvedText = resolveTemplate(m.text);
 
         el.fixedMessagesContainer.appendChild(
           createMessageCard(resolvedText, false, index, null, {
-            lockShortcut: true,
+            lockShortcut: false,
             presetShortcut: m.shortcut
           })
         );

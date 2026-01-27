@@ -3,6 +3,10 @@ const ShortcutsModule = (() => {
   let dropdownEl = null;
   let activeInputEl = null;
   let isOpen = false;
+  let selectedIndex = 0;
+  let currentFiltered = [];
+  let currentQuery = "";
+  let userSector = ""; // Armazenar setor do usuário
 
   let cacheReady = false;
   let loadingPromise = null;
@@ -15,13 +19,9 @@ const ShortcutsModule = (() => {
 
   function normalizeShortcutDisplay(value) {
     let v = String(value || "");
-
     v = v.replace(INVALID_CHARS_REPLACE, "");
-
     v = v.replace(/\s+/g, " ").trim();
-
     if (v.length > MAX_SHORTCUT_LEN) v = v.slice(0, MAX_SHORTCUT_LEN);
-
     return v;
   }
 
@@ -34,12 +34,7 @@ const ShortcutsModule = (() => {
 
   const SUPPORT_FIXED_MESSAGES = [
     "Os valores exibidos de IBS e CBS neste primeiro momento não representam cobrança efetiva, pois a fase inicial da Reforma Tributária é apenas experimental e nominativa, com alíquotas padrão 0,10 e 0,90, sem geração de recolhimento, sendo exigida apenas para empresas do Lucro Presumido e Lucro Real para fins de adaptação e validação das informações.",
-    "Atualmente, a fase inicial da Reforma Tributária com IBS e CBS se aplica apenas às empresas do regime normal (Lucro Presumido e Lucro Real), sendo que para o Simples Nacional não há recolhimento nem impacto prático neste primeiro ano, pois as informações são utilizadas apenas de forma nominativa e experimental.",
-    "A reformulação das telas não altera a lógica de cálculo nem as regras fiscais do sistema, sendo uma evolução voltada à melhoria contínua, e qualquer diferença percebida está relacionada apenas à interface ou fluxo, com nossa equipe disponível para esclarecer dúvidas e ajustar eventuais pontos específicos.",
-    "As telas reformuladas de Contas a Receber, Contas a Pagar, NFC-e e Cadastro de Produtos mantêm as mesmas regras fiscais e operacionais de antes, tendo sido alterados apenas aspectos visuais e funcionais para melhorar usabilidade e organização, sem impacto nos cálculos ou validações já existentes.",
-    "A emissão de NFC-e para CNPJ deixou de ser permitida por determinação das normas fiscais vigentes, não sendo uma regra criada pelo sistema, que apenas aplica automaticamente essa exigência legal para evitar rejeições e problemas fiscais ao contribuinte.",
-    "O procedimento de referenciar NFC-e em uma NF-e não é mais aceito pela legislação fiscal atual, motivo pelo qual o sistema bloqueia essa prática, garantindo conformidade legal e evitando a rejeição dos documentos junto à SEFAZ.",
-    "A vedação à emissão de NFC-e para CNPJ e ao seu referenciamento em NF-e decorre exclusivamente de alterações nas regras fiscais, e o sistema apenas segue essas determinações para manter a regularidade das operações e evitar inconsistências legais."
+    "Atualmente, a fase inicial da Reforma Tributária com IBS e CBS se aplica apenas às empresas do regime normal (Lucro Presumido e Lucro Real), sendo que para o Simples Nacional não há recolhimento nem impacto prático neste primeiro ano, pois as informações são utilizadas apenas de forma nominativa e experimental."
   ];
 
   const PRE_FIXED_MESSAGES = [
@@ -85,14 +80,18 @@ const ShortcutsModule = (() => {
         fixedMessages.forEach((msg, index) => {
           const key = `fixed_${index}`;
           const shortcutDisplay = normalizeShortcutDisplay(shortcuts[key]);
-          if (!shortcutDisplay) return;
+
+          // Para pré-atendimento, incluir TODAS as mensagens fixas (mesmo sem atalho)
+          // Para suporte, incluir apenas as com atalho configurado
+          if (!isPre && !shortcutDisplay) return;
 
           nextCache.push({
             key,
-            shortcutDisplay,
-            shortcutNorm: normForMatch(shortcutDisplay),
+            shortcutDisplay: shortcutDisplay || `msg${index + 1}`, // Fallback para mensagens sem atalho
+            shortcutNorm: normForMatch(shortcutDisplay || `msg${index + 1}`),
             message: msg,
-            origin: "fixed"
+            origin: "fixed",
+            hasShortcut: !!shortcutDisplay
           });
         });
 
@@ -120,7 +119,10 @@ const ShortcutsModule = (() => {
           return a.origin === "fixed" ? -1 : 1;
         });
 
-        if (mySeq === loadSeq) commandsCache = nextCache;
+        if (mySeq === loadSeq) {
+          commandsCache = nextCache;
+          userSector = sector; // Armazenar setor
+        }
       } catch (err) {
         console.error("[Shortcuts] erro ao carregar atalhos:", err);
         if (mySeq === loadSeq) commandsCache = [];
@@ -168,9 +170,11 @@ const ShortcutsModule = (() => {
 
   function openDropdown(inputEl, query) {
     activeInputEl = inputEl;
+    currentQuery = query;
+    selectedIndex = 0; // Reset selecionado
 
     const dd = ensureDropdown();
-    renderDropdown(query);
+    renderDropdown();
 
     positionDropdownNearInput(inputEl, dd);
     dd.style.display = "block";
@@ -183,61 +187,185 @@ const ShortcutsModule = (() => {
     dropdownEl.innerHTML = "";
     isOpen = false;
     activeInputEl = null;
+    currentFiltered = [];
+    currentQuery = "";
   }
 
-  function renderDropdown(queryRaw) {
-    const dd = ensureDropdown();
-    const queryNorm = normForMatch(queryRaw);
+  function renderDropdown() {
+    const dd = dropdownEl;
+    if (!dd) return;
 
-    const filtered = commandsCache.filter(cmd => {
-      if (!queryNorm) return true;
-      return cmd.shortcutNorm.startsWith(queryNorm);
-    });
+    currentFiltered = [];
+    const queryNorm = normForMatch(currentQuery);
 
-    if (!filtered.length) {
+    // Se query vazia, mostrar TODOS os comandos disponíveis
+    if (queryNorm.length === 0) {
+      currentFiltered = commandsCache.map(cmd => ({ type: 'cmd', data: cmd }));
+    } else {
+      // Filtrar comandos que começam com a query
+      const matches = commandsCache.filter(cmd => cmd.shortcutNorm.startsWith(queryNorm));
+      currentFiltered = matches.map(cmd => ({ type: 'cmd', data: cmd }));
+
+      // Adicionar opção de criar novo atalho APENAS para suporte
+      const isPre = userSector === "preatendimento";
+      if (!isPre && queryNorm.length > 0) {
+        currentFiltered.push({ type: 'create', query: currentQuery });
+      }
+    }
+
+    if (!currentFiltered.length) {
       dd.innerHTML = `
         <div style="padding:12px 14px; color:#5f6368; font-size:13px;">
-          Nenhum atalho encontrado para <b>/${escapeHtml(queryRaw || "")}</b>
+          Nenhum atalho encontrado.
         </div>
       `;
       return;
     }
 
-    dd.innerHTML = filtered.map(cmd => {
-      const preview = cmd.message.length > 140 ? cmd.message.slice(0, 140) + "..." : cmd.message;
+    // Ajustar selectedIndex se fora dos limites
+    if (selectedIndex >= currentFiltered.length) selectedIndex = 0;
+    if (selectedIndex < 0) selectedIndex = 0;
 
-      return `
-        <div class="cmd-item" data-key="${escapeHtml(cmd.key)}"
-             style="padding:12px 14px; cursor:pointer; border-bottom:1px solid #f1f3f4;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="background:#1a73e8; color:#fff; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700;">
-              /${escapeHtml(cmd.shortcutDisplay)}
-            </span>
-            <span style="color:#5f6368; font-size:12px;">
-              ${cmd.origin === "fixed" ? "Fixa" : "Personalizada"}
-            </span>
+    dd.innerHTML = currentFiltered.map((item, idx) => {
+      const isSelected = idx === selectedIndex;
+      const bg = isSelected ? '#e8f0fe' : '#fff';
+      const border = isSelected ? 'border-left: 3px solid #1a73e8;' : 'border-left: 3px solid transparent;';
+
+      if (item.type === 'cmd') {
+        const cmd = item.data;
+        const preview = cmd.message.length > 140 ? cmd.message.slice(0, 140) + "..." : cmd.message;
+
+        return `
+          <div class="cmd-item" data-idx="${idx}"
+               style="padding:12px 14px; cursor:pointer; border-bottom:1px solid #f1f3f4; background:${bg}; ${border}">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="background:#1a73e8; color:#fff; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700;">
+                /${escapeHtml(cmd.shortcutDisplay)}
+              </span>
+              <span style="color:#5f6368; font-size:12px;">
+                ${cmd.origin === "fixed" ? "Fixa" : "Personalizada"}
+              </span>
+            </div>
+            <div style="margin-top:8px; color:#3c4043; font-size:13px; line-height:1.35;">
+              ${escapeHtml(preview)}
+            </div>
           </div>
-          <div style="margin-top:8px; color:#3c4043; font-size:13px; line-height:1.35;">
-            ${escapeHtml(preview)}
+        `;
+      } else if (item.type === 'create') {
+        return `
+          <div class="cmd-item" data-idx="${idx}"
+               style="padding:12px 14px; cursor:pointer; border-bottom:1px solid #f1f3f4; background:${bg}; ${border} color: #1a73e8; font-weight: 600;">
+             Cadastrar mensagem para "/${escapeHtml(item.query)}"
           </div>
-        </div>
-      `;
+        `;
+      }
     }).join("");
 
+    // Scroll se necessário
+    const selectedEl = dd.querySelector(`.cmd-item[data-idx="${selectedIndex}"]`);
+    if (selectedEl) {
+      // scrollIntoView se estiver fora visivel
+      // Simples:
+      // selectedEl.scrollIntoView({ block: 'nearest' });
+    }
+
     dd.querySelectorAll(".cmd-item").forEach(el => {
-      el.addEventListener("mouseenter", () => el.style.background = "#f8f9fa");
-      el.addEventListener("mouseleave", () => el.style.background = "#fff");
+      el.addEventListener("mouseenter", () => {
+        selectedIndex = parseInt(el.dataset.idx);
+        renderDropdown();
+      });
 
-      el.addEventListener("click", () => {
-        const key = el.getAttribute("data-key");
-        const cmd = commandsCache.find(c => c.key === key);
-        if (!cmd || !activeInputEl) return;
-
-        inserirMensagemSubstituindoSlashQuery(activeInputEl, cmd.message);
-        closeDropdown();
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("[Shortcuts] Click detectado no item:", selectedIndex);
+        executarAcaoSelecionada();
       });
     });
   }
+
+  function executarAcaoSelecionada() {
+    console.log("[Shortcuts] executarAcaoSelecionada chamado");
+    console.log("[Shortcuts] activeInputEl:", activeInputEl);
+    console.log("[Shortcuts] selectedIndex:", selectedIndex);
+    console.log("[Shortcuts] currentFiltered:", currentFiltered);
+
+    if (!activeInputEl || !currentFiltered[selectedIndex]) {
+      console.warn("[Shortcuts] Condição falhou - activeInputEl ou item não existe");
+      return;
+    }
+
+    const item = currentFiltered[selectedIndex];
+    console.log("[Shortcuts] Item selecionado:", item);
+
+    if (item.type === 'cmd') {
+      console.log("[Shortcuts] Inserindo mensagem:", item.data.message);
+      inserirMensagemSubstituindoSlashQuery(activeInputEl, item.data.message);
+      closeDropdown();
+    } else if (item.type === 'create') {
+      const query = item.query;
+      closeDropdown();
+      abrirModalCriarAtalho(query);
+    }
+  }
+
+  function abrirModalCriarAtalho(defaultShortcut) {
+    if (!window.UIBuilder) {
+      alert("Erro: Modulo UIBuilder não carregado.");
+      return;
+    }
+
+    UIBuilder.criarModalFormulario({
+      title: 'Cadastrar Nova Mensagem',
+      fields: [
+        {
+          name: 'shortcut',
+          label: 'Atalho Personalizado',
+          type: 'text',
+          required: true,
+          value: defaultShortcut,
+          placeholder: 'Ex: bomdia'
+        },
+        {
+          name: 'message',
+          label: 'Mensagem',
+          type: 'textarea',
+          required: true,
+          value: '',
+          placeholder: 'Digite a mensagem completa aqui...'
+        }
+      ],
+      onSave: async (formData) => {
+        const newShortcut = normalizeShortcutDisplay(formData.shortcut);
+        const newMessage = formData.message;
+
+        if (!newShortcut || !newMessage) return;
+
+        const data = await StorageHelper.get(["customMessages", "messageShortcuts"]);
+        const customs = data.customMessages || [];
+        const shortcuts = data.messageShortcuts || {};
+
+        customs.push(newMessage);
+        const newIndex = customs.length - 1;
+
+        // Salvar atalho
+        shortcuts[`custom_${newIndex}`] = newShortcut;
+
+        await StorageHelper.set({
+          customMessages: customs,
+          messageShortcuts: shortcuts
+        });
+
+        // Recarregar cache
+        carregarAtalhosMensagens();
+
+        // Tentar inserir se o input ainda estiver lá? Talvez melhor não, apenas salvar.
+        // Mas seria legal feedback.
+        // alert("Mensagem cadastrada com sucesso!");
+      }
+    });
+  }
+
 
   function positionDropdownNearInput(inputEl, dd) {
     const rect = inputEl.getBoundingClientRect();
@@ -255,6 +383,9 @@ const ShortcutsModule = (() => {
     const h = dd.offsetHeight || 240;
 
     let top = rect.top - h - margin;
+    // Se não couber em cima, tentar embaixo?
+    // Mas a lógica original era cima por padrão (estilo slack as vezes).
+    // Vou manter lógica original mas garantir que não saia da tela
     if (top < 20) top = rect.bottom + margin;
 
     dd.style.top = `${top}px`;
@@ -303,38 +434,64 @@ const ShortcutsModule = (() => {
   }
 
   function inserirMensagemSubstituindoSlashQuery(el, message) {
+    console.log("[Shortcuts] inserirMensagemSubstituindoSlashQuery chamado");
+    console.log("[Shortcuts] Elemento:", el);
+    console.log("[Shortcuts] Mensagem:", message);
+    console.log("[Shortcuts] isContentEditable:", el.isContentEditable);
+
     if (el.isContentEditable) {
       const before = getTextBeforeCaret(el);
       const active = findActiveSlashQuery(before);
-      if (!active) return;
+
+      console.log("[Shortcuts] ContentEditable - before:", before);
+      console.log("[Shortcuts] ContentEditable - active:", active);
 
       const fullText = el.textContent || "";
       const caretPos = before.length;
 
-      const start = active.slashIndex;
-      const end = caretPos;
+      let start, end;
+
+      if (active) {
+        start = active.slashIndex;
+        end = caretPos;
+      } else {
+        start = caretPos;
+        end = caretPos;
+      }
 
       const newText = fullText.slice(0, start) + message + fullText.slice(end);
+      console.log("[Shortcuts] ContentEditable - newText:", newText);
 
-      el.focus();
       el.textContent = newText;
-
+      el.focus();
       setCaretContentEditable(el, start + message.length);
       el.dispatchEvent(new Event("input", { bubbles: true }));
-      el.dispatchEvent(new Event("change", { bubbles: true }));
+
+      console.log("[Shortcuts] ContentEditable - Mensagem inserida!");
       return;
     }
 
     const before = getTextBeforeCaret(el);
     const active = findActiveSlashQuery(before);
-    if (!active) return;
 
-    const caretPos = el.selectionStart ?? before.length;
-    const start = active.slashIndex;
-    const end = caretPos;
+    console.log("[Shortcuts] Textarea/Input - before:", before);
+    console.log("[Shortcuts] Textarea/Input - active:", active);
 
     const value = el.value || "";
+    const caretPos = el.selectionStart ?? before.length;
+
+    let start, end;
+
+    if (active) {
+      start = active.slashIndex;
+      end = caretPos;
+    } else {
+      start = caretPos;
+      end = caretPos;
+    }
+
     const newValue = value.slice(0, start) + message + value.slice(end);
+    console.log("[Shortcuts] Textarea/Input - newValue:", newValue);
 
     el.value = newValue;
 
@@ -344,6 +501,8 @@ const ShortcutsModule = (() => {
 
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
+
+    console.log("[Shortcuts] Textarea/Input - Mensagem inserida!");
   }
 
   function setCaretContentEditable(el, pos) {
@@ -399,23 +558,56 @@ const ShortcutsModule = (() => {
     if (!el) return;
 
     await ensureCacheReady();
-    if (!commandsCache.length) {
-      if (isOpen) closeDropdown();
-      return;
-    }
 
     const before = getTextBeforeCaret(el);
     const active = findActiveSlashQuery(before);
 
     if (active) {
+      const queryNorm = normForMatch(active.query);
+
+      // Verificar se existe match exato para expansão imediata
+      // Regra:
+      // 1. Deve haver um match exato.
+      // 2. Não deve haver OUTROS matches que comecem com o mesmo prefixo (para não impedir de digitar atalhos mais longos).
+      // Ex: se tenho "bom" e "bomdia", digitar "bom" não deve expandir "bom" imediatamente.
+
+      const exactMatch = commandsCache.find(cmd => cmd.shortcutNorm === queryNorm);
+      const potentialMatches = commandsCache.filter(cmd => cmd.shortcutNorm.startsWith(queryNorm));
+
+      // Se match único e exato, expande agora.
+      if (exactMatch && potentialMatches.length === 1) {
+        inserirMensagemSubstituindoSlashQuery(el, exactMatch.message);
+        closeDropdown();
+        return;
+      }
+
       if (!isOpen || activeInputEl !== el) {
         openDropdown(el, active.query);
       } else {
-        renderDropdown(active.query);
+        currentQuery = active.query;
+        renderDropdown();
         positionDropdownNearInput(el, dropdownEl);
       }
     } else {
       if (isOpen) closeDropdown();
+    }
+  }
+
+  function handleKeyDown(e) {
+    if (!isOpen || !activeInputEl) return;
+
+    // Passar navegação
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIndex++;
+      renderDropdown();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIndex--;
+      renderDropdown();
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      executarAcaoSelecionada();
     }
   }
 
@@ -424,13 +616,44 @@ const ShortcutsModule = (() => {
 
     StorageHelper.addListener((changes, namespace) => {
       if (namespace === "local" && (changes.messageShortcuts || changes.customMessages || changes[NAME_KEY] ||
-      changes[SECTOR_KEY])) {
+        changes[SECTOR_KEY])) {
         carregarAtalhosMensagens();
       }
     });
 
     document.addEventListener("input", (event) => handleTyping(event.target));
     document.addEventListener("keyup", (event) => handleTyping(event.target));
+
+    // Novo: Keydown para navegação
+    document.addEventListener("keydown", (event) => {
+      // Auto-expansão com Espaço
+      if (event.key === ' ' && activeInputEl) {
+        const before = getTextBeforeCaret(activeInputEl);
+        const active = findActiveSlashQuery(before);
+        if (active) {
+          const queryNorm = normForMatch(active.query);
+          const exactMatch = commandsCache.find(cmd => cmd.shortcutNorm === queryNorm);
+          if (exactMatch) {
+            event.preventDefault(); // Evitar o espaço extra
+            inserirMensagemSubstituindoSlashQuery(activeInputEl, exactMatch.message);
+            closeDropdown();
+            return;
+          }
+        }
+      }
+
+      if (isOpen) {
+        // Se dropdown aberto, verificar se é navegação
+        if (['ArrowUp', 'ArrowDown', 'Enter', 'Tab', 'Escape'].includes(event.key)) {
+          if (event.key === 'Escape') {
+            closeDropdown();
+            return;
+          }
+          handleKeyDown(event);
+          return;
+        }
+      }
+    });
 
     document.addEventListener("focusin", (event) => handleTyping(event.target));
 
@@ -439,10 +662,6 @@ const ShortcutsModule = (() => {
       if (dropdownEl && dropdownEl.contains(e.target)) return;
       if (activeInputEl && (e.target === activeInputEl || activeInputEl.contains(e.target))) return;
       closeDropdown();
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && isOpen) closeDropdown();
     });
 
     window.addEventListener("resize", () => {

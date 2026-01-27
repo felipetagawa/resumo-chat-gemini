@@ -75,10 +75,10 @@ const AgendaModule = (() => {
 
         const tabOrder = loadTabOrder();
         const tabs = [
-            { id: 'calendar', label: '📆 Calendário' },
-            { id: 'crm', label: '📋 CRM' },
-            { id: 'kanban', label: '📊 Kanban' },
-            { id: 'notes', label: '📝 Notas' }
+            { id: 'calendar', label: 'Calendário' },
+            { id: 'crm', label: 'CRM' },
+            { id: 'kanban', label: 'Kanban' },
+            { id: 'notes', label: 'Notas' }
         ];
 
         const sortedTabs = tabOrder.map(tabId =>
@@ -107,7 +107,7 @@ const AgendaModule = (() => {
         <div class="agenda-header">
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="font-weight:700; font-size:18px; color:#333;">📅 Agenda & Gestão</div>
+                <div style="font-weight:700; font-size:18px; color:#333;">Agenda & Gestão</div>
                 <button id="btnEditTabs" style="background:#f0f0f0; border:1px solid #ddd; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; gap:4px; transition:all 0.2s;" title="Reordenar abas">
                 <span>↕️</span>
                 <span>Reordenar</span>
@@ -404,6 +404,91 @@ const AgendaModule = (() => {
         }
     }
 
+    function abrirModalAtendimento(item = null, dia = null, currentMonth = null, currentYear = null, onSaveSuccess = null) {
+        const isEdit = item !== null;
+        let dataDefault = '';
+
+        if (dia && currentMonth !== null && currentYear !== null) {
+            dataDefault = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+        }
+
+        UIBuilder.criarModalFormulario({
+            title: isEdit ? 'Editar Atendimento' : 'Novo Atendimento',
+            fields: [
+                {
+                    name: 'client',
+                    label: 'Nome do Cliente',
+                    type: 'text',
+                    required: true,
+                    value: item?.client || '',
+                    placeholder: 'Nome do cliente'
+                },
+                {
+                    name: 'title',
+                    label: 'Assunto/Pendência',
+                    type: 'text',
+                    required: true,
+                    value: item?.title || '',
+                    placeholder: 'Resumo do atendimento'
+                },
+                {
+                    name: 'problem',
+                    label: 'Problema Detalhado',
+                    type: 'textarea',
+                    required: false,
+                    value: item?.problem || '',
+                    placeholder: 'Descrição detalhada do problema...'
+                },
+                {
+                    name: 'date',
+                    label: 'Data Agendada',
+                    type: 'date',
+                    required: true,
+                    value: item?.date || dataDefault
+                },
+                {
+                    name: 'time',
+                    label: 'Hora Agendada',
+                    type: 'time',
+                    required: false,
+                    value: item?.time || ''
+                },
+                {
+                    name: 'notes',
+                    label: 'Observações',
+                    type: 'textarea',
+                    required: false,
+                    value: item?.notes || '',
+                    placeholder: 'Observações adicionais...'
+                },
+                {
+                    name: 'status',
+                    label: 'Status',
+                    type: 'select',
+                    required: true,
+                    value: item?.status || 'todo',
+                    options: [
+                        { value: 'todo', label: 'A Fazer' },
+                        { value: 'inprogress', label: 'Em Progresso' },
+                        { value: 'done', label: 'Concluído' }
+                    ]
+                }
+            ],
+            onSave: async (formData) => {
+                await salvarEventoCompleto({
+                    ...formData,
+                    id: item?.id,
+                    createdAt: item?.createdAt
+                });
+                if (onSaveSuccess) onSaveSuccess();
+            },
+            onDelete: isEdit ? async () => {
+                await deletarEventoCompleto(item.id);
+                if (onSaveSuccess) onSaveSuccess();
+            } : null
+        });
+    }
+
     function iniciarCalendario(container) {
         const date = new Date();
         let currentMonth = date.getMonth();
@@ -653,7 +738,7 @@ const AgendaModule = (() => {
                 editBtn.addEventListener('click', () => {
                     closeModal();
                     setTimeout(() => {
-                        abrirModalEvento(eventData);
+                        abrirModalAtendimento(eventData, null, null, null, loadAndRender);
                     }, 50);
                 });
             }
@@ -692,86 +777,7 @@ const AgendaModule = (() => {
             }, 10);
         };
 
-        const abrirModalEvento = (eventData = null, dia = null) => {
-            const isEdit = eventData !== null;
-            const dataDefault = dia ? `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}` : '';
 
-            UIBuilder.criarModalFormulario({
-                title: isEdit ? '✏️ Editar Evento' : '➕ Novo Evento',
-                fields: [
-                    {
-                        name: 'title',
-                        label: 'Título do Evento',
-                        type: 'text',
-                        required: true,
-                        value: eventData?.title || '',
-                        placeholder: 'Ex: Reunião com cliente'
-                    },
-                    {
-                        name: 'client',
-                        label: 'Cliente',
-                        type: 'text',
-                        required: false,
-                        value: eventData?.client || '',
-                        placeholder: 'Nome do cliente (opcional)'
-                    },
-                    {
-                        name: 'problem',
-                        label: 'Problema/Descrição',
-                        type: 'textarea',
-                        required: false,
-                        value: eventData?.problem || '',
-                        placeholder: 'Descreva o motivo do agendamento...'
-                    },
-                    {
-                        name: 'date',
-                        label: 'Data',
-                        type: 'date',
-                        required: true,
-                        value: eventData?.date || dataDefault
-                    },
-                    {
-                        name: 'time',
-                        label: 'Hora',
-                        type: 'time',
-                        required: false,
-                        value: eventData?.time || ''
-                    },
-                    {
-                        name: 'notes',
-                        label: 'Observações',
-                        type: 'textarea',
-                        required: false,
-                        value: eventData?.notes || '',
-                        placeholder: 'Observações adicionais...'
-                    },
-                    {
-                        name: 'status',
-                        label: 'Status',
-                        type: 'select',
-                        required: true,
-                        value: eventData?.status || 'todo',
-                        options: [
-                            { value: 'todo', label: 'A Fazer' },
-                            { value: 'inprogress', label: 'Em Progresso' },
-                            { value: 'done', label: 'Concluído' }
-                        ]
-                    }
-                ],
-                onSave: async (formData) => {
-                    await salvarEventoCompleto({
-                        ...formData,
-                        id: eventData?.id,
-                        createdAt: eventData?.createdAt
-                    });
-                    loadAndRender();
-                },
-                onDelete: isEdit ? async () => {
-                    await deletarEventoCompleto(eventData.id);
-                    loadAndRender();
-                } : null
-            });
-        };
 
         const render = (eventsCache) => {
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
@@ -830,13 +836,17 @@ const AgendaModule = (() => {
                 if (hasOverdue) dayEl.classList.add('has-overdue');
 
                 dayEl.innerHTML = `
-            <span class="day-number" style="cursor: pointer; padding: 2px 5px; border-radius: 3px; display: inline-block;">${i}</span>
-            <div class="day-events">${eventsHtml}</div>
-            `;
+                <span class="day-number" style="padding: 2px 5px; border-radius: 3px; display: inline-block;">${i}</span>
+                <div class="day-events">${eventsHtml}</div>
+                `;
 
-                dayEl.querySelector('.day-number').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    abrirModalEvento(null, i);
+                dayEl.style.cursor = 'pointer';
+                dayEl.title = 'Clique para criar um novo atendimento';
+                dayEl.addEventListener('click', (e) => {
+                    // Se clicar exatamente no evento, não criar novo
+                    if (e.target.closest('.event-marker')) return;
+
+                    abrirModalAtendimento(null, i, currentMonth, currentYear, loadAndRender);
                 });
 
                 dayEl.querySelectorAll('.event-marker').forEach(marker => {
@@ -919,85 +929,7 @@ const AgendaModule = (() => {
         dataInicio.value = formatarDataParaInput(primeiroDiaMes);
         dataFim.value = formatarDataParaInput(ultimoDiaMes);
 
-        const abrirModalCRM = (item = null) => {
-            const isEdit = item !== null;
 
-            UIBuilder.criarModalFormulario({
-                title: isEdit ? '✏️ Editar Atendimento' : '➕ Novo Atendimento',
-                fields: [
-                    {
-                        name: 'client',
-                        label: 'Nome do Cliente',
-                        type: 'text',
-                        required: true,
-                        value: item?.client || '',
-                        placeholder: 'Nome do cliente'
-                    },
-                    {
-                        name: 'title',
-                        label: 'Assunto/Pendência',
-                        type: 'text',
-                        required: true,
-                        value: item?.title || '',
-                        placeholder: 'Resumo do atendimento'
-                    },
-                    {
-                        name: 'problem',
-                        label: 'Problema Detalhado',
-                        type: 'textarea',
-                        required: false,
-                        value: item?.problem || '',
-                        placeholder: 'Descrição detalhada do problema...'
-                    },
-                    {
-                        name: 'date',
-                        label: 'Data Agendada',
-                        type: 'date',
-                        required: true,
-                        value: item?.date || ''
-                    },
-                    {
-                        name: 'time',
-                        label: 'Hora Agendada',
-                        type: 'time',
-                        required: false,
-                        value: item?.time || ''
-                    },
-                    {
-                        name: 'notes',
-                        label: 'Observações',
-                        type: 'textarea',
-                        required: false,
-                        value: item?.notes || '',
-                        placeholder: 'Observações adicionais...'
-                    },
-                    {
-                        name: 'status',
-                        label: 'Status',
-                        type: 'select',
-                        required: true,
-                        value: item?.status || 'todo',
-                        options: [
-                            { value: 'todo', label: 'A Fazer' },
-                            { value: 'inprogress', label: 'Em Progresso' },
-                            { value: 'done', label: 'Concluído' }
-                        ]
-                    }
-                ],
-                onSave: async (formData) => {
-                    await salvarEventoCompleto({
-                        ...formData,
-                        id: item?.id,
-                        createdAt: item?.createdAt
-                    });
-                    renderTable();
-                },
-                onDelete: isEdit ? async () => {
-                    await deletarEventoCompleto(item.id);
-                    renderTable();
-                } : null
-            });
-        };
 
         const aplicarFiltroData = (dados) => {
             const dataInicioVal = dataInicio.value;
@@ -1188,7 +1120,7 @@ const AgendaModule = (() => {
         renderTable();
 
         container.querySelector("#btnAddCrm").addEventListener('click', () => {
-            abrirModalCRM();
+            abrirModalAtendimento(null, null, null, null, renderTable);
         });
 
         filtroInput.addEventListener('input', () => {

@@ -44,7 +44,7 @@ const MessagesModule = (() => {
 
         popup.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px solid #eee;">
-        <b style="font-size:16px; color:#3c4043;">💬 Mensagens Padrão</b>
+        <b style="font-size:16px; color:#3c4043;">Mensagens Padrão</b>
         <button id="fecharMensagensFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
       </div>
       <div id="conteudoMensagens" style="flex:1; overflow-y:auto; padding:16px;"></div>
@@ -63,12 +63,7 @@ const MessagesModule = (() => {
 
     const SUPPORT_FIXED_MESSAGES = [
         "Os valores exibidos de IBS e CBS neste primeiro momento não representam cobrança efetiva, pois a fase inicial da Reforma Tributária é apenas experimental e nominativa, com alíquotas padrão 0,10 e 0,90, sem geração de recolhimento, sendo exigida apenas para empresas do Lucro Presumido e Lucro Real para fins de adaptação e validação das informações.",
-        "Atualmente, a fase inicial da Reforma Tributária com IBS e CBS se aplica apenas às empresas do regime normal (Lucro Presumido e Lucro Real), sendo que para o Simples Nacional não há recolhimento nem impacto prático neste primeiro ano, pois as informações são utilizadas apenas de forma nominativa e experimental.",
-        "A reformulação das telas não altera a lógica de cálculo nem as regras fiscais do sistema, sendo uma evolução voltada à melhoria contínua, e qualquer diferença percebida está relacionada apenas à interface ou fluxo, com nossa equipe disponível para esclarecer dúvidas e ajustar eventuais pontos específicos.",
-        "As telas reformuladas de Contas a Receber, Contas a Pagar, NFC-e e Cadastro de Produtos mantêm as mesmas regras fiscais e operacionais de antes, tendo sido alterados apenas aspectos visuais e funcionais para melhorar usabilidade e organização, sem impacto nos cálculos ou validações já existentes.",
-        "A emissão de NFC-e para CNPJ deixou de ser permitida por determinação das normas fiscais vigentes, não sendo uma regra criada pelo sistema, que apenas aplica automaticamente essa exigência legal para evitar rejeições e problemas fiscais ao contribuinte.",
-        "O procedimento de referenciar NFC-e em uma NF-e não é mais aceito pela legislação fiscal atual, motivo pelo qual o sistema bloqueia essa prática, garantindo conformidade legal e evitando a rejeição dos documentos junto à SEFAZ.",
-        "A vedação à emissão de NFC-e para CNPJ e ao seu referenciamento em NF-e decorre exclusivamente de alterações nas regras fiscais, e o sistema apenas segue essas determinações para manter a regularidade das operações e evitar inconsistências legais."
+        "Atualmente, a fase inicial da Reforma Tributária com IBS e CBS se aplica apenas às empresas do regime normal (Lucro Presumido e Lucro Real), sendo que para o Simples Nacional não há recolhimento nem impacto prático neste primeiro ano, pois as informações são utilizadas apenas de forma nominativa e experimental."
     ];
 
     const PRE_FIXED_MESSAGES = [
@@ -100,8 +95,96 @@ const MessagesModule = (() => {
         if (!isPre) {
             const customAcordeon = UIBuilder.criarAcordeon(`✨ Mensagens Personalizadas (${customMessagesList.length})`, true, "acordeon-custom");
 
+            // Adicionar botão de nova mensagem no header do acordeon ou logo abaixo
+            const btnAdd = document.createElement("button");
+            btnAdd.innerHTML = "Nova Mensagem";
+            btnAdd.style = `
+                margin: 4px 0 10px 0;
+                background: #e8f0fe;
+                color: #1a73e8;
+                border: 1px solid #d2e3fc;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 600;
+                width: 100%;
+                transition: all 0.2s;
+            `;
+            btnAdd.onmouseover = () => btnAdd.style.background = "#d2e3fc";
+            btnAdd.onmouseout = () => btnAdd.style.background = "#e8f0fe";
+
+            btnAdd.onclick = () => {
+                UIBuilder.criarModalFormulario({
+                    title: 'Cadastrar Nova Mensagem',
+                    fields: [
+                        {
+                            name: 'shortcut',
+                            label: 'Atalho Opcional',
+                            type: 'text',
+                            required: false,
+                            value: '',
+                            placeholder: 'Ex: aviso'
+                        },
+                        {
+                            name: 'message',
+                            label: 'Mensagem',
+                            type: 'textarea',
+                            required: true,
+                            value: '',
+                            placeholder: 'Digite a mensagem...'
+                        }
+                    ],
+                    onSave: async (formData) => {
+                        const newShortcut = formData.shortcut ? String(formData.shortcut).trim() : "";
+                        const newMessage = formData.message;
+
+                        if (!newMessage) return;
+
+                        const data = await StorageHelper.get(["customMessages", "messageShortcuts"]);
+                        const customs = data.customMessages || [];
+                        const shortcuts = data.messageShortcuts || {};
+
+                        // Validar duplicação de atalho
+                        if (newShortcut) {
+                            const normalizedNew = newShortcut.toLowerCase();
+                            const duplicate = Object.values(shortcuts).some(value =>
+                                String(value).toLowerCase() === normalizedNew
+                            );
+
+                            if (duplicate) {
+                                alert("Este atalho já está sendo usado por outra mensagem!");
+                                return;
+                            }
+                        }
+
+                        customs.push(newMessage);
+                        const newIndex = customs.length - 1;
+
+                        if (newShortcut) {
+                            // Salvar atalho se fornecido
+                            shortcuts[`custom_${newIndex}`] = newShortcut;
+                        }
+
+                        await StorageHelper.set({
+                            customMessages: customs,
+                            messageShortcuts: shortcuts
+                        });
+
+                        // Reload
+                        toggleMensagens();
+                        toggleMensagens();
+                    }
+                });
+            };
+
+            customAcordeon.content.appendChild(btnAdd);
+
             if (customMessagesList.length === 0) {
-                customAcordeon.content.innerHTML = `<p style="color:#999; text-align:center; padding:20px;">Nenhuma mensagem personalizada. Configure em Opções.</p>`;
+                const emptyMsg = document.createElement("p");
+                emptyMsg.style = "color:#999; text-align:center; padding:20px; font-size:13px;";
+                emptyMsg.innerText = "Nenhuma mensagem personalizada.";
+                customAcordeon.content.appendChild(emptyMsg);
             } else {
                 customMessagesList.forEach((msg, index) => {
                     const key = `custom_${index}`;
@@ -127,9 +210,11 @@ const MessagesModule = (() => {
       position: relative;
     `;
 
+        const shortcutBadge = shortcut ? `<span style="background:#1a73e8; padding:2px 8px; border-radius:12px; font-weight:bold; font-size:11px; margin-right:8px; color:#ffffff; box-shadow: 0 2px 4px rgba(26,115,232,0.3); border: 1px solid #1557b0;">/${shortcut}</span>` : '';
+
         card.innerHTML = `
       <div style="font-size:13px; color:#333; line-height:1.4; padding-right: 20px;">
-        ${shortcut ? `<span style="background:#1a73e8; padding:2px 8px; border-radius:12px; font-weight:bold; font-size:11px; margin-right:8px; color:#ffffff; box-shadow: 0 2px 4px rgba(26,115,232,0.3); border: 1px solid #1557b0;">/${shortcut}</span>` : ''}
+        ${shortcutBadge}
         ${text}
       </div>
       <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end; align-items:center;">
@@ -139,8 +224,153 @@ const MessagesModule = (() => {
       </div>
     `;
 
+        // Adicionar campo de atalho para TODAS as mensagens (fixas e personalizadas)
+        const shortcutConfig = document.createElement("div");
+        shortcutConfig.style.cssText = "margin-top:10px; padding-top:10px; border-top:1px solid #e0e0e0; display:flex; align-items:center; gap:6px;";
+
+        const shortcutLabel = document.createElement("span");
+        shortcutLabel.textContent = "Atalho: /";
+        shortcutLabel.style.cssText = "color:#666; font-size:12px; font-weight:700;";
+
+        const shortcutInput = document.createElement("input");
+        shortcutInput.type = "text";
+        shortcutInput.maxLength = 20;
+        shortcutInput.placeholder = "ex: bomdia";
+        shortcutInput.value = shortcut || "";
+        shortcutInput.style.cssText = `
+            width:180px;
+            padding:6px 8px;
+            border:1px solid #ccc;
+            border-radius:6px;
+            font-family: ui-monospace, SFMono-Regular, monospace;
+            font-weight:800;
+            font-size:13px;
+        `;
+
+        shortcutInput.addEventListener("change", async () => {
+            const newShortcut = shortcutInput.value.trim();
+            const data = await StorageHelper.get(["messageShortcuts"]);
+            const shortcuts = data.messageShortcuts || {};
+
+            const targetKey = isCustom ? `custom_${index}` : `fixed_${index}`;
+
+            // Validar duplicação
+            if (newShortcut) {
+                const normalizedNew = newShortcut.toLowerCase();
+                const duplicate = Object.entries(shortcuts).some(([key, value]) => {
+                    if (key === targetKey) return false; // Ignorar o próprio
+                    return String(value).toLowerCase() === normalizedNew;
+                });
+
+                if (duplicate) {
+                    alert("Este atalho já está sendo usado por outra mensagem!");
+                    shortcutInput.value = shortcuts[targetKey] || "";
+                    return;
+                }
+
+                shortcuts[targetKey] = newShortcut;
+            } else {
+                delete shortcuts[targetKey];
+            }
+
+            await StorageHelper.set({ messageShortcuts: shortcuts });
+
+            // Recarregar para atualizar badge
+            toggleMensagens();
+            toggleMensagens();
+        });
+
+        shortcutConfig.appendChild(shortcutLabel);
+        shortcutConfig.appendChild(shortcutInput);
+        card.appendChild(shortcutConfig);
+
         if (isCustom) {
-            card.querySelector(".btn-excluir").addEventListener("click", async (e) => {
+            const btnDelete = card.querySelector(".btn-excluir");
+            const btnEdit = document.createElement("button");
+            btnEdit.textContent = "Editar";
+            btnEdit.className = "btn-editar";
+            btnEdit.style.cssText = "background:transparent; border:none; color:#1a73e8; font-size:12px; cursor:pointer; margin-right:8px;";
+
+            // Inserir botão Editar ao lado do Excluir
+            btnDelete.parentNode.insertBefore(btnEdit, btnDelete);
+
+            btnEdit.addEventListener("click", async (e) => {
+                e.stopPropagation();
+
+                const data = await StorageHelper.get(["customMessages", "messageShortcuts"]);
+                const messages = data.customMessages || [];
+                const shortcuts = data.messageShortcuts || {};
+
+                const currentMessage = messages[index];
+                const currentShortcut = shortcuts[`custom_${index}`] || "";
+
+                UIBuilder.criarModalFormulario({
+                    title: 'Editar Mensagem Personalizada',
+                    fields: [
+                        {
+                            name: 'shortcut',
+                            label: 'Atalho Opcional',
+                            type: 'text',
+                            required: false,
+                            value: currentShortcut,
+                            placeholder: 'Ex: aviso'
+                        },
+                        {
+                            name: 'message',
+                            label: 'Mensagem',
+                            type: 'textarea',
+                            required: true,
+                            value: currentMessage,
+                            placeholder: 'Digite a mensagem...'
+                        }
+                    ],
+                    onSave: async (formData) => {
+                        const newShortcut = formData.shortcut ? String(formData.shortcut).trim() : "";
+                        const newMessage = formData.message;
+
+                        if (!newMessage) return;
+
+                        const data = await StorageHelper.get(["customMessages", "messageShortcuts"]);
+                        const messages = data.customMessages || [];
+                        const shortcuts = data.messageShortcuts || {};
+
+                        // Validar duplicação de atalho (se mudou)
+                        if (newShortcut && newShortcut !== currentShortcut) {
+                            const normalizedNew = newShortcut.toLowerCase();
+                            const duplicate = Object.entries(shortcuts).some(([key, value]) => {
+                                if (key === `custom_${index}`) return false;
+                                return String(value).toLowerCase() === normalizedNew;
+                            });
+
+                            if (duplicate) {
+                                alert("Este atalho já está sendo usado por outra mensagem!");
+                                return;
+                            }
+                        }
+
+                        // Atualizar mensagem
+                        messages[index] = newMessage;
+
+                        // Atualizar atalho
+                        if (newShortcut) {
+                            shortcuts[`custom_${index}`] = newShortcut;
+                        } else {
+                            delete shortcuts[`custom_${index}`];
+                        }
+
+                        await StorageHelper.set({
+                            customMessages: messages,
+                            messageShortcuts: shortcuts
+                        });
+
+                        // Recarregar
+                        toggleMensagens();
+                        toggleMensagens();
+                    }
+                });
+            });
+
+            btnDelete.addEventListener("click", async (e) => {
                 e.stopPropagation();
                 if (confirm("Excluir mensagem personalizada?")) {
                     const data = await StorageHelper.get(["customMessages", "messageShortcuts"]);
@@ -151,22 +381,6 @@ const MessagesModule = (() => {
                     // Remover atalho associado
                     let newShortcuts = data.messageShortcuts || {};
                     delete newShortcuts[`custom_${index}`];
-                    // Update keys for subsequent items?
-                    // If we remove index 1, index 2 becomes 1.
-                    // This is tricky. The keys depend on index.
-                    // If we splice, indices shift.
-                    // We must rebuild shortcuts map or just accept they might break/shift?
-                    // Better to rebuild or just clear shortcuts for custom messages to be safe?
-                    // Or re-map.
-                    // For now, simpler approach: just save messages.
-                    // The shortcuts logic relies on index. If indices shift, shortcuts point to wrong messages.
-                    // We should probably reassign shortcuts.
-                    // Given complexity, maybe just notify user they might need to reconfigure shortcuts?
-                    // Or intelligent shift:
-                    //   custom_0 -> keep
-                    //   custom_1 -> deleted
-                    //   custom_2 -> becomes custom_1.
-                    //   So we must move custom_2 shortcut to custom_1.
 
                     const cleanShortcuts = {};
                     Object.keys(newShortcuts).forEach(key => {
