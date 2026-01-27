@@ -46,6 +46,211 @@ const getIconHTML = (icon, text) => {
   return `<span class="icon">${icon}</span>`;
 };
 
+function createOnboardingModal() {
+  if (document.getElementById("atendeai-onboarding-overlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "atendeai-onboarding-overlay";
+  overlay.style.cssText = `
+    position: fixed;
+    inset: 0;
+    z-index: 1000000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(8px);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  `;
+
+  const modal = document.createElement("div");
+  modal.style.cssText = `
+    width: 480px;
+    max-width: 90vw;
+    background: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+  `;
+
+  const header = document.createElement("div");
+  header.style.cssText = `
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    padding: 24px;
+    text-align: center;
+    color: white;
+  `;
+  header.innerHTML = `
+    <div style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">Bem-vindo ao AtendeAI!</div>
+    <div style="font-size: 14px; opacity: 0.9;">Configure seu perfil para começarmos.</div>
+  `;
+
+  const body = document.createElement("div");
+  body.style.cssText = `padding: 32px 24px;`;
+
+  body.innerHTML = `
+    <div style="margin-bottom: 20px;">
+      <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">Seu Nome / Login</label>
+      <input type="text" id="onboarding-name-input" placeholder="Ex: Felipe" style="
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        font-size: 15px;
+        outline: none;
+        transition: border-color 0.2s;
+      " />
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 12px;">Seu Setor</label>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <label style="cursor: pointer;">
+          <input type="radio" name="onboarding-sector" value="suporte" checked style="display: none;" />
+          <div class="sector-card" style="
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            transition: all 0.2s;
+          ">Suporte</div>
+        </label>
+        <label style="cursor: pointer;">
+          <input type="radio" name="onboarding-sector" value="preatendimento" style="display: none;" />
+          <div class="sector-card" style="
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            transition: all 0.2s;
+          ">Pré-atendimento</div>
+        </label>
+      </div>
+    </div>
+
+    <button id="onboarding-save-btn" style="
+      width: 100%;
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    ">Salvar e Continuar</button>
+  `;
+
+  // Style logic for radio buttons
+  const styleRadios = () => {
+    const cards = body.querySelectorAll('.sector-card');
+    const inputs = body.querySelectorAll('input[name="onboarding-sector"]');
+    inputs.forEach((input, index) => {
+      if (input.checked) {
+        cards[index].style.borderColor = '#2563eb';
+        cards[index].style.backgroundColor = '#eff6ff';
+        cards[index].style.color = '#1e40af';
+      } else {
+        cards[index].style.borderColor = '#e2e8f0';
+        cards[index].style.backgroundColor = 'transparent';
+        cards[index].style.color = '#64748b';
+      }
+    });
+  };
+
+  body.addEventListener('change', (e) => {
+    if (e.target.name === 'onboarding-sector') styleRadios();
+  });
+  setTimeout(styleRadios, 0);
+
+  modal.appendChild(header);
+  modal.appendChild(body);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Logic
+  const saveBtn = body.querySelector('#onboarding-save-btn');
+  const nameInput = body.querySelector('#onboarding-name-input');
+
+  saveBtn.addEventListener('click', async () => {
+    const name = nameInput.value.trim();
+    const sector = body.querySelector('input[name="onboarding-sector"]:checked').value;
+
+    if (!name) {
+      alert("Por favor, digite seu nome.");
+      return;
+    }
+
+    // Save
+    console.log("DEBUG: Saving user config:", name, sector);
+    await new Promise(resolve => chrome.storage.local.set({
+      [NAME_KEY]: name,
+      [SECTOR_KEY]: sector
+    }, resolve));
+
+    // Force visibility update based on new sector
+    const isPre = sector === "preatendimento";
+    const newVisibility = {
+      btnAgenda: true,
+      btnMessages: true,
+      btnAssistenteIA: true,
+      btnConsultarDocsLoop: true,
+      btnResumoGemini: !isPre,
+      btnChamadoManual: !isPre,
+      btnDica: !isPre
+    };
+
+    console.log("DEBUG: Saving new visibility:", newVisibility);
+    await new Promise(resolve => chrome.storage.local.set({ ["atendeai_visibility"]: newVisibility }, resolve));
+
+    // Remove modal and init
+    overlay.remove();
+    // Trigger immediate check
+    console.log("DEBUG: Triggering checkAndInit after save.");
+    checkAndInit();
+  });
+}
+
+function checkAndInit() {
+  const urlAtualCorreta = window.location.href.startsWith(TARGET_URL);
+  if (!urlAtualCorreta) {
+    if (modulosInicializados) {
+      modulosInicializados = false;
+      DOMHelpers.removeElement("containerBotoesGemini");
+      DOMHelpers.removeElement("atendeai-onboarding-overlay");
+    }
+    return;
+  }
+
+  // Se URL correta
+  inicializarModulos();
+  NotificationsModule.verificarNotificacoesChat();
+
+  isUserConfigured().then(configured => {
+    if (!configured) {
+      createOnboardingModal();
+      return;
+    }
+
+    // Se configurado, garantir que modal não existe e criar botões
+    const modal = document.getElementById("atendeai-onboarding-overlay");
+    if (modal) modal.remove();
+
+    storageGet(["atendeai_visibility"]).then(data => {
+      criarBotoesFlutuantes(data.atendeai_visibility);
+    });
+  });
+}
+
+
 const storageGet = (keys) =>
   new Promise((resolve) => chrome.storage.local.get(keys, (data) => resolve(data || {})));
 
@@ -211,8 +416,18 @@ function openConfigRequiredModal() {
   overlay.style.display = "flex";
 }
 
-function criarBotoesFlutuantes() {
-  if (DOMHelpers.exists("containerBotoesGemini")) return;
+function criarBotoesFlutuantes(visibility) {
+  if (DOMHelpers.exists("containerBotoesGemini")) {
+    console.log("DEBUG: containerBotoesGemini already exists, skipping creation.");
+    return;
+  }
+
+  console.log("DEBUG: criarBotoesFlutuantes called with:", visibility);
+
+  const isVisible = (key, defaultVal = true) => {
+    if (!visibility) return defaultVal;
+    return visibility[key] === true;
+  };
 
   const container = DOMHelpers.createElement("div", {
     id: "containerBotoesGemini",
@@ -299,12 +514,12 @@ function criarBotoesFlutuantes() {
   itemDica.innerHTML = `${getIconHTML("dicas-inteligentes.png", "Dicas Inteligentes")} Dicas Inteligentes`;
 
   itemDica.onclick = guardFeature(async () => {
-  const btn = document.getElementById("btnDica");
-  btn.disabled = true;
-  const textoOriginal = btn.innerHTML;
-  btn.innerHTML = `<span class="icon">⏳</span> Pensando...`;
+    const btn = document.getElementById("btnDica");
+    btn.disabled = true;
+    const textoOriginal = btn.innerHTML;
+    btn.innerHTML = `<span class="icon">⏳</span> Pensando...`;
 
-  const texto = ChatCaptureModule.capturarTextoChat();
+    const texto = ChatCaptureModule.capturarTextoChat();
     if (!texto) {
       alert("Não foi possível capturar o texto do chat.");
       btn.disabled = false;
@@ -324,8 +539,8 @@ function criarBotoesFlutuantes() {
     }
   });
 
-  dropdownContent.appendChild(itemDocs);
-  dropdownContent.appendChild(itemDica);
+  if (isVisible("btnConsultarDocsLoop")) dropdownContent.appendChild(itemDocs);
+  if (isVisible("btnDica")) dropdownContent.appendChild(itemDica);
 
   containerDropdown.appendChild(botaoMain);
   containerDropdown.appendChild(dropdownContent);
@@ -351,11 +566,12 @@ function criarBotoesFlutuantes() {
     guardFeature(() => CalledModule.exibirChamadoManual())
   );
 
-  container.appendChild(botaoResumo);
-  container.appendChild(botaoMessages);
-  container.appendChild(botaoAgenda);
-  container.appendChild(botaoChamadoManual);
-  container.appendChild(containerDropdown);
+  if (isVisible("btnResumoGemini")) container.appendChild(botaoResumo);
+  if (isVisible("btnMessages")) container.appendChild(botaoMessages);
+  if (isVisible("btnAgenda")) container.appendChild(botaoAgenda);
+  if (isVisible("btnChamadoManual")) container.appendChild(botaoChamadoManual);
+
+  if (isVisible("btnAssistenteIA")) container.appendChild(containerDropdown);
 
   document.body.appendChild(container);
 }
@@ -391,25 +607,51 @@ MessagingHelper.addListener((request, sender, sendResponse) => {
   return true;
 });
 
-setInterval(() => {
-  const botoesExistem = DOMHelpers.exists("containerBotoesGemini");
-  const urlAtualCorreta = window.location.href.startsWith(TARGET_URL);
+console.log("✅ Main Loop: Checking...");
+function checkAndInit() {
+  const currentUrl = window.location.href;
+  const isTarget = currentUrl.startsWith(TARGET_URL);
 
-  if (urlAtualCorreta && !botoesExistem) {
-    inicializarModulos();
-    criarBotoesFlutuantes();
-  } else if (urlAtualCorreta) {
-    inicializarModulos();
-    NotificationsModule.verificarNotificacoesChat();
-  } else if (!urlAtualCorreta && botoesExistem) {
-    modulosInicializados = false;
+  // console.log("DEBUG: Checking URL...", currentUrl, "Matches?", isTarget);
 
-    DOMHelpers.removeElement("containerBotoesGemini");
-    DOMHelpers.removeElement("geminiResumoPopup");
-    DOMHelpers.removeElement("geminiDicaPopup");
-    DOMHelpers.removeElement("geminiDocsPopup");
-    DOMHelpers.removeElement("popupMensagensPadrao");
+  if (!isTarget) {
+    if (modulosInicializados) {
+      console.log("DEBUG: Leaving target area, cleaning up.");
+      modulosInicializados = false;
+      DOMHelpers.removeElement("containerBotoesGemini");
+      DOMHelpers.removeElement("atendeai-onboarding-overlay");
+    }
+    return;
   }
-}, 2000);
+
+  // Se URL correta
+  inicializarModulos();
+  NotificationsModule.verificarNotificacoesChat();
+
+  isUserConfigured().then(configured => {
+    // console.log("DEBUG: User Configured?", configured);
+    if (!configured) {
+      if (!document.getElementById("atendeai-onboarding-overlay")) {
+        console.log("DEBUG: Not configured, showing onboarding modal.");
+        createOnboardingModal();
+      }
+      return;
+    }
+
+    // Se configurado, garantir que modal não existe e criar botões
+    const modal = document.getElementById("atendeai-onboarding-overlay");
+    if (modal) {
+      console.log("DEBUG: Configured, removing modal.");
+      modal.remove();
+    }
+
+    storageGet(["atendeai_visibility"]).then(data => {
+      console.log("DEBUG: Loaded visibility from storage:", data.atendeai_visibility);
+      criarBotoesFlutuantes(data.atendeai_visibility);
+    });
+  });
+}
+
+setInterval(checkAndInit, 2000);
 
 console.log("✅ AtendeAI Manager: Extensão carregada e modularizada!");

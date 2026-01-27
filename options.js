@@ -48,6 +48,11 @@ document.addEventListener("DOMContentLoaded", () => {
     onboardingNameInput: document.getElementById("onboardingNameInput"),
     onboardingSaveBtn: document.getElementById("onboardingSaveBtn"),
     onboardingStatus: document.getElementById("onboardingStatus"),
+    onboardingStatus: document.getElementById("onboardingStatus"),
+    versionElements: document.querySelectorAll(".app-version"),
+    visibilityOptions: document.getElementById("visibilityOptions"),
+    saveVisibilityBtn: document.getElementById("saveVisibilityBtn"),
+    visStatus: document.getElementById("visStatus"),
   };
 
   const MAX_SHORTCUT_LEN = 20;
@@ -55,6 +60,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const KEY_ACTIVE_TAB = "settings_active_tab";
   const NAME_KEY = "atendeai_user_name";
   const SECTOR_KEY = "atendeai_user_sector";
+  const VISIBILITY_KEY = "atendeai_visibility";
+
+  const BUTTON_CONFIGS = [
+    { id: "btnAgenda", label: "Agenda & Gestão", defaultSupport: true, defaultPre: true },
+    { id: "btnMessages", label: "Mensagens Padrão", defaultSupport: true, defaultPre: true },
+    { id: "btnResumoGemini", label: "Gerar Relatório (IA)", defaultSupport: true, defaultPre: false },
+    { id: "btnChamadoManual", label: "Chamado Manual", defaultSupport: true, defaultPre: false },
+    { id: "btnAssistenteIA", label: "Botão Assistente IA (Dropdown)", defaultSupport: true, defaultPre: true },
+    { id: "btnConsultarDocsLoop", label: "↳ Consultar Docs (no Menu)", defaultSupport: true, defaultPre: true },
+    { id: "btnDica", label: "↳ Dicas Inteligentes (no Menu)", defaultSupport: true, defaultPre: false }
+  ];
 
   const FIXED_MESSAGES = [
     "Os valores exibidos de IBS e CBS neste primeiro momento não representam cobrança efetiva, pois a fase inicial da Reforma Tributária é apenas experimental e nominativa, com alíquotas padrão 0,10 e 0,90, sem geração de recolhimento, sendo exigida apenas para empresas do Lucro Presumido e Lucro Real para fins de adaptação e validação das informações.",
@@ -133,7 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
         t.setAttribute("aria-selected", active ? "true" : "false");
       });
 
-      try { sessionStorage.setItem(KEY_ACTIVE_TAB, id); } catch (_) {}
+      try { sessionStorage.setItem(KEY_ACTIVE_TAB, id); } catch (_) { }
 
       try { window.scrollTo({ top: 0, behavior: "smooth" }); }
       catch (_) { window.scrollTo(0, 0); }
@@ -159,7 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const saved = sessionStorage.getItem("settings_active_tab");
       const allowed = getAllowedTabsBySector(getUserSector());
       if (saved && document.getElementById(saved) && allowed.has(saved)) initial = saved;
-    } catch (e) {}
+    } catch (e) { }
 
     const activeBtn = el.tabs.find((t) => t.classList.contains("active"));
     if (activeBtn?.dataset?.section && document.getElementById(activeBtn.dataset.section)) {
@@ -213,24 +229,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getUserSector() {
-  try {
-    const v = String(localStorage.getItem(SECTOR_KEY) || "").trim().toLowerCase();
-    if (v === "suporte" || v === "preatendimento") return v;
-    return "";
-  } catch (e) {
-    return "";
+    try {
+      const v = String(localStorage.getItem(SECTOR_KEY) || "").trim().toLowerCase();
+      if (v === "suporte" || v === "preatendimento") return v;
+      return "";
+    } catch (e) {
+      return "";
+    }
   }
-}
 
-function setUserSectorOnce(sector) {
-  const s = String(sector || "").trim().toLowerCase();
+  function setUserSectorOnce(sector) {
+    const s = String(sector || "").trim().toLowerCase();
     if (s !== "suporte" && s !== "preatendimento") return;
 
     try {
       const existing = getUserSector();
       if (existing) return;
       localStorage.setItem(SECTOR_KEY, s);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function sectorLabel(sector) {
@@ -285,7 +301,7 @@ function setUserSectorOnce(sector) {
         ? "sec-home"
         : Array.from(allowed)[0];
 
-      try { sessionStorage.setItem("settings_active_tab", fallback); } catch (e) {}
+      try { sessionStorage.setItem("settings_active_tab", fallback); } catch (e) { }
 
       sections.forEach(s => {
         const on = s.id === fallback;
@@ -324,9 +340,15 @@ function setUserSectorOnce(sector) {
     await storageSet(payload);
   }
 
+  async function applySectorDefaultsIfChanged(newSector) {
+    const defaults = getDefaultVisibility(newSector);
+    await storageSet({ [VISIBILITY_KEY]: defaults });
+    renderVisibilityUI();
+  }
+
   function getUserName() {
-  try { return sanitizeName(localStorage.getItem(NAME_KEY)); }
-  catch (e) { return ""; }
+    try { return sanitizeName(localStorage.getItem(NAME_KEY)); }
+    catch (e) { return ""; }
   }
 
   function resolveTemplate(text) {
@@ -334,32 +356,32 @@ function setUserSectorOnce(sector) {
     return String(text || "").replaceAll("{{NOME}}", name);
   }
 
-function setUserName(name) {
-  try { localStorage.setItem(NAME_KEY, sanitizeName(name)); }
-  catch (e) {}
-  persistUserMetaToChromeStorage({ name });
-}
+  function setUserName(name) {
+    try { localStorage.setItem(NAME_KEY, sanitizeName(name)); }
+    catch (e) { }
+    persistUserMetaToChromeStorage({ name });
+  }
 
-function applyPreAtendimentoMessagesUI() {
-  if (!isPreAtendimento()) return;
+  function applyPreAtendimentoMessagesUI() {
+    if (!isPreAtendimento()) return;
 
-  const customTitle = document.querySelector('#sec-mensagens h3:nth-of-type(2)');
-  if (customTitle) customTitle.style.display = "none";
+    const customTitle = document.querySelector('#sec-mensagens h3:nth-of-type(2)');
+    if (customTitle) customTitle.style.display = "none";
 
-  if (el.customMessagesContainer) el.customMessagesContainer.style.display = "none";
+    if (el.customMessagesContainer) el.customMessagesContainer.style.display = "none";
 
-  const addRow = document.querySelector(".add-message-row");
-  if (addRow) addRow.style.display = "none";
+    const addRow = document.querySelector(".add-message-row");
+    if (addRow) addRow.style.display = "none";
 
-  if (el.btnBackupMessages) el.btnBackupMessages.style.display = "none";
-  if (el.btnLimparTodosAtalhos) el.btnLimparTodosAtalhos.style.display = "none";
+    if (el.btnBackupMessages) el.btnBackupMessages.style.display = "none";
+    if (el.btnLimparTodosAtalhos) el.btnLimparTodosAtalhos.style.display = "none";
 
-  if (el.customCount) el.customCount.textContent = "0";
-}
+    if (el.customCount) el.customCount.textContent = "0";
+  }
 
-function setNameUI(name) {
-  const safeName = sanitizeName(name);
-  const sector = getUserSector();
+  function setNameUI(name) {
+    const safeName = sanitizeName(name);
+    const sector = getUserSector();
     if (el.sectorBadge) {
       if (sector) {
         el.sectorBadge.style.display = "inline-flex";
@@ -409,29 +431,31 @@ function setNameUI(name) {
   }
 
   function closeNameDialog() {
-    try { el.nameDialog?.close(); } catch (e) {}
+    try { el.nameDialog?.close(); } catch (e) { }
   }
 
   function initNameOnboarding() {
     const current = getUserName();
     setNameUI(current);
-      const currentName = getUserName();
-      const currentSector = getUserSector();
+    const currentName = getUserName();
+    const currentSector = getUserSector();
 
-      setNameUI(currentName);
+    setNameUI(currentName);
 
-      if (!currentName || !currentSector) {
-        showOnboardingDialog();
+    if (!currentName || !currentSector) {
+      showOnboardingDialog();
+    }
+
+    el.onboardingSaveBtn?.addEventListener("click", validateAndSaveOnboarding);
+
+    el.saveVisibilityBtn?.addEventListener("click", saveVisibilitySettings);
+
+    el.onboardingNameInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        validateAndSaveOnboarding();
       }
-
-      el.onboardingSaveBtn?.addEventListener("click", validateAndSaveOnboarding);
-
-      el.onboardingNameInput?.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          validateAndSaveOnboarding();
-        }
-      });
+    });
 
     if (!current) {
       flashNameStatus("⚠️ Defina seu nome para continuar.", "#b45309", 2500);
@@ -463,7 +487,7 @@ function setNameUI(name) {
     el.saveNameDialog?.addEventListener("click", async () => {
       const name = sanitizeName(el.nameDialogInput?.value);
       if (!name) {
-        try { localStorage.removeItem(NAME_KEY); } catch (e) {}
+        try { localStorage.removeItem(NAME_KEY); } catch (e) { }
         setNameUI("");
         await renderFixedMessagesBySector();
         closeNameDialog();
@@ -499,61 +523,67 @@ function setNameUI(name) {
   }
 
   function showOnboardingDialog() {
-  if (!el.onboardingDialog) return;
+    if (!el.onboardingDialog) return;
 
-  el.onboardingDialog.addEventListener("cancel", (e) => e.preventDefault());
+    el.onboardingDialog.addEventListener("cancel", (e) => e.preventDefault());
 
-  el.onboardingDialog.showModal();
+    el.onboardingDialog.showModal();
 
-  if (el.onboardingStatus) el.onboardingStatus.textContent = "";
+    if (el.onboardingStatus) el.onboardingStatus.textContent = "";
 
-  const currentName = getUserName();
-  if (el.onboardingNameInput) el.onboardingNameInput.value = currentName || "";
+    const currentName = getUserName();
+    if (el.onboardingNameInput) el.onboardingNameInput.value = currentName || "";
 
-  const currentSector = getUserSector();
-  const radios = Array.from(document.querySelectorAll('input[name="onboardingSector"]'));
-  if (currentSector) {
-    radios.forEach(r => {
-      r.checked = (r.value === currentSector);
-      r.disabled = true;
-    });
-  } else {
-    radios.forEach(r => { r.disabled = false; r.checked = false; });
+    const currentSector = getUserSector();
+    const radios = Array.from(document.querySelectorAll('input[name="onboardingSector"]'));
+    if (currentSector) {
+      radios.forEach(r => {
+        r.checked = (r.value === currentSector);
+        r.disabled = true;
+      });
+    } else {
+      radios.forEach(r => { r.disabled = false; r.checked = false; });
+    }
+
+    setTimeout(() => el.onboardingNameInput?.focus(), 50);
   }
 
-  setTimeout(() => el.onboardingNameInput?.focus(), 50);
-}
+  async function validateAndSaveOnboarding() {
+    const name = sanitizeName(el.onboardingNameInput?.value);
+    const sectorExisting = getUserSector();
 
-async function validateAndSaveOnboarding() {
-  const name = sanitizeName(el.onboardingNameInput?.value);
-  const sectorExisting = getUserSector();
+    let sector = sectorExisting;
+    if (!sectorExisting) {
+      const selected = document.querySelector('input[name="onboardingSector"]:checked');
+      sector = selected ? String(selected.value) : "";
+    }
 
-  let sector = sectorExisting;
-  if (!sectorExisting) {
-    const selected = document.querySelector('input[name="onboardingSector"]:checked');
-    sector = selected ? String(selected.value) : "";
+    if (!name) {
+      if (el.onboardingStatus) el.onboardingStatus.textContent = "⚠️ Informe seu nome/login.";
+      el.onboardingNameInput?.focus();
+      return;
+    }
+
+    if (!sector || (sector !== "suporte" && sector !== "preatendimento")) {
+      if (el.onboardingStatus) el.onboardingStatus.textContent = "⚠️ Selecione seu setor.";
+      return;
+    }
+
+    setUserName(name);
+    setUserSectorOnce(sector);
+    setNameUI(name);
+
+    persistUserMetaToChromeStorage({ name, sector });
+
+    // Se mudou o setor, reseta a visibilidade para o padrão desse setor
+    if (sector !== sectorExisting) {
+      await applySectorDefaultsIfChanged(sector);
+    }
+
+    await refreshUIAfterOnboarding();
+
+    try { el.onboardingDialog.close(); } catch (e) { }
   }
-
-  if (!name) {
-    if (el.onboardingStatus) el.onboardingStatus.textContent = "⚠️ Informe seu nome/login.";
-    el.onboardingNameInput?.focus();
-    return;
-  }
-
-  if (!sector || (sector !== "suporte" && sector !== "preatendimento")) {
-    if (el.onboardingStatus) el.onboardingStatus.textContent = "⚠️ Selecione seu setor.";
-    return;
-  }
-
-  setUserName(name);
-  setUserSectorOnce(sector);
-  setNameUI(name);
-
-  persistUserMetaToChromeStorage({ name, sector });
-  await refreshUIAfterOnboarding();
-
-  try { el.onboardingDialog.close(); } catch (e) {}
-}
 
   function renderHistory(history) {
     if (!el.historyList) return;
@@ -900,6 +930,60 @@ async function validateAndSaveOnboarding() {
     });
   }
 
+
+
+  function getDefaultVisibility(sector) {
+    const isPre = sector === "preatendimento";
+    const settings = {};
+    BUTTON_CONFIGS.forEach(btn => {
+      settings[btn.id] = isPre ? btn.defaultPre : btn.defaultSupport;
+    });
+    return settings;
+  }
+
+  async function loadVisibilitySettings() {
+    const data = await storageGet([VISIBILITY_KEY, SECTOR_KEY]);
+    let settings = data[VISIBILITY_KEY];
+
+    // Se não existir config salva, usa o padrão do setor
+    if (!settings) {
+      const sector = data[SECTOR_KEY] || "";
+      settings = getDefaultVisibility(sector);
+    }
+    return settings;
+  }
+
+  async function renderVisibilityUI() {
+    if (!el.visibilityOptions) return;
+    const settings = await loadVisibilitySettings();
+
+    el.visibilityOptions.innerHTML = BUTTON_CONFIGS.map(btn => `
+      <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+        <input type="checkbox" value="${btn.id}" ${settings[btn.id] ? "checked" : ""}>
+        ${btn.label}
+      </label>
+    `).join("");
+  }
+
+  async function saveVisibilitySettings() {
+    const settings = {};
+    const checkboxes = el.visibilityOptions.querySelectorAll("input[type='checkbox']");
+    checkboxes.forEach(cb => {
+      settings[cb.value] = cb.checked;
+    });
+
+    await storageSet({ [VISIBILITY_KEY]: settings });
+
+    if (el.visStatus) {
+      el.visStatus.textContent = "✅ Configurações salvas!";
+      el.visStatus.style.color = "green";
+      setTimeout(() => el.visStatus.textContent = "", 2000);
+    }
+  }
+
+  // Override setShortcuts to NOT clear visibility when just saving names
+  // But inside validateAndSaveOnboarding we should reset visibility to defaults if sector changed
+
   renderFixedMessagesBySector();
 
   function renderCustomMessages(messages) {
@@ -913,11 +997,27 @@ async function validateAndSaveOnboarding() {
     updateCustomCount((messages || []).length);
   }
 
+  function updateVersionDisplay() {
+    try {
+      const manifest = chrome.runtime.getManifest();
+      const version = manifest.version;
+      if (el.versionElements) {
+        el.versionElements.forEach(element => {
+          element.textContent = `v${version}`;
+        });
+      }
+    } catch (e) {
+      console.error("Erro ao obter versão do manifesto:", e);
+    }
+  }
+
   async function initApp() {
     applySectorVisibility();
     initTabs();
     inicializarAcordeons();
     initNameOnboarding();
+    updateVersionDisplay();
+    renderVisibilityUI();
 
     applyPreAtendimentoMessagesUI();
 

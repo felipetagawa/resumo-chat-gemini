@@ -13,11 +13,13 @@ const MessagesModule = (() => {
         const popup = criarPopupMensagens();
         document.body.appendChild(popup);
 
-        const data = await StorageHelper.get(["customMessages", "messageShortcuts"]);
+        const data = await StorageHelper.get(["customMessages", "messageShortcuts", "atendeai_user_sector", "atendeai_user_name"]);
         const customMessagesList = data.customMessages || [];
         const shortcuts = data.messageShortcuts || {};
+        const sector = data.atendeai_user_sector || "suporte";
+        const name = data.atendeai_user_name || "";
 
-        renderizarMensagens(popup, customMessagesList, shortcuts);
+        renderizarMensagens(popup, customMessagesList, shortcuts, sector, name);
     }
 
     function criarPopupMensagens() {
@@ -53,15 +55,40 @@ const MessagesModule = (() => {
         return popup;
     }
 
-    function renderizarMensagens(popup, customMessagesList, shortcuts = {}) {
-        const container = popup.querySelector("#conteudoMensagens");
+    function resolveTemplate(text, name) {
+        const safe = String(name || "").trim();
+        const finalName = safe ? safe : "Atendente";
+        return String(text || "").replaceAll("{{NOME}}", finalName);
+    }
 
-        const fixedMessages = [
-            "Os valores exibidos de IBS e CBS neste primeiro momento não representam cobrança efetiva, pois a fase inicial da Reforma Tributária é apenas experimental e nominativa, com alíquotas padrão 0,10 e 0,90, sem geração de recolhimento, sendo exigida apenas para empresas do Lucro Presumido e Lucro Real para fins de adaptação e validação das informações.",
-            "Atualmente, a fase inicial da Reforma Tributária com IBS e CBS se aplica apenas às empresas do regime normal (Lucro Presumido e Lucro Real), sendo que para o Simples Nacional não há recolhimento nem impacto prático neste primeiro ano, pois as informações são utilizadas apenas de forma nominativa e experimental.",
-        ];
+    const SUPPORT_FIXED_MESSAGES = [
+        "Os valores exibidos de IBS e CBS neste primeiro momento não representam cobrança efetiva, pois a fase inicial da Reforma Tributária é apenas experimental e nominativa, com alíquotas padrão 0,10 e 0,90, sem geração de recolhimento, sendo exigida apenas para empresas do Lucro Presumido e Lucro Real para fins de adaptação e validação das informações.",
+        "Atualmente, a fase inicial da Reforma Tributária com IBS e CBS se aplica apenas às empresas do regime normal (Lucro Presumido e Lucro Real), sendo que para o Simples Nacional não há recolhimento nem impacto prático neste primeiro ano, pois as informações são utilizadas apenas de forma nominativa e experimental.",
+        "A reformulação das telas não altera a lógica de cálculo nem as regras fiscais do sistema, sendo uma evolução voltada à melhoria contínua, e qualquer diferença percebida está relacionada apenas à interface ou fluxo, com nossa equipe disponível para esclarecer dúvidas e ajustar eventuais pontos específicos.",
+        "As telas reformuladas de Contas a Receber, Contas a Pagar, NFC-e e Cadastro de Produtos mantêm as mesmas regras fiscais e operacionais de antes, tendo sido alterados apenas aspectos visuais e funcionais para melhorar usabilidade e organização, sem impacto nos cálculos ou validações já existentes.",
+        "A emissão de NFC-e para CNPJ deixou de ser permitida por determinação das normas fiscais vigentes, não sendo uma regra criada pelo sistema, que apenas aplica automaticamente essa exigência legal para evitar rejeições e problemas fiscais ao contribuinte.",
+        "O procedimento de referenciar NFC-e em uma NF-e não é mais aceito pela legislação fiscal atual, motivo pelo qual o sistema bloqueia essa prática, garantindo conformidade legal e evitando a rejeição dos documentos junto à SEFAZ.",
+        "A vedação à emissão de NFC-e para CNPJ e ao seu referenciamento em NF-e decorre exclusivamente de alterações nas regras fiscais, e o sistema apenas segue essas determinações para manter a regularidade das operações e evitar inconsistências legais."
+    ];
+
+    const PRE_FIXED_MESSAGES = [
+        { text: "Bom dia, tudo bem?\nEu sou o atendente {{NOME}} do pré atendimento do suporte da Soften Sistema, como posso te ajudar?" },
+        { text: "Boa tarde, tudo bem?\nEu sou o atendente {{NOME}} do pré atendimento do suporte da Soften Sistema, como posso te ajudar?" },
+        { text: "Você pode me informar seu NOME, seu EMAIL e seu ID AnyDesk, caso não possua, acesse o nosso site em seu computador https://anydesk.com/pt por gentileza, irei verificar com um técnico especializado para te auxiliar." },
+        { text: "Caso não possua, poderia realizar o download do AnyDesk por gentileza: https://anydesk.com/pt" },
+        { text: "Só um momento, irei verificar um técnico para te auxiliar e assim que estiver disponível encaminharei seu atendimento." },
+        { text: "Estou finalizando o atendimento pois não obtive resposta, qualquer dúvida entre em contato com a Soften!" },
+        { text: "Disponha, precisando estamos a disposição\nTenha um ótimo dia! 🙂" }
+    ];
+
+    function renderizarMensagens(popup, customMessagesList, shortcuts = {}, sector = "suporte", name = "") {
+        const container = popup.querySelector("#conteudoMensagens");
+        const isPre = sector === "preatendimento";
+
+        const fixedMessages = isPre ? PRE_FIXED_MESSAGES.map(m => resolveTemplate(m.text, name)) : SUPPORT_FIXED_MESSAGES;
 
         const fixedAcordeon = UIBuilder.criarAcordeon("📌 Mensagens Fixas", true, "acordeon-fixas");
+
         fixedMessages.forEach((msg, index) => {
             const key = `fixed_${index}`;
             const shortcut = shortcuts[key];
@@ -70,19 +97,21 @@ const MessagesModule = (() => {
         });
         container.appendChild(fixedAcordeon.container);
 
-        const customAcordeon = UIBuilder.criarAcordeon(`✨ Mensagens Personalizadas (${customMessagesList.length})`, true, "acordeon-custom");
+        if (!isPre) {
+            const customAcordeon = UIBuilder.criarAcordeon(`✨ Mensagens Personalizadas (${customMessagesList.length})`, true, "acordeon-custom");
 
-        if (customMessagesList.length === 0) {
-            customAcordeon.content.innerHTML = `<p style="color:#999; text-align:center; padding:20px;">Nenhuma mensagem personalizada. Configure em Opções.</p>`;
-        } else {
-            customMessagesList.forEach((msg, index) => {
-                const key = `custom_${index}`;
-                const shortcut = shortcuts[key];
-                const card = criarCardMensagem(msg, true, shortcut, index);
-                customAcordeon.content.appendChild(card);
-            });
+            if (customMessagesList.length === 0) {
+                customAcordeon.content.innerHTML = `<p style="color:#999; text-align:center; padding:20px;">Nenhuma mensagem personalizada. Configure em Opções.</p>`;
+            } else {
+                customMessagesList.forEach((msg, index) => {
+                    const key = `custom_${index}`;
+                    const shortcut = shortcuts[key];
+                    const card = criarCardMensagem(msg, true, shortcut, index);
+                    customAcordeon.content.appendChild(card);
+                });
+            }
+            container.appendChild(customAcordeon.container);
         }
-        container.appendChild(customAcordeon.container);
     }
 
     function criarCardMensagem(text, isCustom, shortcut = null, index = -1) {

@@ -19,7 +19,7 @@
       flex-direction: column;
     }
 
-    .app-main{
+    .app-main {
       flex: 1 0 auto;
     }
 
@@ -311,8 +311,14 @@
       scrollbar-gutter: stable;
     }
 
-    .credits-log-scroll::-webkit-scrollbar { width: 10px; }
-    .credits-log-scroll::-webkit-scrollbar-track { background: transparent; }
+    .credits-log-scroll::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .credits-log-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
     .credits-log-scroll::-webkit-scrollbar-thumb {
       background: #d1d5db;
       border-radius: 999px;
@@ -320,7 +326,9 @@
       background-clip: content-box;
     }
 
-    .credits-log-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+    .credits-log-scroll::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
 
     .card-header-row {
       display: flex;
@@ -350,8 +358,13 @@
       display: inline-flex;
     }
 
-    .actions-menu > summary::-webkit-details-marker { display: none; }
-    .actions-menu > summary { list-style: none; }
+    .actions-menu>summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .actions-menu>summary {
+      list-style: none;
+    }
 
     .actions-trigger {
       display: inline-flex;
@@ -380,7 +393,10 @@
       box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08);
     }
 
-    .actions-trigger .chevron { font-weight: 900; opacity: .9; }
+    .actions-trigger .chevron {
+      font-weight: 900;
+      opacity: .9;
+    }
 
     .actions-dropdown {
       position: absolute;
@@ -390,13 +406,15 @@
       background: #fff;
       border: 1px solid #e5e7eb;
       border-radius: 12px;
-      box-shadow: 0 18px 40px rgba(0,0,0,0.14);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.14);
       padding: 6px;
       z-index: 9999;
       display: none;
     }
 
-    .actions-menu[open] .actions-dropdown { display: block; }
+    .actions-menu[open] .actions-dropdown {
+      display: block;
+    }
 
     .actions-item {
       width: 100%;
@@ -447,8 +465,16 @@
       line-height: 1.15;
     }
 
-    .actions-item .title { font-weight: 800; font-size: 12.8px; }
-    .actions-item .desc { font-size: 11.2px; font-weight: 600; color: #64748b; }
+    .actions-item .title {
+      font-weight: 800;
+      font-size: 12.8px;
+    }
+
+    .actions-item .desc {
+      font-size: 11.2px;
+      font-weight: 600;
+      color: #64748b;
+    }
 
     .add-message-row {
       margin-top: 24px;
@@ -458,7 +484,7 @@
       gap: 10px;
     }
 
-     .add-message-row textarea {
+    .add-message-row textarea {
       width: 100%;
       min-height: 100px;
       max-height: 160px;
@@ -469,80 +495,87 @@
       width: fit-content;
     }
 
-    .top-nav{
-      display:flex;
-      align-items:flex-end;
-      justify-content:space-between;
-      gap:14px;
-      margin-bottom:14px;
+    .top-nav {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
     }
 
-    .nav-brand .sys-name{
-      font-size:13px;
-      font-weight:700;
-      color:#0f172a;
+    .nav-brand .sys-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
     }
 
-    .nav-brand .sys-sub{
-      font-size:12px;
-      font-weight:600;
-      color:#64748b;
-      margin-top:2px;
+    .nav-brand .sys-sub {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      margin-top: 2px;
     }
 
-    .nav-tabs{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
-    .nav-tab{
-      margin-top:0;
-      padding:8px 12px;
-      border-radius:10px;
-      border:1px solid #e2e8f0;
-      background:#f8fafc;
-      color:#334155;
-      font-size:13px;
-      font-weight:700;
-      cursor:pointer;
+    .nav-tab {
+      margin-top: 0;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
       transition: background .15s ease, border-color .15s ease, transform .12s ease;
     }
 
-    .nav-tab:hover{ background:#f1f5f9; }
-
-    .nav-tab.active{
-      background:#eaf2ff;
-      border-color:#bfdbfe;
-      color:#1e40af;
+    .nav-tab:hover {
+      background: #f1f5f9;
     }
 
-    .home-hero{
-      background:#fff;
-      border:1px solid #e5e7eb;
-      border-radius:12px;
-      padding:16px 18px;
+    .nav-tab.active {
+      background: #eaf2ff;
+      border-color: #bfdbfe;
+      color: #1e40af;
+    }
+
+    .home-hero {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px 18px;
       box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
-      margin-bottom:20px;
+      margin-bottom: 20px;
     }
 
-    .home-hero .title{
-      margin:0 0 6px 0;
-      font-weight:800;
-      color:#0f172a;
+    .home-hero .title {
+      margin: 0 0 6px 0;
+      font-weight: 800;
+      color: #0f172a;
     }
 
-    .home-hero .desc{
-      margin:0;
-      font-weight:600;
-      color:#64748b;
+    .home-hero .desc {
+      margin: 0;
+      font-weight: 600;
+      color: #64748b;
     }
 
-    .page-section{ display:none; }
-    .page-section.active{ display:block; }
+    .page-section {
+      display: none;
+    }
 
-    
-    .app-footer{
+    .page-section.active {
+      display: block;
+    }
+
+
+    .app-footer {
       margin-top: auto;
       padding-top: 14px;
       border-top: 1px solid #e5e7eb;
@@ -550,7 +583,7 @@
       justify-content: center;
     }
 
-    .footer-link{
+    .footer-link {
       font-size: 13px;
       color: #4285F4;
       text-decoration: none;
@@ -558,11 +591,11 @@
       font-weight: 600;
     }
 
-    .footer-link:hover{
+    .footer-link:hover {
       text-decoration: underline;
     }
 
-    .name-chip{
+    .name-chip {
       font-weight: 900;
       font-size: 22px;
       padding: 6px 10px;
@@ -575,10 +608,9 @@
       margin-left: 2px;
     }
 
-    .name-chip:hover{
+    .name-chip:hover {
       background: #dbeafe;
     }
-
   </style>
 
   <dialog id="creditsDialog" style="
@@ -606,7 +638,7 @@
           </div>
         </div>
 
-        <div style="
+        <div class="app-version" style="
         background: rgba(255,255,255,0.18);
         border: 1px solid rgba(255,255,255,0.22);
         padding: 6px 10px;
@@ -616,7 +648,7 @@
         letter-spacing: .2px;
         white-space: nowrap;
       ">
-          v1.3
+          v...
         </div>
       </div>
     </div>
@@ -759,7 +791,7 @@
             </div>
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-size:12px; font-weight:800; color:#111827;">v1.3</span>
+                <span class="app-version" style="font-size:12px; font-weight:800; color:#111827;">v...</span>
                 <span style="font-size:12px; color:#6b7280;">Melhorias e Correções</span>
                 <span style="
                 font-size: 11px;
@@ -772,7 +804,8 @@
               ">Atual</span>
               </div>
               <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
-                ajustes no fluxo de mensagens padrão e novas opções de edição nas configurações; ajustes de layout para melhoria de UX.
+                ajustes no fluxo de mensagens padrão e novas opções de edição nas configurações; ajustes de layout para
+                melhoria de UX.
               </div>
             </div>
           </div>
@@ -784,10 +817,12 @@
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <span style="font-size:12px; font-weight:800; color:#111827;">v1.2</span>
-                <span style="font-size:12px; color:#6b7280;">Mensagens Padrão, Dicas inteligentes com IA e Agenda & Gestão</span>
+                <span style="font-size:12px; color:#6b7280;">Mensagens Padrão, Dicas inteligentes com IA e Agenda &
+                  Gestão</span>
               </div>
               <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
-                Adicionadas mensagens padrão, Dicas inteligentes com IA, Área Agenda & Gestão com Kanban, Calendário e área para Anotações.
+                Adicionadas mensagens padrão, Dicas inteligentes com IA, Área Agenda & Gestão com Kanban, Calendário e
+                área para Anotações.
               </div>
             </div>
           </div>
@@ -838,15 +873,15 @@
 
   <main class="app-main">
 
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
-    <h1 style="margin:0;">⚙️ Painel de Configurações</h1>
-  </div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+      <h1 style="margin:0;">⚙️ Painel de Configurações</h1>
+    </div>
 
-  <div class="top-nav" role="navigation" aria-label="Navegação de Configurações">
-    <div class="nav-brand">
-      <div class="sys-name" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-        <span>AtendeAI Manager</span>
-        <span id="sectorBadge" style="
+    <div class="top-nav" role="navigation" aria-label="Navegação de Configurações">
+      <div class="nav-brand">
+        <div class="sys-name" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span>AtendeAI Manager</span>
+          <span id="sectorBadge" style="
           display:none;
           font-size:12px;
           font-weight:800;
@@ -856,59 +891,60 @@
           background:#f8fafc;
           color:#0f172a;
         "></span>
-      </div>
-    </div>
-
-    <div class="nav-tabs">
-      <button class="nav-tab active" type="button" data-section="sec-home">Início</button>
-      <button class="nav-tab" type="button" data-section="sec-mensagens">Mensagens Padrão</button>
-      <button class="nav-tab" type="button" data-section="sec-ia">Configuração IA</button>
-      <button class="nav-tab" type="button" data-section="sec-historico">Histórico</button>
-    </div>
-  </div>
-
-  <section id="sec-home" class="page-section active">
-    <div class="home-hero" style="display:flex; flex-direction:column; gap:14px;">
-      <div>
-        <div style="font-size:22px; font-weight:900; color:#0f172a; line-height:1.15;">
-          <span id="homeGreetingPrefix">Olá</span><span id="homeGreetingComma">,</span>
-          <button id="editNameTrigger" type="button" class="name-chip" aria-label="Editar nome" hidden></button>
-        </div>
-
-        <div style="margin-top:6px; font-size:13px; color:#64748b; font-weight:600;">
-          Centralize configurações e atalhos para acelerar seu atendimento e padronizar respostas.
         </div>
       </div>
 
-      <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
-        <div class="card" style="margin-bottom:0;">
-          <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
-            💬 Mensagens Padrão - Suporte e Pré Atendimento
+      <div class="nav-tabs">
+        <button class="nav-tab active" type="button" data-section="sec-home">Início</button>
+        <button class="nav-tab" type="button" data-section="sec-mensagens">Mensagens Padrão</button>
+        <button class="nav-tab" type="button" data-section="sec-ia">Configuração IA</button>
+        <button class="nav-tab" type="button" data-section="sec-historico">Histórico</button>
+      </div>
+    </div>
+
+    <section id="sec-home" class="page-section active">
+      <div class="home-hero" style="display:flex; flex-direction:column; gap:14px;">
+        <div>
+          <div style="font-size:22px; font-weight:900; color:#0f172a; line-height:1.15;">
+            <span id="homeGreetingPrefix">Olá</span><span id="homeGreetingComma">,</span>
+            <button id="editNameTrigger" type="button" class="name-chip" aria-label="Editar nome" hidden></button>
           </div>
-          <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
-            Cadastre respostas frequentes e use atalhos para colar mensagens com um clique, mantendo consistência no atendimento.
+
+          <div style="margin-top:6px; font-size:13px; color:#64748b; font-weight:600;">
+            Centralize configurações e atalhos para acelerar seu atendimento e padronizar respostas.
           </div>
         </div>
 
-        <div class="card" style="margin-bottom:0;">
-          <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
-            🧠 Configuração IA - Suporte
+        <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
+          <div class="card" style="margin-bottom:0;">
+            <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
+              💬 Mensagens Padrão - Suporte e Pré Atendimento
+            </div>
+            <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
+              Cadastre respostas frequentes e use atalhos para colar mensagens com um clique, mantendo consistência no
+              atendimento.
+            </div>
           </div>
-          <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
-            Defina instruções para a IA gerar resumos no padrão da sua operação (tom, formato e foco do atendimento).
-          </div>
-        </div>
 
-        <div class="card" style="margin-bottom:0;">
-          <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
-            🗂️ Histórico - Suporte
+          <div class="card" style="margin-bottom:0;">
+            <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
+              🧠 Configuração IA - Suporte
+            </div>
+            <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
+              Defina instruções para a IA gerar resumos no padrão da sua operação (tom, formato e foco do atendimento).
+            </div>
           </div>
-          <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
-            Consulte resumos gerados e chamados manuais anteriores para recuperar contexto rapidamente.
+
+          <div class="card" style="margin-bottom:0;">
+            <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
+              🗂️ Histórico - Suporte
+            </div>
+            <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
+              Consulte resumos gerados e chamados manuais anteriores para recuperar contexto rapidamente.
+            </div>
           </div>
         </div>
       </div>
-    </div>
       <div id="nameSetupBlock" style="margin-top: 16px;">
         <label style="display:block; margin-bottom:6px; font-weight:800;">Nome</label>
 
@@ -924,93 +960,107 @@
 
         <div id="nameStatus" style="font-size:12px; margin-top:8px; min-height:18px; color:#64748b;"></div>
       </div>
-    </div>
-  </section>
 
-  <section id="sec-mensagens" class="page-section">
-    <div class="card">
-      <div class="card-header-row">
-        <h2>💬 Mensagens Padrão</h2>
+      <div class="card" style="margin-top: 20px;">
+        <div style="font-weight:900; color:#0f172a; margin-bottom: 10px;">👁️ Visibilidade dos Botões</div>
+        <div style="font-size:13px; color:#475569; margin-bottom: 14px;">
+          Selecione quais botões devem aparecer na interface.
+        </div>
 
-        <div class="header-actions">
-          <details class="actions-menu">
-            <summary class="actions-trigger">
-              Ações <span class="chevron">▾</span>
-            </summary>
+        <div id="visibilityOptions" style="display:flex; flex-direction:column; gap:8px;">
+          <!-- Checkboxes serão gerados via JS -->
+        </div>
+        <button id="saveVisibilityBtn" class="btn-primary" style="margin-top:14px;">Salvar Visibilidade</button>
+        <div id="visStatus" style="font-size:12px; margin-top:8px; min-height:18px;"></div>
+      </div>
+      </div>
+    </section>
 
-            <div class="actions-dropdown">
-              <button id="backupMessages" type="button" class="actions-item">
-                <span class="icon">⤓</span>
-                <span class="text">
-                  <span class="title">Backup</span>
-                  <span class="desc">Exportar mensagens personalizadas</span>
-                </span>
-              </button>
+    <section id="sec-mensagens" class="page-section">
+      <div class="card">
+        <div class="card-header-row">
+          <h2>💬 Mensagens Padrão</h2>
 
-              <button id="limparTodosAtalhos" type="button" class="actions-item danger">
-                <span class="icon">🧹</span>
-                <span class="text">
-                  <span class="title">Limpar atalhos</span>
-                  <span class="desc">Remove todos os atalhos configurados</span>
-                </span>
-              </button>
-            </div>
-          </details>
+          <div class="header-actions">
+            <details class="actions-menu">
+              <summary class="actions-trigger">
+                Ações <span class="chevron">▾</span>
+              </summary>
 
-          <div id="statusAtalhos" style="font-size:12px; min-height:18px;"></div>
+              <div class="actions-dropdown">
+                <button id="backupMessages" type="button" class="actions-item">
+                  <span class="icon">⤓</span>
+                  <span class="text">
+                    <span class="title">Backup</span>
+                    <span class="desc">Exportar mensagens personalizadas</span>
+                  </span>
+                </button>
+
+                <button id="limparTodosAtalhos" type="button" class="actions-item danger">
+                  <span class="icon">🧹</span>
+                  <span class="text">
+                    <span class="title">Limpar atalhos</span>
+                    <span class="desc">Remove todos os atalhos configurados</span>
+                  </span>
+                </button>
+              </div>
+            </details>
+
+            <div id="statusAtalhos" style="font-size:12px; min-height:18px;"></div>
+          </div>
+        </div>
+
+        <h3>Mensagens Fixas</h3>
+        <div id="fixedMessages"></div>
+
+        <h3>Mensagens Personalizadas</h3>
+        <div id="customMessages"></div>
+
+        <div class="add-message-row">
+          <label for="newMessage">Adicionar nova mensagem</label>
+          <textarea id="newMessage" placeholder="Digite a nova mensagem..."></textarea>
+          <button id="addMessage" type="button" class="btn-primary">Adicionar</button>
         </div>
       </div>
+    </section>
 
-      <h3>Mensagens Fixas</h3>
-      <div id="fixedMessages"></div>
+    <section id="sec-ia" class="page-section">
+      <div class="card">
+        <h2>🧠 Instruções da IA</h2>
 
-      <h3>Mensagens Personalizadas</h3>
-      <div id="customMessages"></div>
+        <label for="customInstructions">Prompt Personalizado</label>
+        <textarea id="customInstructions"></textarea>
 
-      <div class="add-message-row">
-        <label for="newMessage">Adicionar nova mensagem</label>
-        <textarea id="newMessage" placeholder="Digite a nova mensagem..."></textarea>
-        <button id="addMessage" type="button" class="btn-primary">Adicionar</button>
+        <div class="hint">
+          Essas instruções serão enviadas junto com o chat para guiar o comportamento da IA.
+        </div>
+
+        <button id="salvar" class="btn-primary">Salvar Configurações</button>
+        <div id="status"></div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="sec-ia" class="page-section">
-    <div class="card">
-      <h2>🧠 Instruções da IA</h2>
-
-      <label for="customInstructions">Prompt Personalizado</label>
-      <textarea id="customInstructions"></textarea>
-
-      <div class="hint">
-        Essas instruções serão enviadas junto com o chat para guiar o comportamento da IA.
+    <section id="sec-historico" class="page-section">
+      <div class="card">
+        <h2>🗂️ Histórico de Resumos</h2>
+        <ul id="historyList"></ul>
+        <button id="limparHistorico" style="background: #e74c3c; color: #fff;">Limpar Histórico de Resumos</button>
       </div>
 
-      <button id="salvar" class="btn-primary">Salvar Configurações</button>
-      <div id="status"></div>
-    </div>
-  </section>
-
-  <section id="sec-historico" class="page-section">
-    <div class="card">
-      <h2>🗂️ Histórico de Resumos</h2>
-      <ul id="historyList"></ul>
-      <button id="limparHistorico" style="background: #e74c3c; color: #fff;">Limpar Histórico de Resumos</button>
-    </div>
-
-    <div class="card">
-      <h2>📝 Histórico de Chamados Manuais</h2>
-      <ul id="manualCallHistoryList"></ul>
-      <button id="limparHistoricoManual" style="background: #e74c3c; color: #fff;">Limpar Histórico de Chamados</button>
-    </div>
-  </section>
+      <div class="card">
+        <h2>📝 Histórico de Chamados Manuais</h2>
+        <ul id="manualCallHistoryList"></ul>
+        <button id="limparHistoricoManual" style="background: #e74c3c; color: #fff;">Limpar Histórico de
+          Chamados</button>
+      </div>
+    </section>
 
   </main>
 
   <script src="options.js"></script>
 
   <footer class="app-footer">
-    <a href="#" id="openCredits" class="footer-link">Créditos do sistema – v1.3</a>
+    <a href="#" id="openCredits" class="footer-link">Créditos do sistema – <span class="app-version">v...</span></a>
   </footer>
 
   <dialog id="onboardingDialog" style="
@@ -1032,8 +1082,7 @@
 
     <div style="padding:16px 18px; background:#fff;">
       <label style="font-weight:800; font-size:13px; display:block;">Nome</label>
-      <input id="onboardingNameInput" type="text" placeholder="Digite seu Nome"
-        style="
+      <input id="onboardingNameInput" type="text" placeholder="Digite seu Nome" style="
           width: 90%;
           margin-top:8px;
           padding:10px 12px;
@@ -1041,8 +1090,7 @@
           border-radius:10px;
           font-size:14px;
           outline:none;
-        "
-      />
+        " />
 
       <div style="height:12px;"></div>
 
@@ -1071,7 +1119,8 @@
         O setor será salvo localmente e não poderá ser alterado depois. Apenas o nome poderá ser editado.
       </div>
 
-      <div id="onboardingStatus" style="font-size:12px; margin-top:10px; min-height:18px; color:#b45309; font-weight:700;"></div>
+      <div id="onboardingStatus"
+        style="font-size:12px; margin-top:10px; min-height:18px; color:#b45309; font-weight:700;"></div>
 
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
         <button id="onboardingSaveBtn" type="button" class="btn-primary" style="margin-top:0; font-weight:900;">
@@ -1091,24 +1140,20 @@
   overflow:hidden;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 ">
-  <div style="
+    <div style="
     padding:16px 18px;
     background: linear-gradient(135deg, #1a73e8, #4285F4);
     color:#fff;
   ">
-    <div style="
+      <div style="
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:12px;
     ">
-      <div style="font-size:15px; font-weight:800;">Editar nome</div>
+        <div style="font-size:15px; font-weight:800;">Editar nome</div>
 
-      <button
-        id="editCloseNameDialog"
-        type="button"
-        aria-label="Fechar"
-        style="
+        <button id="editCloseNameDialog" type="button" aria-label="Fechar" style="
           appearance:none;
           border:none;
           background: rgba(255,255,255,0.18);
@@ -1121,36 +1166,26 @@
           display:inline-flex;
           align-items:center;
           justify-content:center;
-        "
-      >✕</button>
+        ">✕</button>
+      </div>
     </div>
-  </div>
 
-  <div style="padding:16px 18px; background:#fff;">
-    <label for="editNameDialogInput" style="display:block; margin-bottom:6px; font-weight:800;">
-      Nome
-    </label>
+    <div style="padding:16px 18px; background:#fff;">
+      <label for="editNameDialogInput" style="display:block; margin-bottom:6px; font-weight:800;">
+        Nome
+      </label>
 
-    <input
-      id="editNameDialogInput"
-      type="text"
-      placeholder="Digite seu nome"
-      autocomplete="name"
-      style="
+      <input id="editNameDialogInput" type="text" placeholder="Digite seu nome" autocomplete="name" style="
         width:90%;
         padding:10px 12px;
         border:1px solid #cbd5e1;
         border-radius:10px;
         font-size:14px;
         outline:none;
-      "
-    />
+      " />
 
-    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
-      <button
-        id="editCancelNameDialog"
-        type="button"
-        style="
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+        <button id="editCancelNameDialog" type="button" style="
           background:#e5e7eb;
           color:#111827;
           font-weight:800;
@@ -1159,27 +1194,21 @@
           padding:10px 12px;
           cursor:pointer;
           margin-top:0;
-        "
-      >
-        Cancelar
-      </button>
+        ">
+          Cancelar
+        </button>
 
-      <button
-        id="editSaveNameDialog"
-        type="button"
-        class="btn-primary"
-        style="
+        <button id="editSaveNameDialog" type="button" class="btn-primary" style="
           margin-top:0;
           font-weight:900;
           border-radius:10px;
           padding:10px 12px;
-        "
-      >
-        Salvar
-      </button>
+        ">
+          Salvar
+        </button>
+      </div>
     </div>
-  </div>
-</dialog>
+  </dialog>
 
 </body>
 
