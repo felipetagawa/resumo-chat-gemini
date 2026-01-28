@@ -48,7 +48,6 @@ document.addEventListener("DOMContentLoaded", () => {
     onboardingNameInput: document.getElementById("onboardingNameInput"),
     onboardingSaveBtn: document.getElementById("onboardingSaveBtn"),
     onboardingStatus: document.getElementById("onboardingStatus"),
-    onboardingStatus: document.getElementById("onboardingStatus"),
     versionElements: document.querySelectorAll(".app-version"),
     visibilityOptions: document.getElementById("visibilityOptions"),
     saveVisibilityBtn: document.getElementById("saveVisibilityBtn"),
@@ -257,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getAllowedTabsBySector(sector) {
     if (sector === "suporte") {
-      return new Set(["sec-mensagens", "sec-ia", "sec-historico"]);
+      return new Set(["sec-home", "sec-mensagens", "sec-ia", "sec-historico"]);
     }
 
     if (sector === "preatendimento") {
@@ -468,7 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    if (!current) {
+    if (!currentName) {
       flashNameStatus("⚠️ Defina seu nome para continuar.", "#b45309", 2500);
       el.nameInput?.focus();
     }
@@ -1015,13 +1014,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function initApp() {
+    updateVersionDisplay();
+
+    await initNameOnboarding();
+
     applySectorVisibility();
     initTabs();
     inicializarAcordeons();
-    initNameOnboarding();
-    updateVersionDisplay();
-    renderVisibilityUI();
 
+    renderVisibilityUI();
     applyPreAtendimentoMessagesUI();
 
     const name = await loadUserName();

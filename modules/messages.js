@@ -235,7 +235,7 @@ const MessagesModule = (() => {
         const shortcutInput = document.createElement("input");
         shortcutInput.type = "text";
         shortcutInput.maxLength = 20;
-        shortcutInput.placeholder = "ex: bomdia";
+        shortcutInput.placeholder = "ex: Bom dia";
         shortcutInput.value = shortcut || "";
         shortcutInput.style.cssText = `
             width:180px;

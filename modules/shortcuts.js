@@ -6,7 +6,7 @@ const ShortcutsModule = (() => {
   let selectedIndex = 0;
   let currentFiltered = [];
   let currentQuery = "";
-  let userSector = ""; // Armazenar setor do usuário
+  let userSector = "";
 
   let cacheReady = false;
   let loadingPromise = null;
@@ -87,8 +87,8 @@ const ShortcutsModule = (() => {
 
           nextCache.push({
             key,
-            shortcutDisplay: shortcutDisplay || `msg${index + 1}`, // Fallback para mensagens sem atalho
-            shortcutNorm: normForMatch(shortcutDisplay || `msg${index + 1}`),
+            shortcutDisplay: shortcutDisplay || `${index + 1}`, // Fallback para mensagens sem atalho
+            shortcutNorm: normForMatch(shortcutDisplay || `${index + 1}`),
             message: msg,
             origin: "fixed",
             hasShortcut: !!shortcutDisplay
@@ -162,8 +162,10 @@ const ShortcutsModule = (() => {
       display: none;
     `;
 
-    dropdownEl.addEventListener("mousedown", (e) => e.preventDefault());
-
+    dropdownEl.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+    });
+    
     document.body.appendChild(dropdownEl);
     return dropdownEl;
   }
@@ -269,17 +271,30 @@ const ShortcutsModule = (() => {
       // selectedEl.scrollIntoView({ block: 'nearest' });
     }
 
-    dd.querySelectorAll(".cmd-item").forEach(el => {
-      el.addEventListener("mouseenter", () => {
-        selectedIndex = parseInt(el.dataset.idx);
+    dd.querySelectorAll(".cmd-item").forEach((node) => {
+      node.addEventListener("mouseenter", () => {
+        selectedIndex = parseInt(node.dataset.idx, 10) || 0;
         renderDropdown();
       });
 
-      el.addEventListener("click", (e) => {
+      node.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log("[Shortcuts] Click detectado no item:", selectedIndex);
-        executarAcaoSelecionada();
+
+        const idx = parseInt(node.dataset.idx, 10);
+        if (Number.isNaN(idx)) return;
+
+        const item = currentFiltered[idx];
+        if (!activeInputEl || !item) return;
+
+        // executa exatamente o item clicado
+        if (item.type === "cmd") {
+          inserirMensagemSubstituindoSlashQuery(activeInputEl, item.data.message);
+          closeDropdown();
+        } else if (item.type === "create") {
+          closeDropdown();
+          abrirModalCriarAtalho(item.query);
+        }
       });
     });
   }
@@ -324,7 +339,7 @@ const ShortcutsModule = (() => {
           type: 'text',
           required: true,
           value: defaultShortcut,
-          placeholder: 'Ex: bomdia'
+          placeholder: 'Digite seu atalho'
         },
         {
           name: 'message',

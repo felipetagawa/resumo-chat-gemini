@@ -91,8 +91,8 @@ function createOnboardingModal() {
 
   body.innerHTML = `
     <div style="margin-bottom: 20px;">
-      <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">Seu Nome / Login</label>
-      <input type="text" id="onboarding-name-input" placeholder="Ex: Felipe" style="
+      <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">Nome</label>
+      <input type="text" id="onboarding-name-input" placeholder="Digite seu nome" style="
         width: 100%;
         padding: 12px;
         border: 2px solid #e2e8f0;
