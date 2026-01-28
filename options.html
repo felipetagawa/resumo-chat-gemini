@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Configurações - Resumo Gemini</title>
+  <title>Portal AtendeAI Manager</title>
 
   <style>
     body {
@@ -14,6 +14,13 @@
       margin: 0 auto;
       background-color: #f4f6f8;
       color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-main {
+      flex: 1 0 auto;
     }
 
     h1 {
@@ -296,98 +303,567 @@
       overflow-x: hidden;
     }
 
+    .credits-log-scroll {
+      height: 120px;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      padding-right: 6px;
+      scrollbar-gutter: stable;
+    }
 
-    .accordion-count {
-      background: #e2e8f0;
-      color: #475569;
-      font-size: 12px;
-      padding: 2px 8px;
+    .credits-log-scroll::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .credits-log-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .credits-log-scroll::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: content-box;
+    }
+
+    .credits-log-scroll::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+
+    .card-header-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 8px;
+    }
+
+    .card-header-row h2 {
+      margin: 0;
+      border: none;
+      padding: 0;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .actions-menu {
+      position: relative;
+      display: inline-flex;
+    }
+
+    .actions-menu>summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .actions-menu>summary {
+      list-style: none;
+    }
+
+    .actions-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid #dbeafe;
+      background: linear-gradient(135deg, #eaf2ff, #dbeafe);
+      color: #1e40af;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 0;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+      box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08);
+    }
+
+    .actions-trigger:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(2, 6, 23, 0.12);
+    }
+
+    .actions-trigger:active {
+      transform: translateY(0);
+      box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08);
+    }
+
+    .actions-trigger .chevron {
+      font-weight: 900;
+      opacity: .9;
+    }
+
+    .actions-dropdown {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      min-width: 240px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
       border-radius: 12px;
-      margin-left: 8px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.14);
+      padding: 6px;
+      z-index: 9999;
+      display: none;
+    }
+
+    .actions-menu[open] .actions-dropdown {
+      display: block;
+    }
+
+    .actions-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 10px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      margin-top: 0;
+      text-align: left;
+      font-size: 13px;
+      color: #0f172a;
+      transition: background .12s ease, border-color .12s ease;
+    }
+
+    .actions-item:hover {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+    }
+
+    .actions-item .icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    .actions-item.danger .icon {
+      background: #fee2e2;
+      border-color: #fecaca;
+      color: #991b1b;
+    }
+
+    .actions-item .text {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      line-height: 1.15;
+    }
+
+    .actions-item .title {
+      font-weight: 800;
+      font-size: 12.8px;
+    }
+
+    .actions-item .desc {
+      font-size: 11.2px;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    .add-message-row {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .add-message-row textarea {
+      width: 100%;
+      min-height: 100px;
+      max-height: 160px;
+    }
+
+    .add-message-row button {
+      margin-top: 0;
+      width: fit-content;
+    }
+
+    .top-nav {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .nav-brand .sys-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .nav-brand .sys-sub {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .nav-tab {
+      margin-top: 0;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s ease, border-color .15s ease, transform .12s ease;
+    }
+
+    .nav-tab:hover {
+      background: #f1f5f9;
+    }
+
+    .nav-tab.active {
+      background: #eaf2ff;
+      border-color: #bfdbfe;
+      color: #1e40af;
+    }
+
+    .home-hero {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
+      margin-bottom: 20px;
+    }
+
+    .home-hero .title {
+      margin: 0 0 6px 0;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .home-hero .desc {
+      margin: 0;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    .page-section {
+      display: none;
+    }
+
+    .page-section.active {
+      display: block;
+    }
+
+
+    .app-footer {
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: center;
+    }
+
+    .footer-link {
+      font-size: 13px;
+      color: #4285F4;
+      text-decoration: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .footer-link:hover {
+      text-decoration: underline;
+    }
+
+    .name-chip {
+      font-weight: 900;
+      font-size: 22px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      color: #06349e;
+      text-decoration: underline;
+      background: none;
+      line-height: 1;
+      margin-left: 2px;
+    }
+
+    .name-chip:hover {
+      background: #dbeafe;
     }
   </style>
 
   <dialog id="creditsDialog" style="
   border: none;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 0;
-  width: 460px;
-  max-width: 92%;
-  box-shadow: 0 15px 30px rgba(0,0,0,0.25);
+  width: 520px;
+  max-width: 92vw;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.28);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
 ">
-
     <div style="
     padding: 18px 20px;
-    background: #4285F4;
+    background: linear-gradient(135deg, #1a73e8, #4285F4);
     color: #fff;
-    border-radius: 14px 14px 0 0;
   ">
-      <h2 style="margin:0; font-size:18px;">
-        Créditos do Sistema
-        <span style="font-size:13px; font-weight:normal; opacity:.9;">
-          — v1.2
-        </span>
-      </h2>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+        <div>
+          <div style="font-size:18px; font-weight:700; margin:0; line-height:1.2;">
+            Créditos do Sistema
+          </div>
+          <div style="font-size:12.5px; opacity:.92; margin-top:4px;">
+            AtendeAI Manager
+          </div>
+        </div>
+
+        <div class="app-version" style="
+        background: rgba(255,255,255,0.18);
+        border: 1px solid rgba(255,255,255,0.22);
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: .2px;
+        white-space: nowrap;
+      ">
+          v...
+        </div>
+      </div>
     </div>
 
-    <div style="padding: 20px; background:#fff;">
+    <div style="padding: 18px 18px 16px; background:#fff;">
+
+      <div style="display:grid; grid-template-columns: 1fr; gap: 10px;">
+
+        <div style="
+        padding: 14px;
+        border-radius: 12px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+      ">
+          <div style="
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:10px;
+          margin-bottom: 8px;
+        ">
+            <div style="font-size:13px; color:#6b7280; font-weight:600;">
+              Idealizador e Proprietário
+            </div>
+            <span style="
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #eef2ff;
+            border: 1px solid #e0e7ff;
+            color: #3730a3;
+            font-weight: 700;
+            white-space: nowrap;
+          ">Owner</span>
+          </div>
+          <div style="font-size:15px; font-weight:700; color:#111827;">
+            Felipe Okamoto
+          </div>
+        </div>
+
+        <div style="
+        padding: 14px;
+        border-radius: 12px;
+        background: #f8fbff;
+        border: 1px solid #dbeafe;
+      ">
+          <div style="
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:10px;
+          margin-bottom: 10px;
+        ">
+            <div style="font-size:13px; color:#1e40af; font-weight:700;">
+              Desenvolvimento
+            </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+              <span style="
+              font-size: 11px;
+              padding: 4px 8px;
+              border-radius: 999px;
+              background: #eff6ff;
+              border: 1px solid #bfdbfe;
+              color: #1e40af;
+              font-weight: 700;
+            ">Front-end</span>
+              <span style="
+              font-size: 11px;
+              padding: 4px 8px;
+              border-radius: 999px;
+              background: #eff6ff;
+              border: 1px solid #bfdbfe;
+              color: #1e40af;
+              font-weight: 700;
+            ">Back-end</span>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div style="
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+          ">
+              <div style="font-size:12px; color:#6b7280; font-weight:600; margin-bottom:4px;">
+                Diego Martins
+              </div>
+              <div style="font-size:13px; color:#111827;">
+                Front-end • Back-end
+              </div>
+            </div>
+
+            <div style="
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+          ">
+              <div style="font-size:12px; color:#6b7280; font-weight:600; margin-bottom:4px;">
+                Felipe Okamoto
+              </div>
+              <div style="font-size:13px; color:#111827;">
+                Front-end • Back-end
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:1px; background:#eef2f7; margin: 14px 0;"></div>
 
       <div style="
-      margin-bottom: 16px;
       padding: 14px;
-      border-radius: 10px;
-      background: #f9fafb;
+      border-radius: 12px;
+      background: #ffffff;
       border: 1px solid #e5e7eb;
     ">
-        <div style="font-size:13px; color:#6b7280; margin-bottom:4px;">
-          Idealizador e Proprietário
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom: 10px;">
+          <div style="font-size:13px; color:#111827; font-weight:800;">
+            Log de Atualizações
+          </div>
+          <span style="
+          font-size: 11px;
+          padding: 4px 8px;
+          border-radius: 999px;
+          background: #f3f4f6;
+          border: 1px solid #e5e7eb;
+          color: #374151;
+          font-weight: 700;
+          white-space: nowrap;
+        ">Changelog</span>
         </div>
-        <div style="font-size:15px; font-weight:600;">
-          Felipe Okamoto
-        </div>
-      </div>
 
-      <div style="
-      margin-bottom: 12px;
-      padding: 14px;
-      border-radius: 10px;
-      background: #eef4ff;
-      border: 1px solid #c9ddff;
-    ">
-        <div style="font-size:13px; color:#1e40af; margin-bottom:6px;">
-          Front-end
-        </div>
-        <div style="font-size:14px;">
-          Diego Martins<br>
-          Felipe Okamoto
-        </div>
-      </div>
+        <div class="credits-log-scroll" style="display:flex; flex-direction:column; gap:10px;">
 
-      <div style="
-      padding: 14px;
-      border-radius: 10px;
-      background: #eef4ff;
-      border: 1px solid #c9ddff;
-    ">
-        <div style="font-size:13px; color:#1e40af; margin-bottom:6px;">
-          Back-end
-        </div>
-        <div style="font-size:14px;">
-          Diego Martins<br>
-          Felipe Okamoto
+          <div style="display:flex; gap:10px;">
+            <div style="width:10px; display:flex; justify-content:center;">
+              <div style="width:8px; height:8px; border-radius:50%; background:#34a853; margin-top:6px;"></div>
+            </div>
+            <div style="flex:1;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span class="app-version" style="font-size:12px; font-weight:800; color:#111827;">v...</span>
+                <span style="font-size:12px; color:#6b7280;">Melhorias e Correções</span>
+                <span style="
+                font-size: 11px;
+                padding: 3px 8px;
+                border-radius: 999px;
+                background: #ecfdf5;
+                border: 1px solid #a7f3d0;
+                color: #065f46;
+                font-weight: 800;
+              ">Atual</span>
+              </div>
+              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+                ajustes no fluxo de mensagens padrão e novas opções de edição nas configurações; ajustes de layout para
+                melhoria de UX.
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px;">
+            <div style="width:10px; display:flex; justify-content:center;">
+              <div style="width:8px; height:8px; border-radius:50%; background:#1a73e8; margin-top:6px;"></div>
+            </div>
+            <div style="flex:1;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="font-size:12px; font-weight:800; color:#111827;">v1.2</span>
+                <span style="font-size:12px; color:#6b7280;">Mensagens Padrão, Dicas inteligentes com IA e Agenda &
+                  Gestão</span>
+              </div>
+              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+                Adicionadas mensagens padrão, Dicas inteligentes com IA, Área Agenda & Gestão com Kanban, Calendário e
+                área para Anotações.
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px;">
+            <div style="width:10px; display:flex; justify-content:center;">
+              <div style="width:8px; height:8px; border-radius:50%; background:#1a73e8; margin-top:6px;"></div>
+            </div>
+            <div style="flex:1;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="font-size:12px; font-weight:800; color:#111827;">v1.1</span>
+                <span style="font-size:12px; color:#6b7280;">Resumo de atendimentos com IA</span>
+              </div>
+              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+                Ferramenta gerar o resumo conforme os parâmetros definidos pela gerência.
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
       <div style="
       display:flex;
       justify-content: flex-end;
-      margin-top: 20px;
+      gap: 10px;
+      margin-top: 14px;
     ">
-        <button id="closeCredits" class="btn-primary">
+        <button id="closeCredits" class="btn-primary" style="
+        border: none;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-weight: 800;
+        cursor: pointer;
+        background: #1a73e8;
+        color: #fff;
+      ">
           Fechar
         </button>
       </div>
+
     </div>
   </dialog>
 
@@ -395,83 +871,345 @@
 
 <body>
 
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:25px;">
-    <h1 style="margin:0;">⚙️ Configurações</h1>
+  <main class="app-main">
 
-    <a href="#" id="openCredits" style="
-    font-size: 13px;
-    color: #4285F4;
-    text-decoration: none;
-    cursor: pointer;
-    font-weight: 500;
-  ">
-      Créditos do sistema – v1.2
-    </a>
-  </div>
-
-  <div class="card">
-    <h2>🧠 Instruções da IA</h2>
-
-    <label for="customInstructions">Prompt Personalizado</label>
-    <textarea id="customInstructions"></textarea>
-
-    <div class="hint">
-      Essas instruções serão enviadas junto com o chat para guiar o comportamento da IA.
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+      <h1 style="margin:0;">⚙️ Painel de Configurações</h1>
     </div>
 
-    <button id="salvar" class="btn-primary">Salvar Configurações</button>
-    <div id="status"></div>
-  </div>
-
-  <div class="card">
-    <h2>💬 Mensagens Padrão</h2>
-
-    <div class="accordion" id="fixedAccordion">
-      <div class="accordion-header open" data-target="fixedContent">
-        <span>Mensagens Fixas <span class="accordion-count">
-            <span class="accordion-icon">−</span>
+    <div class="top-nav" role="navigation" aria-label="Navegação de Configurações">
+      <div class="nav-brand">
+        <div class="sys-name" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span>AtendeAI Manager</span>
+          <span id="sectorBadge" style="
+          display:none;
+          font-size:12px;
+          font-weight:800;
+          padding:4px 10px;
+          border-radius:999px;
+          border:1px solid #e2e8f0;
+          background:#f8fafc;
+          color:#0f172a;
+        "></span>
+        </div>
       </div>
-      <div class="accordion-content open" id="fixedContent">
+
+      <div class="nav-tabs">
+        <button class="nav-tab active" type="button" data-section="sec-home">Início</button>
+        <button class="nav-tab" type="button" data-section="sec-mensagens">Mensagens Padrão</button>
+        <button class="nav-tab" type="button" data-section="sec-ia">Configuração IA</button>
+        <button class="nav-tab" type="button" data-section="sec-historico">Histórico</button>
+      </div>
+    </div>
+
+    <section id="sec-home" class="page-section active">
+      <div class="home-hero" style="display:flex; flex-direction:column; gap:14px;">
+        <div>
+          <div style="font-size:22px; font-weight:900; color:#0f172a; line-height:1.15;">
+            <span id="homeGreetingPrefix">Olá</span><span id="homeGreetingComma">,</span>
+            <button id="editNameTrigger" type="button" class="name-chip" aria-label="Editar nome" hidden></button>
+          </div>
+
+          <div style="margin-top:6px; font-size:13px; color:#64748b; font-weight:600;">
+            Centralize configurações e atalhos para acelerar seu atendimento e padronizar respostas.
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
+          <div class="card" style="margin-bottom:0;">
+            <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
+              💬 Mensagens Padrão - Suporte e Pré Atendimento
+            </div>
+            <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
+              Cadastre respostas frequentes e use atalhos para colar mensagens com um clique, mantendo consistência no
+              atendimento.
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:0;">
+            <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
+              🧠 Configuração IA - Suporte
+            </div>
+            <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
+              Defina instruções para a IA gerar resumos no padrão da sua operação (tom, formato e foco do atendimento).
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:0;">
+            <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
+              🗂️ Histórico - Suporte
+            </div>
+            <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
+              Consulte resumos gerados e chamados manuais anteriores para recuperar contexto rapidamente.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="nameSetupBlock" style="margin-top: 16px;">
+        <label style="display:block; margin-bottom:6px; font-weight:800;">Nome</label>
+
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <input id="nameInput" type="text" placeholder="Digite seu nome"
+            style="flex:1; min-width:260px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; outline:none;" />
+          <button id="saveNameBtn" class="btn-primary" type="button" style="margin-top:0;">Salvar</button>
+        </div>
+
+        <div class="hint" style="margin-top:8px;">
+          Obrigatório na primeira configuração. Depois, você altera clicando no seu nome acima.
+        </div>
+
+        <div id="nameStatus" style="font-size:12px; margin-top:8px; min-height:18px; color:#64748b;"></div>
+      </div>
+
+      <div class="card" style="margin-top: 20px;">
+        <div style="font-weight:900; color:#0f172a; margin-bottom: 10px;">👁️ Visibilidade dos Botões</div>
+        <div style="font-size:13px; color:#475569; margin-bottom: 14px;">
+          Selecione quais botões devem aparecer na interface.
+        </div>
+
+        <div id="visibilityOptions" style="display:flex; flex-direction:column; gap:8px;">
+          <!-- Checkboxes serão gerados via JS -->
+        </div>
+        <button id="saveVisibilityBtn" class="btn-primary" style="margin-top:14px;">Salvar Visibilidade</button>
+        <div id="visStatus" style="font-size:12px; margin-top:8px; min-height:18px;"></div>
+      </div>
+      </div>
+    </section>
+
+    <section id="sec-mensagens" class="page-section">
+      <div class="card">
+        <div class="card-header-row">
+          <h2>💬 Mensagens Padrão</h2>
+
+          <div class="header-actions">
+            <details class="actions-menu">
+              <summary class="actions-trigger">
+                Ações <span class="chevron">▾</span>
+              </summary>
+
+              <div class="actions-dropdown">
+                <button id="backupMessages" type="button" class="actions-item">
+                  <span class="icon">⤓</span>
+                  <span class="text">
+                    <span class="title">Backup</span>
+                    <span class="desc">Exportar mensagens personalizadas</span>
+                  </span>
+                </button>
+
+                <button id="limparTodosAtalhos" type="button" class="actions-item danger">
+                  <span class="icon">🧹</span>
+                  <span class="text">
+                    <span class="title">Limpar atalhos</span>
+                    <span class="desc">Remove todos os atalhos configurados</span>
+                  </span>
+                </button>
+              </div>
+            </details>
+
+            <div id="statusAtalhos" style="font-size:12px; min-height:18px;"></div>
+          </div>
+        </div>
+
+        <h3>Mensagens Fixas</h3>
         <div id="fixedMessages"></div>
-      </div>
-    </div>
 
-    <div class="accordion" id="customAccordion">
-      <div class="accordion-header" data-target="customContent">
-        <span>Mensagens Personalizadas <span class="accordion-count" id="customCount">0</span></span>
-        <span class="accordion-icon">+</span>
-      </div>
-      <div class="accordion-content" id="customContent">
+        <h3>Mensagens Personalizadas</h3>
         <div id="customMessages"></div>
+
+        <div class="add-message-row">
+          <label for="newMessage">Adicionar nova mensagem</label>
+          <textarea id="newMessage" placeholder="Digite a nova mensagem..."></textarea>
+          <button id="addMessage" type="button" class="btn-primary">Adicionar</button>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <div style="display: flex; gap: 10px; align-items: center; margin-top: 20px;">
-      <textarea id="newMessage" placeholder="Digite a mensagem personalizada..." style="flex: 1;"></textarea>
-      <button id="addMessage" class="btn-primary" style="height: fit-content;">Adicionar Mensagem</button>
-    </div>
+    <section id="sec-ia" class="page-section">
+      <div class="card">
+        <h2>🧠 Instruções da IA</h2>
 
-    <div style="display: flex; gap: 10px; margin-top: 15px;">
-      <button id="backupMessages" class="btn-backup" style="flex: 1;">Backup Mensagens (.TXT)</button>
-      <button id="limparTodosAtalhos" class="btn-delete" style="flex: 1;">Limpar Atalhos</button>
-    </div>
+        <label for="customInstructions">Prompt Personalizado</label>
+        <textarea id="customInstructions"></textarea>
 
-    <div id="statusAtalhos" style="font-size: 12px; margin-top: 8px; color: #666; min-height: 20px;"></div>
-  </div>
+        <div class="hint">
+          Essas instruções serão enviadas junto com o chat para guiar o comportamento da IA.
+        </div>
 
-  <div class="card">
-    <h2>🗂️ Histórico de Resumos</h2>
-    <ul id="historyList"></ul>
-    <button id="limparHistorico" style="background: #e74c3c; color: #fff;">Limpar Histórico de Resumos</button>
-  </div>
+        <button id="salvar" class="btn-primary">Salvar Configurações</button>
+        <div id="status"></div>
+      </div>
+    </section>
 
-  <div class="card">
-    <h2>📝 Histórico de Chamados Manuais</h2>
-    <ul id="manualCallHistoryList"></ul>
-    <button id="limparHistoricoManual" style="background: #e74c3c; color: #fff;">Limpar Histórico de Chamados</button>
-  </div>
+    <section id="sec-historico" class="page-section">
+      <div class="card">
+        <h2>🗂️ Histórico de Resumos</h2>
+        <ul id="historyList"></ul>
+        <button id="limparHistorico" style="background: #e74c3c; color: #fff;">Limpar Histórico de Resumos</button>
+      </div>
+
+      <div class="card">
+        <h2>📝 Histórico de Chamados Manuais</h2>
+        <ul id="manualCallHistoryList"></ul>
+        <button id="limparHistoricoManual" style="background: #e74c3c; color: #fff;">Limpar Histórico de
+          Chamados</button>
+      </div>
+    </section>
+
+  </main>
 
   <script src="options.js"></script>
+
+  <footer class="app-footer">
+    <a href="#" id="openCredits" class="footer-link">Créditos do sistema – <span class="app-version">v...</span></a>
+  </footer>
+
+  <dialog id="onboardingDialog" style="
+    border:none;
+    border-radius:16px;
+    padding:0;
+    width:520px;
+    max-width:92vw;
+    box-shadow:0 18px 40px rgba(0,0,0,0.28);
+    overflow:hidden;
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  ">
+    <div style="padding:16px 18px; background: linear-gradient(135deg, #1a73e8, #4285F4); color:#fff;">
+      <div style="font-size:16px; font-weight:900;">Configuração inicial</div>
+      <div style="margin-top:6px; font-size:12.8px; opacity:.95; font-weight:600;">
+        Para continuar, informe seu nome e selecione seu setor.
+      </div>
+    </div>
+
+    <div style="padding:16px 18px; background:#fff;">
+      <label style="font-weight:800; font-size:13px; display:block;">Nome</label>
+      <input id="onboardingNameInput" type="text" placeholder="Digite seu Nome" style="
+          width: 90%;
+          margin-top:8px;
+          padding:10px 12px;
+          border:1px solid #cbd5e1;
+          border-radius:10px;
+          font-size:14px;
+          outline:none;
+        " />
+
+      <div style="height:12px;"></div>
+
+      <div style="font-weight:800; font-size:13px;">Setor</div>
+      <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
+        <label style="
+          display:flex; align-items:center; gap:8px; cursor:pointer;
+          padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;
+          font-weight:800; font-size:13px; color:#0f172a;
+        ">
+          <input type="radio" name="onboardingSector" value="suporte" />
+          Suporte
+        </label>
+
+        <label style="
+          display:flex; align-items:center; gap:8px; cursor:pointer;
+          padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;
+          font-weight:800; font-size:13px; color:#0f172a;
+        ">
+          <input type="radio" name="onboardingSector" value="preatendimento" />
+          Pré-atendimento
+        </label>
+      </div>
+
+      <div class="hint" style="margin-top:10px;">
+        O setor será salvo localmente e não poderá ser alterado depois. Apenas o nome poderá ser editado.
+      </div>
+
+      <div id="onboardingStatus"
+        style="font-size:12px; margin-top:10px; min-height:18px; color:#b45309; font-weight:700;"></div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+        <button id="onboardingSaveBtn" type="button" class="btn-primary" style="margin-top:0; font-weight:900;">
+          Confirmar e continuar
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="nameDialog" style="
+  border:none;
+  border-radius:16px;
+  padding:0;
+  width:480px;
+  max-width:92vw;
+  box-shadow:0 18px 40px rgba(0,0,0,0.28);
+  overflow:hidden;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+">
+    <div style="
+    padding:16px 18px;
+    background: linear-gradient(135deg, #1a73e8, #4285F4);
+    color:#fff;
+  ">
+      <div style="
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    ">
+        <div style="font-size:15px; font-weight:800;">Editar nome</div>
+
+        <button id="editCloseNameDialog" type="button" aria-label="Fechar" style="
+          appearance:none;
+          border:none;
+          background: rgba(255,255,255,0.18);
+          color:#fff;
+          width:34px;
+          height:34px;
+          border-radius:10px;
+          cursor:pointer;
+          font-weight:900;
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+        ">✕</button>
+      </div>
+    </div>
+
+    <div style="padding:16px 18px; background:#fff;">
+      <label for="editNameDialogInput" style="display:block; margin-bottom:6px; font-weight:800;">
+        Nome
+      </label>
+
+      <input id="editNameDialogInput" type="text" placeholder="Digite seu nome" autocomplete="name" style="
+        width:90%;
+        padding:10px 12px;
+        border:1px solid #cbd5e1;
+        border-radius:10px;
+        font-size:14px;
+        outline:none;
+      " />
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+        <button id="editCancelNameDialog" type="button" style="
+          background:#e5e7eb;
+          color:#111827;
+          font-weight:800;
+          border:none;
+          border-radius:10px;
+          padding:10px 12px;
+          cursor:pointer;
+          margin-top:0;
+        ">
+          Cancelar
+        </button>
+
+        <button id="editSaveNameDialog" type="button" class="btn-primary" style="
+          margin-top:0;
+          font-weight:900;
+          border-radius:10px;
+          padding:10px 12px;
+        ">
+          Salvar
+        </button>
+      </div>
+    </div>
+  </dialog>
+
 </body>
 
 </html>

@@ -119,3 +119,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
 });
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg?.action === "openOptions") {
+    try {
+      chrome.runtime.openOptionsPage();
+    } catch (e) {
+      const url = chrome.runtime.getURL("options.html");
+      chrome.tabs.create({ url });
+    }
+  }
+});
