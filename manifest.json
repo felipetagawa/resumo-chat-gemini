@@ -11,7 +11,9 @@
     "https://gemini-resumo-api-298442462030.southamerica-east1.run.app/*",
     "https://gemini-resumo-298442462030.southamerica-east1.run.app/*",
     "https://generativelanguage.googleapis.com/*",
-    "http://localhost:8080/*"
+    "https://generativelanguage.googleapis.com/*",
+    "http://localhost:8080/*",
+    "https://sistemaempresarialweb.com.br/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -50,6 +52,15 @@
         "modules/called.js",
         "modules/notifications.js",
         "content.js"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "https://sistemaempresarialweb.com.br/crm-atendimento*"
+      ],
+      "js": [
+        "modules/crm-automation.js"
       ],
       "run_at": "document_end"
     }
