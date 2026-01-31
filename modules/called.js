@@ -308,7 +308,14 @@ const CalledModule = (function () {
         });
 
         if (history.length > 50) history = history.slice(-50);
-        await chrome.storage.local.set({ chamado_manual_history: history });
+        await chrome.storage.local.set({
+          chamado_manual_history: history,
+          last_summary: {
+            text: texto,
+            timestamp: Date.now(),
+            source: "manual"
+          }
+        });
 
         copyMessage.textContent = '✅ Copiado e salvo!';
         copyMessage.style.opacity = '1';
@@ -434,6 +441,58 @@ const CalledModule = (function () {
       const primeiroCampo = popup.querySelector('#problemaDuvida');
       if (primeiroCampo) primeiroCampo.focus();
     }, 100);
+
+    // Enter Navigation Logic
+    const inputs = [
+      'problemaDuvida',
+      'docNumber',
+      'solucao',
+      'upsell-sim',
+      'upsellDesc', // Might be hidden/unused if upsell NO
+      'captura-sim',
+      'humorSelection',
+      'copyBtn'
+    ];
+
+    popup.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const target = e.target;
+        // Allow default behavior for textareas unless Ctrl is pressed, or if user wants simple Enter navigation everywhere
+        // User asked: "tab ou enter". 
+        // If it's a textarea, usually Enter = new line. 
+        // We'll respect textarea new lines, but maybe allow Ctrl+Enter to move? 
+        // Or if the user really wants Enter to navigate, they lose new line capability.
+        // Let's assume for single line inputs (text, radio, select) Enter moves next.
+        // For textareas, we keep default behavior.
+
+        if (target.tagName === 'TEXTAREA') return;
+
+        e.preventDefault();
+
+        // Find current index
+        let currentIndex = -1;
+
+        // Map element to index provided in inputs array
+        if (target.id) currentIndex = inputs.indexOf(target.id);
+        else if (target.type === 'radio') {
+          // For radios, we map based on the group logic or the specific ID in the list
+          if (target.name === 'upsell') currentIndex = inputs.indexOf('upsell-sim');
+          if (target.name === 'captura') currentIndex = inputs.indexOf('captura-sim');
+        }
+
+        if (currentIndex !== -1 && currentIndex < inputs.length - 1) {
+          let nextIndex = currentIndex + 1;
+          let nextId = inputs[nextIndex];
+          let nextEl = popup.querySelector('#' + nextId);
+
+          // Special handling for upsellDesc which might be disabled/irrelevant?
+          // Actually the form always shows it, but maybe we should skip if upsell is NO?
+          // The form HTML shows it always.
+
+          if (nextEl) nextEl.focus();
+        }
+      }
+    });
   }
 
   return {

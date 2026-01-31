@@ -559,17 +559,9 @@ function criarBotoesFlutuantes(visibility) {
     guardFeature(() => AgendaModule.exibirAgenda())
   );
 
-  const botaoChamadoManual = createButton(
-    "btnChamadoManual",
-    "Chamado Manual",
-    "chamado-manual.png",
-    guardFeature(() => CalledModule.exibirChamadoManual())
-  );
-
   if (isVisible("btnResumoGemini")) container.appendChild(botaoResumo);
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);
   if (isVisible("btnAgenda")) container.appendChild(botaoAgenda);
-  if (isVisible("btnChamadoManual")) container.appendChild(botaoChamadoManual);
 
   if (isVisible("btnAssistenteIA")) container.appendChild(containerDropdown);
 
