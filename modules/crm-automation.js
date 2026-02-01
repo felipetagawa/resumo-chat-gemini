@@ -439,64 +439,92 @@ const CRMAutomationModule = (function () {
 
             const formControl = createFormOverlay(textarea);
 
-            // Create Glue Button
-            const createPasteButton = (summaryData) => {
-                const btnId = "btn-paste-summary";
-                if (document.getElementById(btnId)) return;
+            // Create History Dropdown
+            const createHistoryDropdown = (history) => {
+                const containerId = "crm-actions-container";
+                const actionsContainer = document.getElementById(containerId);
+                if (!actionsContainer) return;
 
-                const btn = document.createElement("button");
-                btn.id = btnId;
-                btn.textContent = "📋 Colar Resumo IA";
-                btn.type = "button";
-                btn.style.cssText = `
+                // Remove existing if any
+                const existing = document.getElementById("crm-history-select");
+                if (existing) existing.remove();
+
+                const select = document.createElement("select");
+                select.id = "crm-history-select";
+                select.style.cssText = `
                     background-color: #3b82f6;
                     color: white;
                     border: none;
-                    padding: 6px 14px;
+                    padding: 6px 10px;
                     border-radius: 6px;
                     font-weight: 600;
                     font-size: 13px;
                     cursor: pointer;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    transition: background 0.2s;
+                    outline: none;
                     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    appearance: none; /* remove native arrow in some browsers for cleaner look, or keep */
+                    -webkit-appearance: none;
+                    padding-right: 25px;
+                    background-image: url('data:image/svg+xml;utf8,<svg fill="white" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+                    background-repeat: no-repeat;
+                    background-position: right 2px center;
+                    background-size: 16px;
+                    max-width: 200px;
                 `;
 
-                // Insert into the form header
-                const actionsContainer = document.getElementById("crm-actions-container");
-                if (actionsContainer) {
-                    actionsContainer.appendChild(btn);
-                }
+                const defaultOpt = document.createElement("option");
+                defaultOpt.text = "📋 Colar Resumo IA...";
+                defaultOpt.value = "";
+                defaultOpt.disabled = true;
+                defaultOpt.selected = true;
+                select.appendChild(defaultOpt);
 
-                btn.addEventListener("click", (e) => {
-                    e.preventDefault();
-                    if (summaryData.text) {
-                        if (formControl) {
-                            formControl.fillFromText(summaryData.text);
-                        } else {
-                            textarea.value = summaryData.text;
-                        }
-
-                        btn.textContent = "✅ Preenchido!";
-                        btn.style.backgroundColor = "#10b981";
-                        setTimeout(() => {
-                            btn.textContent = "📋 Colar Resumo IA";
-                            btn.style.backgroundColor = "#3b82f6";
-                        }, 2000);
-                    }
+                history.slice(0, 5).forEach((item, index) => {
+                    const opt = document.createElement("option");
+                    // Use clientName, falling back to time if necessary
+                    const label = item.clientName || `Resumo ${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                    opt.text = label;
+                    opt.value = index;
+                    select.appendChild(opt);
                 });
+
+                select.addEventListener("change", (e) => {
+                    const idx = e.target.value;
+                    if (idx === "") return;
+
+                    const selectedSummary = history[idx];
+                    if (selectedSummary && selectedSummary.text) {
+                        if (formControl) {
+                            formControl.fillFromText(selectedSummary.text);
+                        } else {
+                            textarea.value = selectedSummary.text;
+                            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                    }
+
+                    // Flash feedback
+                    const oldBg = select.style.backgroundColor;
+                    select.style.backgroundColor = "#10b981"; // green
+                    setTimeout(() => {
+                        select.style.backgroundColor = oldBg;
+                        select.value = ""; // Reset
+                    }, 1000);
+                });
+
+                actionsContainer.appendChild(select);
             };
 
-            // Check storage
-            chrome.storage.local.get(['last_summary'], (result) => {
-                const summary = result.last_summary;
-                if (summary && summary.text) {
-                    const isRecent = (Date.now() - (summary.timestamp || 0)) < 24 * 60 * 60 * 1000;
-                    if (isRecent) {
-                        createPasteButton(summary);
-                    }
+            // Check storage and init dropdown
+            chrome.storage.local.get(['summary_history', 'last_summary'], (result) => {
+                let history = result.summary_history || [];
+
+                // Fallback: if no history but last_summary exists, add it temp
+                if (history.length === 0 && result.last_summary) {
+                    history.push(result.last_summary);
+                }
+
+                if (history.length > 0) {
+                    createHistoryDropdown(history);
                 }
             });
 

@@ -20,7 +20,7 @@ const SummaryModule = (() => {
     return formatado.trim();
   }
 
-  function exibirResumo(texto, tipo = "resumo") {
+  function exibirResumo(texto, clientNameOverride = null, tipo = "resumo") {
     DOMHelpers.removeElement("geminiResumoPopup");
 
     let humorIcon = "";
@@ -39,13 +39,37 @@ const SummaryModule = (() => {
 
     const conteudoFormatado = formatarResumoComNegrito(texto);
 
-    // Save to storage for later use
-    chrome.storage.local.set({
-      last_summary: {
-        text: texto,
-        timestamp: Date.now(),
-        source: "ai"
+    // Save to storage (History of 5)
+    chrome.storage.local.get(['summary_history'], (result) => {
+      const history = result.summary_history || [];
+      const now = new Date();
+
+      let clientName = clientNameOverride;
+
+      // Fallback if not provided or if it's the placeholder "Cliente"
+      if (!clientName || clientName === "Cliente") {
+        clientName = `Atendimento ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        const nameMatch = texto.match(/(?:Cliente|Nome):\s*([^\n\r*]+)/i);
+        if (nameMatch) {
+          clientName = nameMatch[1].trim();
+        }
       }
+
+      const newEntry = {
+        text: texto,
+        timestamp: now.getTime(),
+        clientName: clientName,
+        source: "ai"
+      };
+
+      // Add to front, keep max 5
+      history.unshift(newEntry);
+      if (history.length > 5) history.pop();
+
+      chrome.storage.local.set({
+        summary_history: history,
+        last_summary: newEntry
+      });
     });
 
     const popup = document.createElement("div");

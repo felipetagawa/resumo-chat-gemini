@@ -466,6 +466,8 @@ function criarBotoesFlutuantes(visibility) {
       btn.innerHTML = `<span class="icon">⏳</span> Gerando...`;
 
       const texto = ChatCaptureModule.capturarTextoChat();
+      const clientName = ChatCaptureModule.capturarNomeCliente();
+
       if (!texto) {
         alert("Não foi possível capturar o texto do chat.");
         btn.disabled = false;
@@ -475,7 +477,7 @@ function criarBotoesFlutuantes(visibility) {
 
       try {
         const response = await MessagingHelper.send({ action: "gerarResumo", texto });
-        if (response && response.resumo) SummaryModule.exibirResumo(response.resumo);
+        if (response && response.resumo) SummaryModule.exibirResumo(response.resumo, clientName);
         else if (response && response.erro) alert("Erro ao gerar resumo: " + response.erro);
       } catch (error) {
         alert("Erro de comunicação: " + error.message);

@@ -67,9 +67,46 @@ const ChatCaptureModule = (() => {
         return problema.trim() || resumoCompleto;
     }
 
+    function capturarNomeCliente() {
+        // Tentativa 1: Seletores comuns de header de chat
+        const selectors = [
+            "#contact-name",
+            ".contact-name",
+            ".header-info .name",
+            ".conversation-header .name",
+            ".chat-header .title",
+            ".chat-title",
+            "header .name",
+            ".top-bar .name"
+        ];
+
+        for (const sel of selectors) {
+            const el = document.querySelector(sel);
+            if (el && el.innerText.trim()) {
+                return el.innerText.trim();
+            }
+        }
+
+        // Tentativa 2: Procurar na primeira mensagem recebida (que não seja do sistema)
+        // Isso é arriscado mas pode funcionar se o header falhar
+        const msgs = document.querySelectorAll(".msg");
+        for (const msg of msgs) {
+            const isSent = msg.classList.contains("sent"); // Se tiver classe de enviado
+            const nameEl = msg.querySelector(".name");
+            // Se tem nome e não parece ser o usuário logado (assumindo logica de classe ou comparação simples)
+            if (nameEl && nameEl.innerText) {
+                // Simplificação: apenas retorne o primeiro nome encontrado se não temos header
+                return nameEl.innerText.trim();
+            }
+        }
+
+        return "Cliente";
+    }
+
     return {
         capturarTextoChat,
-        extrairProblemaDoResumo
+        extrairProblemaDoResumo,
+        capturarNomeCliente
     };
 })();
 
