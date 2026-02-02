@@ -493,6 +493,9 @@ const CRMAutomationModule = (function () {
 
         return {
             fillFromText: (fullText) => {
+                // Remove all markdown bold markers (**) from the source text
+                fullText = fullText.replace(/\*\*/g, '');
+
                 const getValue = (startMarker, ...endMarkers) => {
                     const startIdx = fullText.toUpperCase().indexOf(startMarker.toUpperCase());
                     if (startIdx === -1) return "";
