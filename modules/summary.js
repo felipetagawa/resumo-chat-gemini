@@ -168,14 +168,14 @@ const SummaryModule = (() => {
     const tips = dicaData.tips || [];
     const status = dicaData.status || "";
 
-    conteudo += `**PROBLEMA DETECTADO:**\n${problemDetected}\n\n`;
-    conteudo += `**MÓDULO:** ${moduleDetected}\n\n`;
+    conteudo += `PROBLEMA DETECTADO:\n${problemDetected}\n\n`;
+    conteudo += `MÓDULO: ${moduleDetected}\n\n`;
 
-    conteudo += `**CHAMADOS RELACIONADOS:** ${similarCalls}\n\n`;
-    conteudo += `**SOLUÇÕES ANALISADAS:** ${solutions}\n\n`;
+    conteudo += `CHAMADOS RELACIONADOS: ${similarCalls}\n\n`;
+    conteudo += `SOLUÇÕES ANALISADAS: ${solutions}\n\n`;
 
     if (status) {
-      conteudo += `**STATUS:** ${status}\n\n`;
+      conteudo += `STATUS: ${status}\n\n`;
     }
 
     if (tips && tips.length > 0) {

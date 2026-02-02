@@ -1057,7 +1057,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     el.btnLimpar?.addEventListener("click", async () => {
       if (!confirm("Tem certeza que deseja apagar todo o histórico de resumos?")) return;
-      await storageSet({ history: [] });
+      await storageSet({
+        history: [],
+        summary_history: [],
+        last_summary: null
+      });
       renderHistory([]);
       if (el.status) {
         el.status.textContent = "🗑️ Histórico de resumos limpo.";

@@ -132,12 +132,20 @@ const CRMAutomationModule = (function () {
         if (document.getElementById("crm-automation-container")) return null;
 
         // Visual Hide of the original textarea (keep it in DOM for form submission)
+        // Clear any existing content first
+        const originalValue = textarea.value;
+        textarea.value = '';
+
         textarea.style.cssText = `
-            opacity: 0;
-            height: 1px;
-            overflow: hidden;
-            position: absolute;
-            z-index: -1;
+            display: none !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            width: 0 !important;
+            overflow: hidden !important;
+            position: absolute !important;
+            z-index: -999 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
         `;
 
         // Create container for our custom inputs
@@ -155,80 +163,113 @@ const CRMAutomationModule = (function () {
             gap: 16px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             box-sizing: border-box;
+            position: relative;
+            z-index: 1;
         `;
 
         // HTML for the form - Vertical Stack to match text flow
         container.innerHTML = `
-            <div style="display:flex; justify-content:flex-end; align-items:center; padding-bottom:10px; margin-bottom:10px;">
-                <!-- Button placeholder -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid #e5e7eb;">
+                <div style="display:flex; gap:8px;">
+                    <button id="crm-toggle-overlay" type="button" style="
+                        background: #8d0101ff;
+                        color: white;
+                        border: none;
+                        padding: 6px 12px;
+                        border-radius: 6px;
+                        font-weight: 600;
+                        font-size: 12px;
+                        cursor: pointer;
+                        outline: none;
+                        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                        transition: background 0.2s;
+                    ">Desativar Overlay</button>
+                    
+                    <button id="crm-clear-form" type="button" style="
+                        background: #2e0e69ff;
+                        color: white;
+                        border: none;
+                        padding: 6px 12px;
+                        border-radius: 6px;
+                        font-weight: 600;
+                        font-size: 12px;
+                        cursor: pointer;
+                        outline: none;
+                        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                        transition: background 0.2s;
+                    ">Limpar</button>
+                </div>
+                
                 <div id="crm-actions-container" style="display:flex; align-items:center;"></div>
             </div>
             
-            <!-- PROBLEMA -->
-            <div>
-                <label style="display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase;">1. Problema / Dúvida</label>
-                <div style="position:relative;">
-                    <input type="text" id="crm-input-problema" class="crm-input" style="width:100%; padding:10px; padding-right:40px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; outline:none; transition:border 0.2s; box-sizing:border-box;" placeholder="Descreva o problema ou dúvida do cliente..." autocomplete="off">
-                </div>
-            </div>
-
-            <!-- SOLUÇÃO -->
-            <div>
-                <label style="display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase;">2. Solução Apresentada</label>
-                <div style="position:relative;">
-                    <textarea id="crm-input-solucao" class="crm-input" rows="3" style="width:100%; padding:10px; padding-right:40px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; outline:none; transition:border 0.2s; resize:vertical; font-family:inherit; box-sizing:border-box;" placeholder="Detalhe a solução fornecida..."></textarea>
-                </div>
-            </div>
-
-            <!-- UPSELL -->
-            <div style="display:flex; gap:20px; align-items:flex-start;">
-                <div style="flex:0 0 auto;">
-                     <label style="display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase;">3. Upsell?</label>
-                     <div style="display:flex; gap:10px; background:#f9fafb; padding:8px 12px; border-radius:6px; border:1px solid #e5e7eb; box-sizing:border-box;">
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px; font-size:14px; font-weight:500;">
-                            <input type="radio" name="crm-upsell" value="SIM" class="crm-input-radio"> Sim
-                        </label>
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px; font-size:14px; font-weight:500;">
-                            <input type="radio" name="crm-upsell" value="NÃO" checked class="crm-input-radio"> Não
-                        </label>
-                     </div>
-                </div>
-                <div style="flex:1;">
-                    <label style="display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase;">Oportunidade / Detalhes</label>
+            <div id="crm-form-content" style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- PROBLEMA -->
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase;">1. Problema / Dúvida</label>
                     <div style="position:relative;">
-                        <input type="text" id="crm-input-upsell-desc" class="crm-input" style="width:100%; padding:10px; padding-right:40px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; background:#f3f4f6; color:#9ca3af; box-sizing:border-box;" placeholder="Descreva o que foi oferecido..." disabled>
+                        <input type="text" id="crm-input-problema" class="crm-input" style="width:100%; padding:10px; padding-right:40px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; outline:none; transition:border 0.2s; box-sizing:border-box;" placeholder="Descreva o problema ou dúvida do cliente..." autocomplete="off">
                     </div>
                 </div>
-            </div>
 
-            <!-- PRINTS & HUMOR -->
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                <!-- PRINTS -->
+                <!-- SOLUÇÃO -->
                 <div>
-                     <label style="display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase;">4. Prints (Erro/Msgs)</label>
-                     <div style="display:flex; gap:15px; padding:10px; border:1px solid #d1d5db; border-radius:6px; align-items:center; box-sizing:border-box;">
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:6px; font-size:14px;">
-                            <input type="radio" name="crm-prints" value="Sim" class="crm-input-radio"> Sim
-                        </label>
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:6px; font-size:14px;">
-                            <input type="radio" name="crm-prints" value="Não" checked class="crm-input-radio"> Não
-                        </label>
-                     </div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase;">2. Solução Apresentada</label>
+                    <div style="position:relative;">
+                        <textarea id="crm-input-solucao" class="crm-input" rows="3" style="width:100%; padding:10px; padding-right:40px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; outline:none; transition:border 0.2s; resize:vertical; font-family:inherit; box-sizing:border-box;" placeholder="Detalhe a solução fornecida..."></textarea>
+                    </div>
                 </div>
 
-                <!-- HUMOR -->
-                <div>
-                    <label style="display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase;">5. Humor do Cliente</label>
-                    <select id="crm-select-humor" class="crm-input" style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; background:#fff; outline:none;">
-                        <option value="Bom">Solution 😊 (Bom)</option>
-                        <option value="Regular">Neutro 😐 (Regular)</option>
-                        <option value="Ruim">Insatisfeito 😡 (Ruim)</option>
-                    </select>
+                <!-- UPSELL -->
+                <div style="display:flex; gap:20px; align-items:flex-start;">
+                    <div style="flex:0 0 auto;">
+                         <label style="display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase;">3. Upsell?</label>
+                         <div style="display:flex; gap:10px; background:#f9fafb; padding:8px 12px; border-radius:6px; border:1px solid #e5e7eb; box-sizing:border-box;">
+                            <label style="cursor:pointer; display:flex; align-items:center; gap:5px; font-size:14px; font-weight:500;">
+                                <input type="radio" name="crm-upsell" value="SIM" class="crm-input-radio"> Sim
+                            </label>
+                            <label style="cursor:pointer; display:flex; align-items:center; gap:5px; font-size:14px; font-weight:500;">
+                                <input type="radio" name="crm-upsell" value="NÃO" checked class="crm-input-radio"> Não
+                            </label>
+                         </div>
+                    </div>
+                    <div style="flex:1;">
+                        <label style="display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase;">Oportunidade / Detalhes</label>
+                        <div style="position:relative;">
+                            <input type="text" id="crm-input-upsell-desc" class="crm-input" style="width:100%; padding:10px; padding-right:40px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; background:#f3f4f6; color:#9ca3af; box-sizing:border-box;" placeholder="Descreva o que foi oferecido..." disabled>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            
-            <div style="font-size:11px; color:#9ca3af; text-align:right; margin-top:5px;">
-                Pressione <span style="font-weight:700; border:1px solid #ddd; padding:0 4px; border-radius:3px;">Enter</span> para avançar.
+
+                <!-- PRINTS & HUMOR -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                    <!-- PRINTS -->
+                    <div>
+                         <label style="display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase;">4. Prints (Erro/Msgs)</label>
+                         <div style="display:flex; gap:15px; padding:10px; border:1px solid #d1d5db; border-radius:6px; align-items:center; box-sizing:border-box;">
+                            <label style="cursor:pointer; display:flex; align-items:center; gap:6px; font-size:14px;">
+                                <input type="radio" name="crm-prints" value="Sim" class="crm-input-radio"> Sim
+                            </label>
+                            <label style="cursor:pointer; display:flex; align-items:center; gap:6px; font-size:14px;">
+                                <input type="radio" name="crm-prints" value="Não" checked class="crm-input-radio"> Não
+                            </label>
+                         </div>
+                    </div>
+
+                    <!-- HUMOR -->
+                    <div>
+                        <label style="display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase;">5. Humor do Cliente</label>
+                        <select id="crm-select-humor" class="crm-input" style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; background:#fff; outline:none;">
+                            <option value="Bom">Satisfeito 😊 (Bom)</option>
+                            <option value="Regular">Neutro 😐 (Regular)</option>
+                            <option value="Ruim">Insatisfeito 😡 (Ruim)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="font-size:11px; color:#9ca3af; text-align:right; margin-top:5px;">
+                    Pressione <span style="font-weight:700; border:1px solid #ddd; padding:0 4px; border-radius:3px;">Enter</span> para avançar.
+                </div>
             </div>
         `;
 
@@ -276,9 +317,6 @@ const CRMAutomationModule = (function () {
             const upsellTxt = els.upsellDesc.value.trim();
             const prints = container.querySelector('input[name="crm-prints"]:checked').value;
             const humor = els.humor.value;
-
-            // Only update if we have at least something, to avoid wiping out manual edits on load? 
-            // Nah, aggressive overwrite is safer to ensure format.
 
             let text = "";
 
@@ -373,8 +411,85 @@ const CRMAutomationModule = (function () {
             }
         });
 
-        // Initialize textarea with default state
-        updateTextarea();
+
+        // Toggle overlay functionality
+        const STORAGE_KEY = 'crm_overlay_enabled';
+        const toggleBtn = container.querySelector('#crm-toggle-overlay');
+        const formContent = container.querySelector('#crm-form-content');
+
+        // Restore saved state
+        const savedState = localStorage.getItem(STORAGE_KEY);
+        const isEnabled = savedState === null ? true : savedState === 'true';
+
+        const applyToggleState = (enabled) => {
+            if (enabled) {
+                // Show form content
+                if (formContent) formContent.style.display = 'flex';
+                textarea.style.cssText = `
+                    display: none !important;
+                    opacity: 0 !important;
+                    height: 0 !important;
+                    width: 0 !important;
+                    overflow: hidden !important;
+                    position: absolute !important;
+                    z-index: -999 !important;
+                    visibility: hidden !important;
+                    pointer-events: none !important;
+                `;
+                if (toggleBtn) {
+                    toggleBtn.textContent = 'Desativar Overlay';
+                    toggleBtn.style.background = '#ef4444';
+                }
+                // Update textarea with form values when enabled
+                updateTextarea();
+            } else {
+                // Hide form content only (keep container and button visible)
+                if (formContent) formContent.style.display = 'none';
+                textarea.style.cssText = '';
+                // Clear textarea when overlay is disabled
+                textarea.value = '';
+                if (toggleBtn) {
+                    toggleBtn.textContent = 'Ativar Overlay';
+                    toggleBtn.style.background = '#10b981';
+                }
+            }
+        };
+
+        // Apply initial state
+        applyToggleState(isEnabled);
+
+        toggleBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const currentState = formContent.style.display !== 'none';
+            const newState = !currentState;
+            localStorage.setItem(STORAGE_KEY, newState.toString());
+            applyToggleState(newState);
+        });
+
+        // Clear button functionality
+        const clearBtn = container.querySelector('#crm-clear-form');
+        clearBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (confirm('Tem certeza que deseja limpar todos os campos?')) {
+                // Clear all inputs
+                els.problema.value = '';
+                els.solucao.value = '';
+                els.upsellDesc.value = '';
+
+                // Reset radios to defaults
+                container.querySelector('input[name="crm-upsell"][value="NÃO"]').checked = true;
+                container.querySelector('input[name="crm-prints"][value="Não"]').checked = true;
+
+                // Reset select
+                els.humor.value = 'Bom';
+
+                // Update textarea
+                updateTextarea();
+
+                // Focus first field
+                els.problema.focus();
+            }
+        });
 
         return {
             fillFromText: (fullText) => {
@@ -455,34 +570,46 @@ const CRMAutomationModule = (function () {
                     background-color: #3b82f6;
                     color: white;
                     border: none;
-                    padding: 6px 10px;
+                    padding: 10px 16px;
                     border-radius: 6px;
                     font-weight: 600;
-                    font-size: 13px;
+                    font-size: 14px;
                     cursor: pointer;
                     outline: none;
                     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    appearance: none; /* remove native arrow in some browsers for cleaner look, or keep */
+                    appearance: none;
                     -webkit-appearance: none;
-                    padding-right: 25px;
+                    padding-right: 30px;
                     background-image: url('data:image/svg+xml;utf8,<svg fill="white" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
                     background-repeat: no-repeat;
-                    background-position: right 2px center;
-                    background-size: 16px;
-                    max-width: 200px;
+                    background-position: right 4px center;
+                    background-size: 18px;
+                    max-width: 600px;
                 `;
 
                 const defaultOpt = document.createElement("option");
-                defaultOpt.text = "📋 Colar Resumo IA...";
+                defaultOpt.text = "Colar Resumo IA";
                 defaultOpt.value = "";
                 defaultOpt.disabled = true;
                 defaultOpt.selected = true;
                 select.appendChild(defaultOpt);
 
-                history.slice(0, 5).forEach((item, index) => {
+                history.slice(0, 10).forEach((item, index) => {
                     const opt = document.createElement("option");
-                    // Use clientName, falling back to time if necessary
-                    const label = item.clientName || `Resumo ${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+                    // Extract problem from text for better identification
+                    let problemPreview = '';
+                    if (item.text) {
+                        const match = item.text.match(/PROBLEMA \/ DÚVIDA:\s*([^\n]+)/);
+                        if (match && match[1]) {
+                            problemPreview = match[1].trim();
+                        }
+                    }
+
+                    // Create label: "ClientName - Problem preview" or fallback
+                    const clientName = item.clientName || `Atendimento ${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                    const label = problemPreview ? `${clientName} - ${problemPreview}` : clientName;
+
                     opt.text = label;
                     opt.value = index;
                     select.appendChild(opt);
