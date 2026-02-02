@@ -592,6 +592,8 @@ const CRMAutomationModule = (function () {
                 defaultOpt.value = "";
                 defaultOpt.disabled = true;
                 defaultOpt.selected = true;
+                defaultOpt.style.backgroundColor = "white";
+                defaultOpt.style.color = "#333";
                 select.appendChild(defaultOpt);
 
                 history.slice(0, 10).forEach((item, index) => {
@@ -612,6 +614,8 @@ const CRMAutomationModule = (function () {
 
                     opt.text = label;
                     opt.value = index;
+                    opt.style.backgroundColor = "white";
+                    opt.style.color = "#333";
                     select.appendChild(opt);
                 });
 
