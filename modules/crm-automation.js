@@ -555,53 +555,89 @@ const CRMAutomationModule = (function () {
             const textarea = await waitForElement(TARGET_SELECTOR);
             console.log("CRM Automation: Elemento encontrado!", textarea);
 
+            // Hide the "Resolução" label if it exists immediately before the textarea
+            const previousElement = textarea.previousElementSibling;
+            if (previousElement && (previousElement.tagName === 'LABEL' || previousElement.textContent.includes('Resolução'))) {
+                previousElement.style.display = 'none';
+            }
+
             const formControl = createFormOverlay(textarea);
 
-            // Create History Dropdown
+            // Create History Dropdown (Custom UI)
             const createHistoryDropdown = (history) => {
                 const containerId = "crm-actions-container";
                 const actionsContainer = document.getElementById(containerId);
                 if (!actionsContainer) return;
 
                 // Remove existing if any
-                const existing = document.getElementById("crm-history-select");
+                const existing = document.getElementById("crm-history-dropdown-wrapper");
                 if (existing) existing.remove();
 
-                const select = document.createElement("select");
-                select.id = "crm-history-select";
-                select.style.cssText = `
+                const wrapper = document.createElement("div");
+                wrapper.id = "crm-history-dropdown-wrapper";
+                wrapper.style.cssText = "position: relative; display: inline-block; z-index: 100;";
+
+                // Button (Trigger)
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.innerHTML = `
+                    <span>Colar Resumo IA</span>
+                    <svg fill="currentColor" height="16" viewBox="0 0 24 24" width="16" style="margin-left:8px"><path d="M7 10l5 5 5-5z"/></svg>
+                `;
+                btn.style.cssText = `
                     background-color: #3b82f6;
                     color: white;
                     border: none;
-                    padding: 10px 16px;
+                    padding: 8px 16px;
                     border-radius: 6px;
                     font-weight: 600;
-                    font-size: 14px;
+                    font-size: 13px;
                     cursor: pointer;
-                    outline: none;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    appearance: none;
-                    -webkit-appearance: none;
-                    padding-right: 30px;
-                    background-image: url('data:image/svg+xml;utf8,<svg fill="white" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
-                    background-repeat: no-repeat;
-                    background-position: right 4px center;
-                    background-size: 18px;
-                    max-width: 600px;
+                    display: flex;
+                    align-items: center;
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                    transition: background 0.2s;
+                `;
+                btn.onmouseover = () => btn.style.backgroundColor = '#2563eb';
+                btn.onmouseout = () => btn.style.backgroundColor = '#3b82f6';
+
+                // Dropdown Menu
+                const menu = document.createElement("div");
+                menu.style.cssText = `
+                    position: absolute;
+                    top: 100%;
+                    right: 0;
+                    margin-top: 5px;
+                    background: white;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 8px;
+                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                    display: none;
+                    flex-direction: column;
+                    min-width: 320px;
+                    max-width: 400px;
+                    max-height: 400px;
+                    overflow-y: auto;
+                    z-index: 9999;
                 `;
 
-                const defaultOpt = document.createElement("option");
-                defaultOpt.text = "Colar Resumo IA";
-                defaultOpt.value = "";
-                defaultOpt.disabled = true;
-                defaultOpt.selected = true;
-                defaultOpt.style.backgroundColor = "white";
-                defaultOpt.style.color = "#333";
-                select.appendChild(defaultOpt);
+                // Toggle logic
+                const toggleMenu = (e) => {
+                    e && e.stopPropagation();
+                    const isHidden = menu.style.display === 'none';
+                    menu.style.display = isHidden ? 'flex' : 'none';
+                };
+                btn.onclick = toggleMenu;
 
+                // Close on click outside
+                document.addEventListener('click', (e) => {
+                    if (!wrapper.contains(e.target)) {
+                        menu.style.display = 'none';
+                    }
+                });
+
+                // Populate Items
                 history.slice(0, 10).forEach((item, index) => {
-                    const opt = document.createElement("option");
-
                     // Extract problem from text for better identification
                     let problemPreview = '';
                     if (item.text) {
@@ -611,41 +647,55 @@ const CRMAutomationModule = (function () {
                         }
                     }
 
-                    // Create label: "ClientName - Problem preview" or fallback
                     const clientName = item.clientName || `Atendimento ${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-                    const label = problemPreview ? `${clientName} - ${problemPreview}` : clientName;
 
-                    opt.text = label;
-                    opt.value = index;
-                    opt.style.backgroundColor = "white";
-                    opt.style.color = "#333";
-                    select.appendChild(opt);
-                });
+                    const itemEl = document.createElement("div");
+                    itemEl.style.cssText = `
+                        padding: 12px 16px;
+                        border-bottom: 1px solid #f3f4f6;
+                        cursor: pointer;
+                        text-align: left;
+                        transition: background 0.1s;
+                    `;
+                    itemEl.onmouseover = () => itemEl.style.backgroundColor = '#f9fafb';
+                    itemEl.onmouseout = () => itemEl.style.backgroundColor = 'white';
 
-                select.addEventListener("change", (e) => {
-                    const idx = e.target.value;
-                    if (idx === "") return;
+                    // HTML Structure for the Item
+                    itemEl.innerHTML = `
+                         <div style="font-weight: 700; color: #1f2937; margin-bottom: 4px; font-size: 14px;">${clientName}</div>
+                         <div style="font-size: 12px; color: #6b7280; line-height: 1.4;">${problemPreview || "Sem descrição do problema..."}</div>
+                    `;
 
-                    const selectedSummary = history[idx];
-                    if (selectedSummary && selectedSummary.text) {
-                        if (formControl) {
-                            formControl.fillFromText(selectedSummary.text);
-                        } else {
-                            textarea.value = selectedSummary.text;
-                            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    itemEl.onclick = () => {
+                        if (item.text) {
+                            if (formControl) {
+                                formControl.fillFromText(item.text);
+                            } else {
+                                textarea.value = item.text;
+                                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
                         }
-                    }
+                        menu.style.display = 'none';
 
-                    // Flash feedback
-                    const oldBg = select.style.backgroundColor;
-                    select.style.backgroundColor = "#10b981"; // green
-                    setTimeout(() => {
-                        select.style.backgroundColor = oldBg;
-                        select.value = ""; // Reset
-                    }, 1000);
+                        // Flash feedback on button
+                        const oldText = btn.innerHTML;
+                        const oldBg = btn.style.backgroundColor;
+
+                        btn.style.backgroundColor = "#10b981"; // green
+                        btn.innerHTML = `<span>Colado!</span>`;
+
+                        setTimeout(() => {
+                            btn.style.backgroundColor = oldBg;
+                            btn.innerHTML = oldText;
+                        }, 1000);
+                    };
+
+                    menu.appendChild(itemEl);
                 });
 
-                actionsContainer.appendChild(select);
+                wrapper.appendChild(btn);
+                wrapper.appendChild(menu);
+                actionsContainer.appendChild(wrapper);
             };
 
             // Check storage and init dropdown
