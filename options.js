@@ -48,7 +48,9 @@ document.addEventListener("DOMContentLoaded", () => {
     onboardingNameInput: document.getElementById("onboardingNameInput"),
     onboardingSaveBtn: document.getElementById("onboardingSaveBtn"),
     onboardingStatus: document.getElementById("onboardingStatus"),
-    versionElements: document.querySelectorAll(".app-version"),
+    onboardingStatus: document.getElementById("onboardingStatus"),
+    mainVersionBadge: document.getElementById("mainVersionBadge"),
+    changelogList: document.getElementById("changelogList"),
     visibilityOptions: document.getElementById("visibilityOptions"),
     saveVisibilityBtn: document.getElementById("saveVisibilityBtn"),
     visStatus: document.getElementById("visStatus"),
@@ -999,22 +1001,136 @@ document.addEventListener("DOMContentLoaded", () => {
     updateCustomCount((messages || []).length);
   }
 
-  function updateVersionDisplay() {
+  async function manageVersionHistory() {
     try {
       const manifest = chrome.runtime.getManifest();
-      const version = manifest.version;
-      if (el.versionElements) {
-        el.versionElements.forEach(element => {
-          element.textContent = `v${version}`;
-        });
+      const currentVersion = manifest.version;
+
+      // Update Main Badge
+      if (el.mainVersionBadge) {
+        el.mainVersionBadge.textContent = `v${currentVersion}`;
       }
+
+      // History Management
+      const data = await storageGet(["version_history"]);
+      let history = data.version_history || [];
+
+      // Ensure history is sorted (newest first)
+      history.sort((a, b) => b.timestamp - a.timestamp);
+
+      // Check if current version is already in history
+      const knownVersion = history.find(h => h.version === currentVersion);
+
+      if (!knownVersion) {
+        // SEED LEGACY HISTORY (First run logic)
+        if (history.length === 0) {
+          history = [
+            { version: "1.4.3", timestamp: Date.now() - 100000, notes: "Melhorias e Correções" },
+            { version: "1.4.2", timestamp: Date.now() - 200000, notes: "Ajustes no fluxo de mensagens padrão e UX" },
+            { version: "1.2", timestamp: Date.now() - 8000000, notes: "Mensagens Padrão, Dicas IA, Agenda" },
+            { version: "1.1", timestamp: Date.now() - 9000000, notes: "Resumo de atendimentos com IA" }
+          ];
+        }
+
+        // New version detected! Add to history.
+        const newEntry = {
+          version: currentVersion,
+          timestamp: Date.now(),
+          notes: "Melhorias e Correções"
+        };
+        // Add to top
+        history.unshift(newEntry);
+        // Limit history size if needed (e.g., keep last 50)
+        if (history.length > 50) history = history.slice(0, 50);
+
+        await storageSet({ version_history: history });
+      }
+
+      renderChangelog(history, currentVersion);
+
     } catch (e) {
-      console.error("Erro ao obter versão do manifesto:", e);
+      console.error("Erro ao gerenciar histórico de versões:", e);
     }
   }
 
+  function renderChangelog(history, currentVersion) {
+    if (!el.changelogList) return;
+    el.changelogList.innerHTML = "";
+
+    if (!history || history.length === 0) {
+      el.changelogList.innerHTML = "<div style='text-align:center; padding:10px; color:#666;'>Histórico vazio.</div>";
+      return;
+    }
+
+    history.forEach((item, index) => {
+      const isCurrent = item.version === currentVersion;
+      const dateStr = new Date(item.timestamp).toLocaleDateString("pt-BR");
+
+      const row = document.createElement("div");
+      row.className = "changelog-item";
+      row.style.cssText = "display:flex; gap:10px; margin-bottom:12px; align-items:flex-start; group";
+
+      row.innerHTML = `
+        <div style="width:10px; display:flex; justify-content:center;">
+          <div style="width:8px; height:8px; border-radius:50%; background:${isCurrent ? '#34a853' : '#d1d5db'}; margin-top:6px;"></div>
+        </div>
+        <div style="flex:1;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span style="font-size:12px; font-weight:800; color:${isCurrent ? '#111827' : '#6b7280'};">v${item.version}</span>
+            <span style="font-size:11px; color:#9ca3af;" title="${new Date(item.timestamp).toLocaleString()}">${dateStr}</span>
+            ${isCurrent ? `
+              <span style="
+                font-size: 10px;
+                padding: 2px 6px;
+                border-radius: 999px;
+                background: #ecfdf5;
+                border: 1px solid #a7f3d0;
+                color: #047857;
+                font-weight: 700;
+              ">Atual</span>
+            ` : ''}
+             <button class="btn-edit-note" style="
+              background:none; border:none; cursor:pointer; font-size:14px; opacity:0.6; padding:0 4px; display:none;
+            " title="Editar notas">✏️</button>
+          </div>
+          <div class="version-note" style="
+            font-size:13px; color:${isCurrent ? '#374151' : '#6b7280'}; 
+            margin-top:4px; line-height:1.35; white-space: pre-wrap;
+          ">${item.notes || 'Sem detalhes.'}</div>
+        </div>
+      `;
+
+      // Hover effect for edit button
+      row.addEventListener("mouseenter", () => {
+        const btn = row.querySelector(".btn-edit-note");
+        if (btn) btn.style.display = "inline-block";
+      });
+      row.addEventListener("mouseleave", () => {
+        const btn = row.querySelector(".btn-edit-note");
+        if (btn) btn.style.display = "none";
+      });
+
+      // Edit Logic
+      row.querySelector(".btn-edit-note").addEventListener("click", async () => {
+        const currentNote = item.notes || "";
+        const newNote = prompt(`Editar notas da versão v${item.version}:`, currentNote);
+
+        if (newNote !== null) {
+          // Update local array
+          history[index].notes = newNote.trim();
+          // Update sorted history in storage
+          await storageSet({ version_history: history });
+          // Re-render
+          renderChangelog(history, currentVersion);
+        }
+      });
+
+      el.changelogList.appendChild(row);
+    });
+  }
+
   async function initApp() {
-    updateVersionDisplay();
+    await manageVersionHistory();
 
     await initNameOnboarding();
 
