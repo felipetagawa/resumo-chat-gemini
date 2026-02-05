@@ -1244,6 +1244,31 @@ document.addEventListener("DOMContentLoaded", () => {
     el.leaderBtnQuery?.click();
   }
 
+  function renderVersionHistory(history) {
+    if (!el.changelogList) return;
+    el.changelogList.innerHTML = "";
+
+    if (!history || history.length === 0) {
+      el.changelogList.innerHTML = "<div style='font-size:12px; color:#666; font-style:italic;'>Nenhum registro de atualização.</div>";
+      return;
+    }
+
+    const sorted = [...history].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    sorted.forEach(item => {
+      const div = document.createElement("div");
+      div.style.cssText = "display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:6px;";
+
+      const dateStr = new Date(item.timestamp).toLocaleString("pt-BR");
+
+      div.innerHTML = `
+        <div style="font-size:13px; font-weight:700; color:#333;">v${item.version}</div>
+        <div style="font-size:11px; color:#888;">${dateStr}</div>
+      `;
+      el.changelogList.appendChild(div);
+    });
+  }
+
   function renderManualCallHistory(history) {
     if (!el.manualCallHistoryList) return;
     el.manualCallHistoryList.innerHTML = "";
@@ -1625,10 +1650,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const name = await loadUserName();
     setNameUI(name);
 
-    const base = await storageGet(["customInstructions", "history", "chamado_manual_history", "customMessages"]);
+    const base = await storageGet(["customInstructions", "history", "chamado_manual_history", "customMessages", "versionHistory"]);
 
     renderHistory(base.history || []);
     renderManualCallHistory(base.chamado_manual_history || []);
+    renderVersionHistory(base.versionHistory || []);
 
     await renderFixedMessagesBySector();
 

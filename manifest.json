@@ -53,6 +53,15 @@
         "content.js"
       ],
       "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "https://sistemaempresarialweb.com.br/crm-atendimento*"
+      ],
+      "js": [
+        "modules/crm-automation.js"
+      ],
+      "run_at": "document_end"
     }
   ],
   "web_accessible_resources": [

@@ -1,19 +1,32 @@
 const CRMAutomationModule = (function () {
-    const TARGET_SELECTOR = '[id="frmAtendimento:tbvAtendimento:resolucao"]';
+    console.log("CRM AUTOMATION: Script injected and running!");
+    // List of potential selectors to try
+    const TARGET_SELECTORS = [
+        '[id="frmAtendimento:tbvAtendimento:resolucao"]', // Standard JSF ID
+        'textarea[name*="resolucao"]',                     // Partial name match
+        'textarea[id*="resolucao"]'                        // Partial ID match
+    ];
 
     // Helper to capitalize first letter
     const capitalize = (s) => s && s[0].toUpperCase() + s.slice(1);
 
-    function waitForElement(selector) {
-        return new Promise((resolve) => {
-            const element = document.querySelector(selector);
-            if (element) return resolve(element);
-
-            const observer = new MutationObserver((mutations, obs) => {
+    function waitForElement(selectors, timeout = 10000) {
+        return new Promise((resolve, reject) => {
+            // Check immediately
+            for (const selector of selectors) {
                 const element = document.querySelector(selector);
-                if (element) {
-                    obs.disconnect();
-                    resolve(element);
+                if (element) return resolve(element);
+            }
+
+            // Observe
+            const observer = new MutationObserver((mutations, obs) => {
+                for (const selector of selectors) {
+                    const element = document.querySelector(selector);
+                    if (element) {
+                        obs.disconnect();
+                        resolve(element);
+                        return;
+                    }
                 }
             });
 
@@ -21,6 +34,19 @@ const CRMAutomationModule = (function () {
                 childList: true,
                 subtree: true
             });
+
+            // Timeout
+            setTimeout(() => {
+                observer.disconnect();
+                console.warn("CRM Automation: Timeout esperando pelos seletores:", selectors);
+
+                // Debug logging: what textareas DOES the page have?
+                const allTextareas = document.querySelectorAll('textarea');
+                console.log("CRM Automation: Textareas encontrados na página:", allTextareas);
+                allTextareas.forEach(t => console.log(`- ID: ${t.id}, Name: ${t.name}, Class: ${t.className}`));
+
+                reject(new Error("Elemento alvo não encontrado após timeout."));
+            }, timeout);
         });
     }
 
@@ -552,7 +578,7 @@ const CRMAutomationModule = (function () {
         console.log("CRM Automation: Iniciando...");
 
         try {
-            const textarea = await waitForElement(TARGET_SELECTOR);
+            const textarea = await waitForElement(TARGET_SELECTORS);
             console.log("CRM Automation: Elemento encontrado!", textarea);
 
             // Hide the "Resolução" label if it exists immediately before the textarea

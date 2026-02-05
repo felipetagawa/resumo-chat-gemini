@@ -6,9 +6,9 @@ const PreControlModule = (() => {
     const ALIAS_KEY = "pre_control_alias_map";
     const SENT_KEY = "pre_control_sent_once";
     const NEG_KEY = "pre_control_negociation_map";
-    const HARD_GRACE_MS = 15000;
-    const PENDING_CONFIRM_MS = 2500;
-    const PENDING_CONFIRM_SCANS = 2;
+    const HARD_GRACE_MS = 1500;
+    const PENDING_CONFIRM_MS = 1000;
+    const PENDING_CONFIRM_SCANS = 1;
     const FLUSH_MS = 1200;
     const SCAN_INTERVAL_MS = 1100;
     const START_STABLE_SCANS = 2;

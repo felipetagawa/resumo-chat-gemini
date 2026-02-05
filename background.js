@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = "https://gemini-resumo-api-298442462030.southamerica-east1.run.app/*";
+const DEFAULT_API_BASE_URL = "https://gemini-resumo-298442462030.southamerica-east1.run.app";
 
 async function getApiBaseUrl() {
   try {
