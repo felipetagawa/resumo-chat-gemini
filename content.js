@@ -20,13 +20,13 @@ function getUserNameSafe() {
   }
 }
 
-function isUserConfigured() {
-  const sector = getUserSectorSafe();
-  const name = getUserNameSafe();
+function isValidSector(sector) {
+  return sector === "suporte" || sector === "preatendimento" || sector === "lider";
+}
 
-  const sectorOk = sector === "suporte" || sector === "preatendimento";
-  const nameOk = !!name;
-  return sectorOk && nameOk;
+async function isUserConfigured() {
+  const { name, sector } = await getUserConfig();
+  return !!name && isValidSector(sector);
 }
 
 function inicializarModulos() {
@@ -34,6 +34,8 @@ function inicializarModulos() {
 
   ShortcutsModule.init();
   NotificationsModule.init();
+
+  PreControlModule.init();
 
   modulosInicializados = true;
 }
@@ -48,6 +50,8 @@ const getIconHTML = (icon, text) => {
 
 function createOnboardingModal() {
   if (document.getElementById("atendeai-onboarding-overlay")) return;
+
+  const LEADER_PASSWORD = "SoftengerenciamentoJB-BR";
 
   const overlay = document.createElement("div");
   overlay.id = "atendeai-onboarding-overlay";
@@ -103,36 +107,49 @@ function createOnboardingModal() {
       " />
     </div>
 
-    <div style="margin-bottom: 24px;">
+    <div style="margin-bottom: 14px;">
       <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 12px;">Seu Setor</label>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <label style="cursor: pointer;">
           <input type="radio" name="onboarding-sector" value="suporte" checked style="display: none;" />
           <div class="sector-card" style="
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 12px;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 600;
-            color: #64748b;
-            transition: all 0.2s;
+            border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px;
+            text-align: center; font-size: 14px; font-weight: 700;
+            color: #64748b; transition: all 0.2s;
           ">Suporte</div>
         </label>
+
         <label style="cursor: pointer;">
           <input type="radio" name="onboarding-sector" value="preatendimento" style="display: none;" />
           <div class="sector-card" style="
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 12px;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 600;
-            color: #64748b;
-            transition: all 0.2s;
+            border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px;
+            text-align: center; font-size: 14px; font-weight: 700;
+            color: #64748b; transition: all 0.2s;
           ">Pré-atendimento</div>
         </label>
+
+        <label style="cursor: pointer; grid-column: 1 / span 2;">
+          <input type="radio" name="onboarding-sector" value="lider" style="display: none;" />
+          <div class="sector-card" style="
+            border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px;
+            text-align: center; font-size: 14px; font-weight: 900;
+            color: #64748b; transition: all 0.2s;
+          ">Líder</div>
+        </label>
       </div>
+    </div>
+
+    <div id="leader-pass-wrap" style="display:none; margin-bottom: 20px;">
+      <label style="display:block; font-size: 13px; font-weight: 800; color:#334155; margin-bottom:8px;">Senha do Líder</label>
+      <input type="password" id="leader-pass-input" placeholder="Digite a senha" style="
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        font-size: 15px;
+        outline: none;
+      "/>
+      <div id="leader-pass-hint" style="margin-top:8px; font-size:12px; color:#b45309; font-weight:700;"></div>
     </div>
 
     <button id="onboarding-save-btn" style="
@@ -143,31 +160,29 @@ function createOnboardingModal() {
       padding: 14px;
       border-radius: 14px;
       font-size: 15px;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
       transition: background 0.2s;
     ">Salvar e Continuar</button>
   `;
 
-  // Style logic for radio buttons
   const styleRadios = () => {
-    const cards = body.querySelectorAll('.sector-card');
+    const cards = body.querySelectorAll(".sector-card");
     const inputs = body.querySelectorAll('input[name="onboarding-sector"]');
     inputs.forEach((input, index) => {
-      if (input.checked) {
-        cards[index].style.borderColor = '#2563eb';
-        cards[index].style.backgroundColor = '#eff6ff';
-        cards[index].style.color = '#1e40af';
-      } else {
-        cards[index].style.borderColor = '#e2e8f0';
-        cards[index].style.backgroundColor = 'transparent';
-        cards[index].style.color = '#64748b';
-      }
+      const active = input.checked;
+      cards[index].style.borderColor = active ? "#2563eb" : "#e2e8f0";
+      cards[index].style.backgroundColor = active ? "#eff6ff" : "transparent";
+      cards[index].style.color = active ? "#1e40af" : "#64748b";
     });
+
+    const selected = body.querySelector('input[name="onboarding-sector"]:checked')?.value;
+    const passWrap = body.querySelector("#leader-pass-wrap");
+    if (passWrap) passWrap.style.display = (selected === "lider") ? "block" : "none";
   };
 
-  body.addEventListener('change', (e) => {
-    if (e.target.name === 'onboarding-sector') styleRadios();
+  body.addEventListener("change", (e) => {
+    if (e.target.name === "onboarding-sector") styleRadios();
   });
   setTimeout(styleRadios, 0);
 
@@ -176,28 +191,47 @@ function createOnboardingModal() {
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
 
-  // Logic
-  const saveBtn = body.querySelector('#onboarding-save-btn');
-  const nameInput = body.querySelector('#onboarding-name-input');
+  const saveBtn = body.querySelector("#onboarding-save-btn");
+  const nameInput = body.querySelector("#onboarding-name-input");
+  const passInput = body.querySelector("#leader-pass-input");
+  const passHint = body.querySelector("#leader-pass-hint");
 
-  saveBtn.addEventListener('click', async () => {
-    const name = nameInput.value.trim();
-    const sector = body.querySelector('input[name="onboarding-sector"]:checked').value;
+  saveBtn.addEventListener("click", async () => {
+    const name = (nameInput.value || "").trim();
+    const sector = body.querySelector('input[name="onboarding-sector"]:checked')?.value;
 
     if (!name) {
       alert("Por favor, digite seu nome.");
       return;
     }
 
-    // Save
-    console.log("DEBUG: Saving user config:", name, sector);
-    await new Promise(resolve => chrome.storage.local.set({
-      [NAME_KEY]: name,
-      [SECTOR_KEY]: sector
-    }, resolve));
+    if (!sector) {
+      alert("Selecione um setor.");
+      return;
+    }
 
-    // Force visibility update based on new sector
+    if (sector === "lider") {
+      const pass = (passInput?.value || "").trim();
+      if (!pass) {
+        if (passHint) passHint.textContent = "⚠️ Senha obrigatória para selecionar Líder.";
+        passInput?.focus();
+        return;
+      }
+      if (pass !== LEADER_PASSWORD) {
+        if (passHint) passHint.textContent = "❌ Senha incorreta.";
+        passInput?.focus();
+        return;
+      }
+      if (passHint) passHint.textContent = "";
+    }
+
+    await new Promise((resolve) =>
+      chrome.storage.local.set({ [NAME_KEY]: name, [SECTOR_KEY]: sector }, resolve)
+    );
+
     const isPre = sector === "preatendimento";
+    const isLeader = sector === "lider";
+
     const newVisibility = {
       btnAgenda: true,
       btnMessages: true,
@@ -208,13 +242,11 @@ function createOnboardingModal() {
       btnDica: !isPre
     };
 
-    console.log("DEBUG: Saving new visibility:", newVisibility);
-    await new Promise(resolve => chrome.storage.local.set({ ["atendeai_visibility"]: newVisibility }, resolve));
+    await new Promise((resolve) =>
+      chrome.storage.local.set({ atendeai_visibility: newVisibility }, resolve)
+    );
 
-    // Remove modal and init
     overlay.remove();
-    // Trigger immediate check
-    console.log("DEBUG: Triggering checkAndInit after save.");
     checkAndInit();
   });
 }
@@ -230,7 +262,6 @@ function checkAndInit() {
     return;
   }
 
-  // Se URL correta
   inicializarModulos();
   NotificationsModule.verificarNotificacoesChat();
 
@@ -240,7 +271,6 @@ function checkAndInit() {
       return;
     }
 
-    // Se configurado, garantir que modal não existe e criar botões
     const modal = document.getElementById("atendeai-onboarding-overlay");
     if (modal) modal.remove();
 
@@ -269,20 +299,18 @@ async function getUserConfig() {
   return { name, sector };
 }
 
-async function isUserConfigured() {
-  const { name, sector } = await getUserConfig();
-  const sectorOk = sector === "suporte" || sector === "preatendimento";
-  const nameOk = !!name;
-  return sectorOk && nameOk;
-}
+function guardFeature(actionFn, opts = {}) {
+  const { allowLeader = false } = opts;
 
-function guardFeature(actionFn) {
   return async (...args) => {
+    const { sector } = await getUserConfig();
     const ok = await isUserConfigured();
+
     if (!ok) {
       openConfigRequiredModal();
       return;
     }
+
     return actionFn(...args);
   };
 }
@@ -466,8 +494,6 @@ function criarBotoesFlutuantes(visibility) {
       btn.innerHTML = `<span class="icon">⏳</span> Gerando...`;
 
       const texto = ChatCaptureModule.capturarTextoChat();
-      const clientName = ChatCaptureModule.capturarNomeCliente();
-
       if (!texto) {
         alert("Não foi possível capturar o texto do chat.");
         btn.disabled = false;
@@ -477,7 +503,7 @@ function criarBotoesFlutuantes(visibility) {
 
       try {
         const response = await MessagingHelper.send({ action: "gerarResumo", texto });
-        if (response && response.resumo) SummaryModule.exibirResumo(response.resumo, clientName);
+        if (response && response.resumo) SummaryModule.exibirResumo(response.resumo);
         else if (response && response.erro) alert("Erro ao gerar resumo: " + response.erro);
       } catch (error) {
         alert("Erro de comunicação: " + error.message);
@@ -561,9 +587,17 @@ function criarBotoesFlutuantes(visibility) {
     guardFeature(() => AgendaModule.exibirAgenda())
   );
 
+  const botaoChamadoManual = createButton(
+    "btnChamadoManual",
+    "Chamado Manual",
+    "chamado-manual.png",
+    guardFeature(() => CalledModule.exibirChamadoManual())
+  );
+
   if (isVisible("btnResumoGemini")) container.appendChild(botaoResumo);
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);
   if (isVisible("btnAgenda")) container.appendChild(botaoAgenda);
+  if (isVisible("btnChamadoManual")) container.appendChild(botaoChamadoManual);
 
   if (isVisible("btnAssistenteIA")) container.appendChild(containerDropdown);
 
@@ -606,7 +640,6 @@ function checkAndInit() {
   const currentUrl = window.location.href;
   const isTarget = currentUrl.startsWith(TARGET_URL);
 
-  // console.log("DEBUG: Checking URL...", currentUrl, "Matches?", isTarget);
 
   if (!isTarget) {
     if (modulosInicializados) {
@@ -618,12 +651,10 @@ function checkAndInit() {
     return;
   }
 
-  // Se URL correta
   inicializarModulos();
   NotificationsModule.verificarNotificacoesChat();
 
   isUserConfigured().then(configured => {
-    // console.log("DEBUG: User Configured?", configured);
     if (!configured) {
       if (!document.getElementById("atendeai-onboarding-overlay")) {
         console.log("DEBUG: Not configured, showing onboarding modal.");
@@ -632,7 +663,6 @@ function checkAndInit() {
       return;
     }
 
-    // Se configurado, garantir que modal não existe e criar botões
     const modal = document.getElementById("atendeai-onboarding-overlay");
     if (modal) {
       console.log("DEBUG: Configured, removing modal.");

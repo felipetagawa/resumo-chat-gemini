@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AtendeAI Manager",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "Gera resumos estruturados de atendimentos usando Gemini.",
   "permissions": [
     "storage"
@@ -11,9 +11,7 @@
     "https://gemini-resumo-api-298442462030.southamerica-east1.run.app/*",
     "https://gemini-resumo-298442462030.southamerica-east1.run.app/*",
     "https://generativelanguage.googleapis.com/*",
-    "https://generativelanguage.googleapis.com/*",
-    "http://localhost:8080/*",
-    "https://sistemaempresarialweb.com.br/*"
+    "http://localhost:8080/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -51,16 +49,8 @@
         "modules/agenda.js",
         "modules/called.js",
         "modules/notifications.js",
+        "modules/pre-controls.js",
         "content.js"
-      ],
-      "run_at": "document_end"
-    },
-    {
-      "matches": [
-        "https://sistemaempresarialweb.com.br/crm-atendimento*"
-      ],
-      "js": [
-        "modules/crm-automation.js"
       ],
       "run_at": "document_end"
     }

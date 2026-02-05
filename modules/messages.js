@@ -62,8 +62,7 @@ const MessagesModule = (() => {
     }
 
     const SUPPORT_FIXED_MESSAGES = [
-        "Os valores exibidos de IBS e CBS neste primeiro momento não representam cobrança efetiva, pois a fase inicial da Reforma Tributária é apenas experimental e nominativa, com alíquotas padrão 0,10 e 0,90, sem geração de recolhimento, sendo exigida apenas para empresas do Lucro Presumido e Lucro Real para fins de adaptação e validação das informações.",
-        "Atualmente, a fase inicial da Reforma Tributária com IBS e CBS se aplica apenas às empresas do regime normal (Lucro Presumido e Lucro Real), sendo que para o Simples Nacional não há recolhimento nem impacto prático neste primeiro ano, pois as informações são utilizadas apenas de forma nominativa e experimental."
+
     ];
 
     const PRE_FIXED_MESSAGES = [
@@ -72,7 +71,8 @@ const MessagesModule = (() => {
         { text: "Você pode me informar seu NOME, seu EMAIL e seu ID AnyDesk, caso não possua, acesse o nosso site em seu computador https://anydesk.com/pt por gentileza, irei verificar com um técnico especializado para te auxiliar." },
         { text: "Caso não possua, poderia realizar o download do AnyDesk por gentileza: https://anydesk.com/pt" },
         { text: "Só um momento, irei verificar um técnico para te auxiliar e assim que estiver disponível encaminharei seu atendimento." },
-        { text: "Estou finalizando o atendimento pois não obtive resposta, qualquer dúvida entre em contato com a Soften!" },
+        { text: "Olá! Ainda está conosco? Caso precise de mais alguma orientação, estou à disposição para dar continuidade ao atendimento." },
+        { text: "Finalizando atendimento pela falta de resposta, tenha um ótimo dia! 🙂 Muito obrigado tenha um excelente dia e continuamos a sua disposição para quaisquer e eventuais dúvidas" },
         { text: "Disponha, precisando estamos a disposição\nTenha um ótimo dia! 🙂" }
     ];
 

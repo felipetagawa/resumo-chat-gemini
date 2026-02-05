@@ -48,12 +48,23 @@ document.addEventListener("DOMContentLoaded", () => {
     onboardingNameInput: document.getElementById("onboardingNameInput"),
     onboardingSaveBtn: document.getElementById("onboardingSaveBtn"),
     onboardingStatus: document.getElementById("onboardingStatus"),
-    onboardingStatus: document.getElementById("onboardingStatus"),
-    mainVersionBadge: document.getElementById("mainVersionBadge"),
-    changelogList: document.getElementById("changelogList"),
+    versionElements: document.querySelectorAll(".app-version"),
     visibilityOptions: document.getElementById("visibilityOptions"),
     saveVisibilityBtn: document.getElementById("saveVisibilityBtn"),
     visStatus: document.getElementById("visStatus"),
+    leaderPasswordWrap: document.getElementById("leaderPasswordWrap"),
+    leaderPasswordInput: document.getElementById("leaderPasswordInput"),
+    leaderFilterName: document.getElementById("leaderFilterName"),
+    leaderFilterDateFrom: document.getElementById("leaderFilterDateFrom"),
+    leaderFilterDateTo: document.getElementById("leaderFilterDateTo"),
+    leaderFilterNegociation: document.getElementById("leaderFilterNegociation"),
+    leaderBtnAll: document.getElementById("leaderBtnAll"),
+    leaderBtnQuery: document.getElementById("leaderBtnQuery"),
+    leaderExportTxt: document.getElementById("leaderExportTxt"),
+    leaderExportExcel: document.getElementById("leaderExportExcel"),
+    leaderStatus: document.getElementById("leaderStatus"),
+    leaderAvgBox: document.getElementById("leaderAvgBox"),
+    leaderTableBody: document.getElementById("leaderTableBody"),
   };
 
   const MAX_SHORTCUT_LEN = 20;
@@ -62,6 +73,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const NAME_KEY = "atendeai_user_name";
   const SECTOR_KEY = "atendeai_user_sector";
   const VISIBILITY_KEY = "atendeai_visibility";
+  const LEADER_PASSWORD = "SoftengerenciamentoJB-BR";
+  const LEADER_AUTH_KEY = "atendeai_leader_auth";
 
   const BUTTON_CONFIGS = [
     { id: "btnAgenda", label: "Agenda & Gestão", defaultSupport: true, defaultPre: true },
@@ -118,10 +131,15 @@ document.addEventListener("DOMContentLoaded", () => {
     {
       shortcut: "6",
       text:
-        "Estou finalizando o atendimento pois não obtive resposta, qualquer dúvida entre em contato com a Soften!"
+        "Olá! Ainda está conosco? Caso precise de mais alguma orientação, estou à disposição para dar continuidade ao atendimento."
     },
     {
       shortcut: "7",
+      text:
+        "Finalizando atendimento pela falta de resposta, tenha um ótimo dia! 🙂 Muito obrigado tenha um excelente dia e continuamos a sua disposição para quaisquer e eventuais dúvidas"
+    },
+    {
+      shortcut: "8",
       text:
         "Disponha, precisando estamos a disposição\nTenha um ótimo dia! 🙂"
     }
@@ -232,16 +250,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function getUserSector() {
     try {
       const v = String(localStorage.getItem(SECTOR_KEY) || "").trim().toLowerCase();
-      if (v === "suporte" || v === "preatendimento") return v;
+      if (v === "suporte" || v === "preatendimento" || v === "lider") return v;
       return "";
-    } catch (e) {
-      return "";
-    }
+    } catch (e) { return ""; }
   }
 
   function setUserSectorOnce(sector) {
     const s = String(sector || "").trim().toLowerCase();
-    if (s !== "suporte" && s !== "preatendimento") return;
+    if (s !== "suporte" && s !== "preatendimento" && s !== "lider") return;
 
     try {
       const existing = getUserSector();
@@ -253,6 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function sectorLabel(sector) {
     if (sector === "suporte") return "Suporte";
     if (sector === "preatendimento") return "Pré-atendimento";
+    if (sector === "lider") return "Líder";
     return "";
   }
 
@@ -263,6 +280,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (sector === "preatendimento") {
       return new Set(["sec-home", "sec-mensagens"]);
+    }
+
+    if (sector === "lider") {
+      return new Set(["sec-home", "sec-mensagens", "sec-ia", "sec-historico", "sec-lider"]);
     }
 
     return new Set(["sec-home"]);
@@ -365,7 +386,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function applyPreAtendimentoMessagesUI() {
     if (!isPreAtendimento()) {
-      // Se for SUPORTE, garantir que tudo esteja visivel
       if (el.customMessagesContainer) el.customMessagesContainer.style.display = "block";
       const addRow = document.querySelector(".add-message-row");
       if (addRow) addRow.style.display = "flex";
@@ -448,7 +468,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentName = sanitizeName(data[NAME_KEY]);
     const currentSector = String(data[SECTOR_KEY] || "").trim().toLowerCase();
 
-    // Sync to localStorage just in case other parts rely on it (though they shouldn't)
     if (currentName) localStorage.setItem(NAME_KEY, currentName);
     if (currentSector) localStorage.setItem(SECTOR_KEY, currentSector);
 
@@ -534,6 +553,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function toggleLeaderPasswordUI() {
+    const selected = document.querySelector('input[name="onboardingSector"]:checked');
+    const isLeader = selected && selected.value === "lider";
+    if (el.leaderPasswordWrap) el.leaderPasswordWrap.style.display = isLeader ? "block" : "none";
+  }
+
   function showOnboardingDialog() {
     if (!el.onboardingDialog) return;
 
@@ -557,7 +582,59 @@ document.addEventListener("DOMContentLoaded", () => {
       radios.forEach(r => { r.disabled = false; r.checked = false; });
     }
 
+    toggleLeaderPasswordUI();
+
+    document.querySelectorAll('input[name="onboardingSector"]').forEach(r => {
+      r.addEventListener("change", toggleLeaderPasswordUI);
+    });
+
+    ensureLeaderPasswordUI();
+
     setTimeout(() => el.onboardingNameInput?.focus(), 50);
+  }
+
+  function ensureLeaderPasswordUI() {
+    if (!el.onboardingDialog) return;
+
+    let wrap = el.onboardingDialog.querySelector("#leaderPasswordWrap");
+    if (!wrap) {
+      wrap = document.createElement("div");
+      wrap.id = "leaderPasswordWrap";
+      wrap.style.cssText = "margin-top:12px; display:none;";
+
+      wrap.innerHTML = `
+        <label style="display:block; font-size:12px; font-weight:800; color:#334155; margin-bottom:6px;">
+          Senha do Líder
+        </label>
+        <input id="leaderPasswordInput" type="password" placeholder="Digite a senha" style="
+          width: 100%;
+          padding: 10px 12px;
+          border: 2px solid #e2e8f0;
+          border-radius: 12px;
+          font-size: 14px;
+          outline: none;
+        "/>
+        <div style="margin-top:6px; font-size:12px; color:#64748b; font-weight:600;">
+          Necessário para habilitar o painel Líder.
+        </div>
+      `;
+
+      const radiosBlock = el.onboardingDialog.querySelector(".sector-grid")
+        || el.onboardingDialog.querySelector('input[name="onboardingSector"]')?.closest("div")
+        || el.onboardingDialog;
+
+      radiosBlock?.parentElement?.insertBefore(wrap, radiosBlock.nextSibling);
+    }
+
+    const update = () => {
+      const selected = document.querySelector('input[name="onboardingSector"]:checked');
+      const sector = selected ? String(selected.value || "").toLowerCase() : "";
+      wrap.style.display = sector === "lider" ? "block" : "none";
+    };
+
+    const radios = Array.from(document.querySelectorAll('input[name="onboardingSector"]'));
+    radios.forEach(r => r.addEventListener("change", update));
+    update();
   }
 
   async function validateAndSaveOnboarding() {
@@ -571,30 +648,41 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (!name) {
-      if (el.onboardingStatus) el.onboardingStatus.textContent = "⚠️ Informe seu nome/login.";
+      el.onboardingStatus.textContent = "⚠️ Informe seu nome/login.";
       el.onboardingNameInput?.focus();
       return;
     }
 
-    if (!sector || (sector !== "suporte" && sector !== "preatendimento")) {
-      if (el.onboardingStatus) el.onboardingStatus.textContent = "⚠️ Selecione seu setor.";
+    if (!sector || (sector !== "suporte" && sector !== "preatendimento" && sector !== "lider")) {
+      el.onboardingStatus.textContent = "⚠️ Selecione seu setor.";
       return;
     }
 
-    setUserName(name);
-    setUserSectorOnce(sector);
-    setNameUI(name);
+    const btn = el.onboardingSaveBtn;
+    if (btn) btn.disabled = true;
 
-    persistUserMetaToChromeStorage({ name, sector });
+    try {
+      setUserName(name);
+      setUserSectorOnce(sector);
+      setNameUI(name);
 
-    // Se mudou o setor, reseta a visibilidade para o padrão desse setor
-    if (sector !== sectorExisting) {
-      await applySectorDefaultsIfChanged(sector);
+      await persistUserMetaToChromeStorage({ name, sector });
+
+      if (sector !== sectorExisting) {
+        await applySectorDefaultsIfChanged(sector);
+      }
+
+      await refreshUIAfterOnboarding();
+
+    } catch (err) {
+      console.error("Erro no onboarding:", err);
+      if (el.onboardingStatus) {
+        el.onboardingStatus.textContent = "❌ Erro ao finalizar. Veja o console (F12).";
+      }
+    } finally {
+      try { el.onboardingDialog?.close(); } catch (e) { console.error("Falha ao fechar dialog:", e); }
+      if (btn) btn.disabled = false;
     }
-
-    await refreshUIAfterOnboarding();
-
-    try { el.onboardingDialog.close(); } catch (e) { }
   }
 
   function renderHistory(history) {
@@ -641,6 +729,519 @@ document.addEventListener("DOMContentLoaded", () => {
 
       el.historyList.appendChild(li);
     });
+  }
+
+  function normalizeToYMD(dateRaw) {
+    const s = (dateRaw == null ? "" : String(dateRaw)).trim();
+    if (!s) return "";
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10);
+
+    const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+
+    const d = new Date(s);
+    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+
+    return "";
+  }
+
+  function initLeaderControls() {
+    if (!el.leaderBtnQuery || !el.leaderTableBody) return;
+
+    const PAGE_SIZE = 15;
+    let currentPage = 0;
+
+    let masterRows = [];
+    let filteredRows = [];
+    let pageRows = [];
+
+    const pagePrevBtn = document.getElementById("leaderPagePrev");
+    const pageNextBtn = document.getElementById("leaderPageNext");
+    const pageInfoEl = document.getElementById("leaderPageInfo");
+
+    const setStatus = (text, color = "#64748b") => {
+      if (!el.leaderStatus) return;
+      el.leaderStatus.textContent = text || "";
+      el.leaderStatus.style.color = color;
+    };
+
+    const disableUI = (disabled) => {
+      [el.leaderBtnQuery, el.leaderExportTxt, el.leaderExportExcel, pagePrevBtn, pageNextBtn]
+        .filter(Boolean)
+        .forEach((b) => (b.disabled = !!disabled));
+    };
+
+    const safe = (v) => (v == null ? "" : String(v));
+
+    const normalizeName = (v) => safe(v).trim();
+    const normalizeDate = (v) => safe(v).trim();
+
+    const normalizeBoolFilter = (v) => {
+      const s = safe(v).trim().toLowerCase();
+      if (!s || s === "all" || s === "todos") return null;
+      if (s === "true" || s === "sim" || s === "1") return true;
+      if (s === "false" || s === "nao" || s === "não" || s === "0") return false;
+      return null;
+    };
+
+    function getLeaderFilters() {
+      const name = normalizeName(el.leaderFilterName?.value);
+
+      const dateFrom = normalizeDate(el.leaderFilterDateFrom?.value);
+      const dateTo = normalizeDate(el.leaderFilterDateTo?.value);
+
+      const neg = normalizeBoolFilter(el.leaderFilterNegociation?.value);
+
+      return { name, dateFrom, dateTo, neg };
+    }
+
+    function parseDurationToMs(value) {
+      if (value == null) return 0;
+
+      if (typeof value === "number" && Number.isFinite(value)) {
+        if (value > 100000) return Math.max(0, Math.floor(value));
+        if (value > 0 && value < 100000) return Math.max(0, Math.floor(value * 1000));
+        return 0;
+      }
+
+      const s = safe(value).trim();
+
+      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
+        const parts = s.split(":").map((x) => parseInt(x, 10));
+        if (parts.some((n) => Number.isNaN(n))) return 0;
+
+        let h = 0, m = 0, sec = 0;
+        if (parts.length === 3) [h, m, sec] = parts;
+        if (parts.length === 2) [m, sec] = parts;
+
+        return ((h * 3600) + (m * 60) + sec) * 1000;
+      }
+
+      if (/^\d+$/.test(s)) {
+        const n = parseInt(s, 10);
+        if (!Number.isFinite(n)) return 0;
+        if (n > 100000) return n;
+        return n * 1000;
+      }
+
+      return 0;
+    }
+
+    function formatDuration(ms) {
+      ms = Math.max(0, Math.floor(ms || 0));
+      const totalSec = Math.floor(ms / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+
+      const pad = (n) => String(n).padStart(2, "0");
+      if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
+      return `${pad(m)}:${pad(s)}`;
+    }
+
+    function normalizeApiList(payload) {
+      if (Array.isArray(payload)) return payload;
+      if (payload && typeof payload === "object") {
+        const candidates = [
+          payload.content, payload.items, payload.data, payload.result, payload.results,
+          payload.registros, payload.records,
+        ];
+        for (const c of candidates) if (Array.isArray(c)) return c;
+      }
+      return [];
+    }
+
+    function pickField(obj, keys) {
+      for (const k of keys) {
+        if (obj && obj[k] != null) return obj[k];
+      }
+      return "";
+    }
+
+    function normalizeNegociationValue(v) {
+      if (v === true) return true;
+      if (v === false) return false;
+
+      const s = safe(v).trim().toLowerCase();
+      if (!s) return false;
+
+      if (s === "true" || s === "sim" || s === "s" || s === "1" || s === "yes") return true;
+      if (s === "false" || s === "nao" || s === "não" || s === "n" || s === "0" || s === "no") return false;
+
+      if (s.includes("sim")) return true;
+      return false;
+    }
+
+    function mapRow(item) {
+      const dateRaw = pickField(item, ["date", "data", "createdAt", "created_at", "dia", "timestamp", "dataRegistro", "data_registro"]);
+      const preRaw = pickField(item, ["preName", "pre", "nomePre", "nome_pre", "agentName", "name", "tecnico", "usuario", "userName", "user_name"]);
+      const cliRaw = pickField(item, ["nameClient", "clientName", "cliente", "nomeCliente", "nome_cliente", "customerName", "customer", "client"]);
+
+      const negRaw = pickField(item, [
+        "negociation", "negotiation",
+        "negociacao", "negociação",
+        "isNegociation", "isNegotiation",
+        "hasNegociation", "hasNegotiation",
+        "negociou", "negociado", "negociacaoOk"
+      ]);
+      const neg = normalizeNegociationValue(negRaw);
+
+      const ms =
+        parseDurationToMs(
+          pickField(item, [
+            "durationMs", "tempoMs", "timeMs", "elapsedMs", "spentMs",
+            "duration", "tempo", "time", "elapsed",
+            "durationSeconds", "tempoSeconds", "timeSeconds"
+          ])
+        ) || 0;
+
+      const dateStr = normalizeToYMD(dateRaw).trim();
+
+      return {
+        date: dateStr || "",
+        pre: safe(preRaw).trim(),
+        client: safe(cliRaw).trim(),
+        ms,
+        negociation: neg,
+        raw: item
+      };
+    }
+
+    function renderTable(rows) {
+      pageRows = rows || [];
+      if (!el.leaderTableBody) return;
+
+      el.leaderTableBody.innerHTML = "";
+
+      if (!pageRows.length) {
+        el.leaderTableBody.innerHTML = `
+          <tr>
+            <td colspan="5" style="padding:12px; color:#64748b; font-weight:700;">
+              Nenhum registro encontrado.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+
+      pageRows.forEach((r) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td style="padding:10px; border-bottom:1px solid #e2e8f0;">${safe(r.date)}</td>
+          <td style="padding:10px; border-bottom:1px solid #e2e8f0; font-weight:800;">${safe(r.pre)}</td>
+          <td style="padding:10px; border-bottom:1px solid #e2e8f0;">${safe(r.client)}</td>
+          <td style="padding:10px; border-bottom:1px solid #e2e8f0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-weight:800;">
+            ${formatDuration(r.ms)}
+          </td>
+          <td style="padding:10px; border-bottom:1px solid #e2e8f0; font-weight:900;">
+            ${r.negociation ? "Sim" : "Não"}
+          </td>
+        `;
+        frag.appendChild(tr);
+      });
+
+      el.leaderTableBody.appendChild(frag);
+    }
+
+    function renderAvgBox(rows) {
+      if (!el.leaderAvgBox) return;
+
+      const all = rows || [];
+      const valid = all.filter((r) => (r.ms || 0) > 0);
+
+      if (!all.length) {
+        el.leaderAvgBox.innerHTML = `
+          <div style="font-weight:900; color:#0f172a;">Sem dados</div>
+          <div style="margin-top:6px; color:#64748b; font-weight:700;">
+            Faça uma consulta para ver métricas.
+          </div>
+        `;
+        return;
+      }
+
+      const totalMs = valid.reduce((acc, r) => acc + (r.ms || 0), 0);
+      const avgMs = valid.length ? Math.round(totalMs / valid.length) : 0;
+
+      el.leaderAvgBox.innerHTML = `
+        <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:900; color:#0f172a;">Registros</div>
+            <div style="margin-top:4px; color:#334155; font-weight:800;">${all.length}</div>
+          </div>
+          <div>
+            <div style="font-weight:900; color:#0f172a;">Média (tempos válidos)</div>
+            <div style="margin-top:4px; color:#334155; font-weight:900; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;">
+              ${formatDuration(avgMs)}
+            </div>
+          </div>
+          <div>
+            <div style="font-weight:900; color:#0f172a;">Total (tempos válidos)</div>
+            <div style="margin-top:4px; color:#334155; font-weight:900; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;">
+              ${formatDuration(totalMs)}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function downloadFile(filename, content, mime) {
+      const blob = new Blob([content], { type: mime || "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+
+      setTimeout(() => URL.revokeObjectURL(url), 600);
+    }
+
+    function exportTxt() {
+      if (!pageRows.length) {
+        setStatus("⚠️ Nada para exportar.", "#b45309");
+        return;
+      }
+
+      const lines = [
+        "Data\tPre\tCliente\tTempo\tNegociação",
+        ...pageRows.map((r) => `${safe(r.date)}\t${safe(r.pre)}\t${safe(r.client)}\t${formatDuration(r.ms)}\t${r.negociation ? "Sim" : "Não"}`)
+      ];
+
+      downloadFile("pre_controles.txt", lines.join("\n"), "text/plain;charset=utf-8");
+      setStatus("✅ TXT gerado.", "green");
+    }
+
+    function exportCsvForExcel() {
+      if (!pageRows.length) {
+        setStatus("⚠️ Nada para exportar.", "#b45309");
+        return;
+      }
+
+      const esc = (v) => `"${safe(v).replace(/"/g, '""')}"`;
+
+      const lines = [
+        ["Data", "Pre", "Cliente", "Tempo", "Negociação"].map(esc).join(";"),
+        ...pageRows.map((r) => [r.date, r.pre, r.client, formatDuration(r.ms), (r.negociation ? "Sim" : "Não")].map(esc).join(";"))
+      ];
+
+      const content = "\uFEFF" + lines.join("\n");
+      downloadFile("pre_controles.csv", content, "text/csv;charset=utf-8");
+      setStatus("✅ CSV (Excel) gerado.", "green");
+    }
+
+    function applyFilters(rows, filters) {
+      const nameNeedle = safe(filters.name).trim().toLowerCase();
+
+      const from = safe(filters.dateFrom).trim();
+      const to = safe(filters.dateTo).trim();
+
+      const neg = filters.neg;
+
+      return (rows || []).filter((r) => {
+        if (nameNeedle) {
+          const hay = safe(r.pre).toLowerCase();
+          if (!hay.includes(nameNeedle)) return false;
+        }
+
+        if (neg === true || neg === false) {
+          if (r.negociation !== neg) return false;
+        }
+
+        if (from) {
+          if (!r.date) return false;
+          if (safe(r.date) < from) return false;
+        }
+
+        if (to) {
+          if (!r.date) return false;
+          if (safe(r.date) > to) return false;
+        }
+
+        return true;
+      });
+    }
+
+    function getTotalPages() {
+      const total = filteredRows.length;
+      return Math.max(1, Math.ceil(total / PAGE_SIZE));
+    }
+
+    function clampPage() {
+      const totalPages = getTotalPages();
+      if (currentPage < 0) currentPage = 0;
+      if (currentPage > totalPages - 1) currentPage = totalPages - 1;
+    }
+
+    function updatePaginationUI() {
+      const totalPages = getTotalPages();
+      clampPage();
+
+      const total = filteredRows.length;
+
+      if (pageInfoEl) {
+        pageInfoEl.textContent = String(total === 0 ? 1 : (currentPage + 1));
+      }
+
+      if (pagePrevBtn) pagePrevBtn.disabled = currentPage <= 0 || total === 0;
+      if (pageNextBtn) pageNextBtn.disabled = currentPage >= totalPages - 1 || total === 0;
+    }
+
+    function renderCurrentPage() {
+      clampPage();
+
+      const start = currentPage * PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      const slice = filteredRows.slice(start, end);
+
+      renderTable(slice);
+
+      renderAvgBox(filteredRows);
+
+      updatePaginationUI();
+    }
+
+    function refreshFiltered(resetPage = false) {
+      const f = getLeaderFilters();
+      filteredRows = applyFilters(masterRows, f);
+      if (resetPage) currentPage = 0;
+      renderCurrentPage();
+    }
+
+    function setCurrentMonthDefaults() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth();
+
+      const first = new Date(y, m, 1);
+      const last = new Date(y, m + 1, 0);
+
+      const toYMD = (d) => {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
+      };
+
+      if (el.leaderFilterDateFrom) el.leaderFilterDateFrom.value = toYMD(first);
+      if (el.leaderFilterDateTo) el.leaderFilterDateTo.value = toYMD(last);
+    }
+
+    async function query({ name, dateFrom, dateTo, negociation } = {}) {
+      disableUI(true);
+      setStatus("🔎 Consultando...", "#64748b");
+
+      try {
+        const resp = await new Promise((resolve) => {
+          chrome.runtime.sendMessage(
+            {
+              action: "preControl:query",
+              name: name || "",
+              dateFrom: dateFrom || "",
+              dateTo: dateTo || "",
+              negociation: (negociation === true ? true : negociation === false ? false : ""),
+              date: "",
+              page: 0,
+              size: 5000
+            },
+            (r) => resolve(r || {})
+          );
+        });
+
+        if (!resp.success) {
+          masterRows = [];
+          filteredRows = [];
+          currentPage = 0;
+          renderCurrentPage();
+          setStatus(`❌ ${resp.erro || "Erro na consulta"}`, "#b91c1c");
+          return;
+        }
+
+        const list = normalizeApiList(resp.data);
+        const rows = list.map(mapRow);
+
+        rows.sort((a, b) => {
+          const da = safe(a.date), db = safe(b.date);
+          if (da !== db) return db.localeCompare(da);
+          const pa = safe(a.pre), pb = safe(b.pre);
+          if (pa !== pb) return pa.localeCompare(pb);
+          return safe(a.client).localeCompare(safe(b.client));
+        });
+
+        masterRows = rows;
+
+        refreshFiltered(true);
+
+        setStatus(`✅ ${filteredRows.length} registro(s) no filtro (de ${rows.length}).`, "green");
+
+      } catch (err) {
+        masterRows = [];
+        filteredRows = [];
+        currentPage = 0;
+        renderCurrentPage();
+        setStatus(`❌ Erro: ${err?.message || String(err)}`, "#b91c1c");
+      } finally {
+        disableUI(false);
+        setTimeout(() => setStatus(""), 2500);
+      }
+    }
+
+    el.leaderBtnQuery.addEventListener("click", () => {
+      const f = getLeaderFilters();
+
+      query({
+        name: f.name,
+        dateFrom: f.dateFrom,
+        dateTo: f.dateTo,
+        negociation: f.neg
+      });
+    });
+
+    pagePrevBtn?.addEventListener("click", () => {
+      if (!filteredRows.length) return;
+      currentPage -= 1;
+      renderCurrentPage();
+    });
+
+    pageNextBtn?.addEventListener("click", () => {
+      if (!filteredRows.length) return;
+      currentPage += 1;
+      renderCurrentPage();
+    });
+
+    el.leaderExportTxt?.addEventListener("click", exportTxt);
+    el.leaderExportExcel?.addEventListener("click", exportCsvForExcel);
+
+    [
+      el.leaderFilterName,
+      el.leaderFilterDateFrom,
+      el.leaderFilterDateTo,
+      el.leaderFilterNegociation
+    ].forEach((inp) => {
+      inp?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          el.leaderBtnQuery?.click();
+        }
+      });
+    });
+
+    el.leaderFilterNegociation?.addEventListener("change", () => el.leaderBtnQuery?.click());
+    el.leaderFilterDateFrom?.addEventListener("change", () => el.leaderBtnQuery?.click());
+    el.leaderFilterDateTo?.addEventListener("change", () => el.leaderBtnQuery?.click());
+
+    setCurrentMonthDefaults();
+
+    masterRows = [];
+    filteredRows = [];
+    currentPage = 0;
+    renderCurrentPage();
+
+    el.leaderBtnQuery?.click();
   }
 
   function renderManualCallHistory(history) {
@@ -934,8 +1535,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-
-
   function getDefaultVisibility(sector) {
     const isPre = sector === "preatendimento";
     const settings = {};
@@ -949,7 +1548,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const data = await storageGet([VISIBILITY_KEY, SECTOR_KEY]);
     let settings = data[VISIBILITY_KEY];
 
-    // Se não existir config salva, usa o padrão do setor
     if (!settings) {
       const sector = data[SECTOR_KEY] || "";
       settings = getDefaultVisibility(sector);
@@ -985,9 +1583,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Override setShortcuts to NOT clear visibility when just saving names
-  // But inside validateAndSaveOnboarding we should reset visibility to defaults if sector changed
-
   renderFixedMessagesBySector();
 
   function renderCustomMessages(messages) {
@@ -1001,136 +1596,22 @@ document.addEventListener("DOMContentLoaded", () => {
     updateCustomCount((messages || []).length);
   }
 
-  async function manageVersionHistory() {
+  function updateVersionDisplay() {
     try {
       const manifest = chrome.runtime.getManifest();
-      const currentVersion = manifest.version;
-
-      // Update Main Badge
-      if (el.mainVersionBadge) {
-        el.mainVersionBadge.textContent = `v${currentVersion}`;
+      const version = manifest.version;
+      if (el.versionElements) {
+        el.versionElements.forEach(element => {
+          element.textContent = `v${version}`;
+        });
       }
-
-      // History Management
-      const data = await storageGet(["version_history"]);
-      let history = data.version_history || [];
-
-      // Ensure history is sorted (newest first)
-      history.sort((a, b) => b.timestamp - a.timestamp);
-
-      // Check if current version is already in history
-      const knownVersion = history.find(h => h.version === currentVersion);
-
-      if (!knownVersion) {
-        // SEED LEGACY HISTORY (First run logic)
-        if (history.length === 0) {
-          history = [
-            { version: "1.4.3", timestamp: Date.now() - 100000, notes: "Melhorias e Correções" },
-            { version: "1.4.2", timestamp: Date.now() - 200000, notes: "Ajustes no fluxo de mensagens padrão e UX" },
-            { version: "1.2", timestamp: Date.now() - 8000000, notes: "Mensagens Padrão, Dicas IA, Agenda" },
-            { version: "1.1", timestamp: Date.now() - 9000000, notes: "Resumo de atendimentos com IA" }
-          ];
-        }
-
-        // New version detected! Add to history.
-        const newEntry = {
-          version: currentVersion,
-          timestamp: Date.now(),
-          notes: "Melhorias e Correções"
-        };
-        // Add to top
-        history.unshift(newEntry);
-        // Limit history size if needed (e.g., keep last 50)
-        if (history.length > 50) history = history.slice(0, 50);
-
-        await storageSet({ version_history: history });
-      }
-
-      renderChangelog(history, currentVersion);
-
     } catch (e) {
-      console.error("Erro ao gerenciar histórico de versões:", e);
+      console.error("Erro ao obter versão do manifesto:", e);
     }
-  }
-
-  function renderChangelog(history, currentVersion) {
-    if (!el.changelogList) return;
-    el.changelogList.innerHTML = "";
-
-    if (!history || history.length === 0) {
-      el.changelogList.innerHTML = "<div style='text-align:center; padding:10px; color:#666;'>Histórico vazio.</div>";
-      return;
-    }
-
-    history.forEach((item, index) => {
-      const isCurrent = item.version === currentVersion;
-      const dateStr = new Date(item.timestamp).toLocaleDateString("pt-BR");
-
-      const row = document.createElement("div");
-      row.className = "changelog-item";
-      row.style.cssText = "display:flex; gap:10px; margin-bottom:12px; align-items:flex-start; group";
-
-      row.innerHTML = `
-        <div style="width:10px; display:flex; justify-content:center;">
-          <div style="width:8px; height:8px; border-radius:50%; background:${isCurrent ? '#34a853' : '#d1d5db'}; margin-top:6px;"></div>
-        </div>
-        <div style="flex:1;">
-          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <span style="font-size:12px; font-weight:800; color:${isCurrent ? '#111827' : '#6b7280'};">v${item.version}</span>
-            <span style="font-size:11px; color:#9ca3af;" title="${new Date(item.timestamp).toLocaleString()}">${dateStr}</span>
-            ${isCurrent ? `
-              <span style="
-                font-size: 10px;
-                padding: 2px 6px;
-                border-radius: 999px;
-                background: #ecfdf5;
-                border: 1px solid #a7f3d0;
-                color: #047857;
-                font-weight: 700;
-              ">Atual</span>
-            ` : ''}
-             <button class="btn-edit-note" style="
-              background:none; border:none; cursor:pointer; font-size:14px; opacity:0.6; padding:0 4px; display:none;
-            " title="Editar notas">✏️</button>
-          </div>
-          <div class="version-note" style="
-            font-size:13px; color:${isCurrent ? '#374151' : '#6b7280'}; 
-            margin-top:4px; line-height:1.35; white-space: pre-wrap;
-          ">${item.notes || 'Sem detalhes.'}</div>
-        </div>
-      `;
-
-      // Hover effect for edit button
-      row.addEventListener("mouseenter", () => {
-        const btn = row.querySelector(".btn-edit-note");
-        if (btn) btn.style.display = "inline-block";
-      });
-      row.addEventListener("mouseleave", () => {
-        const btn = row.querySelector(".btn-edit-note");
-        if (btn) btn.style.display = "none";
-      });
-
-      // Edit Logic
-      row.querySelector(".btn-edit-note").addEventListener("click", async () => {
-        const currentNote = item.notes || "";
-        const newNote = prompt(`Editar notas da versão v${item.version}:`, currentNote);
-
-        if (newNote !== null) {
-          // Update local array
-          history[index].notes = newNote.trim();
-          // Update sorted history in storage
-          await storageSet({ version_history: history });
-          // Re-render
-          renderChangelog(history, currentVersion);
-        }
-      });
-
-      el.changelogList.appendChild(row);
-    });
   }
 
   async function initApp() {
-    await manageVersionHistory();
+    updateVersionDisplay();
 
     await initNameOnboarding();
 
@@ -1173,11 +1654,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     el.btnLimpar?.addEventListener("click", async () => {
       if (!confirm("Tem certeza que deseja apagar todo o histórico de resumos?")) return;
-      await storageSet({
-        history: [],
-        summary_history: [],
-        last_summary: null
-      });
+      await storageSet({ history: [] });
       renderHistory([]);
       if (el.status) {
         el.status.textContent = "🗑️ Histórico de resumos limpo.";
@@ -1267,6 +1744,8 @@ document.addEventListener("DOMContentLoaded", () => {
     el.closeCredits?.addEventListener("click", () => {
       el.creditsDialog?.close();
     });
+
+    initLeaderControls();
   }
 
   initApp();

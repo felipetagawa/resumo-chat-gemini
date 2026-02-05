@@ -1,44 +1,109 @@
-const API_BASE_URL = "https://gemini-resumo-298442462030.southamerica-east1.run.app";
+const DEFAULT_API_BASE_URL = "https://gemini-resumo-api-298442462030.southamerica-east1.run.app/*";
+
+async function getApiBaseUrl() {
+  try {
+    const { apiBaseUrl } = await chrome.storage.local.get(["apiBaseUrl"]);
+    const v = String(apiBaseUrl || "").trim();
+    return v || DEFAULT_API_BASE_URL;
+  } catch (_) {
+    return DEFAULT_API_BASE_URL;
+  }
+}
+
+function sendTabMessageSafe(tabId, payload) {
+  try {
+    if (tabId) chrome.tabs.sendMessage(tabId, payload);
+  } catch (_) { }
+}
+
+async function apiFetchJson(url, options = {}) {
+  const resp = await fetch(url, options);
+
+  let json = null;
+  let text = "";
+  try {
+    json = await resp.json();
+  } catch (_) {
+    try {
+      text = await resp.text();
+    } catch (_) { }
+  }
+
+  if (!resp.ok) {
+    const msg =
+      (json && (json.erro || json.message)) ||
+      (text ? text.slice(0, 400) : "") ||
+      `HTTP ${resp.status}`;
+    const err = new Error(msg);
+    err.status = resp.status;
+    err.body = json ?? text;
+    throw err;
+  }
+
+  return json ?? {};
+}
+
+function normalizeDateStr(v) {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s ? s : null;
+}
+
+function normalizeName(v) {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s ? s : null;
+}
+
+function normalizeBool(v) {
+  if (v == null) return null;
+  if (typeof v === "boolean") return v;
+  const s = String(v).trim().toLowerCase();
+  if (s === "true" || s === "1" || s === "yes" || s === "sim") return true;
+  if (s === "false" || s === "0" || s === "no" || s === "nao" || s === "não") return false;
+  return null;
+}
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  const responder = (data) => {
-    if (sender.tab && request.fromTab) {
-      sendResponse(data);
-    } else {
-      sendResponse(data);
-    }
+  const safeSend = (data) => {
+    try { sendResponse(data); } catch (_) { }
   };
 
-  if (request.action === "gerarResumo") {
-    const handleGerarResumo = async () => {
+  const tabId = sender?.tab?.id;
+
+  if (request?.action === "openOptions") {
+    try {
+      chrome.runtime.openOptionsPage();
+    } catch (e) {
+      const url = chrome.runtime.getURL("options.html");
+      chrome.tabs.create({ url });
+    }
+    safeSend({ success: true });
+    return true;
+  }
+
+  if (request?.action === "gerarResumo") {
+    (async () => {
       try {
+        const apiBaseUrl = await getApiBaseUrl();
         const { texto } = request;
+
         const storageData = await chrome.storage.local.get(["customInstructions", "history"]);
         const customInstructions = storageData.customInstructions || "";
 
         let textoFinal = texto;
         if (customInstructions.trim()) {
-          textoFinal = `INSTRUÇÕES ADICIONAIS DO USUÁRIO:\n${customInstructions}\n\n---\n\nHISTÓRICO DO CHAT:\n${texto}`;
+          textoFinal =
+            `INSTRUÇÕES ADICIONAIS DO USUÁRIO:\n${customInstructions}\n\n---\n\nHISTÓRICO DO CHAT:\n${texto}`;
         }
 
-        const resp = await fetch(`${API_BASE_URL}/api/gemini/resumir`, {
+        const json = await apiFetchJson(`${apiBaseUrl}/api/gemini/resumir`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ texto: textoFinal })
         });
 
-        const json = await resp.json();
-
-        if (!resp.ok) {
-          if (sender.tab) {
-            chrome.tabs.sendMessage(sender.tab.id, { action: "exibirErro", erro: json.erro || `HTTP ${resp.status}` });
-          } else {
-            sendResponse({ erro: json.erro || `HTTP ${resp.status}` });
-          }
-          return;
-        }
-
-        const resumoTexto = json.summary || json.resumo;
+        const resumoTexto = json.summary || json.resumo || "";
 
         const novoItem = { timestamp: Date.now(), summary: resumoTexto };
         const history = storageData.history || [];
@@ -46,87 +111,134 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (history.length > 20) history.shift();
         await chrome.storage.local.set({ history });
 
-        if (sender.tab) {
-          chrome.tabs.sendMessage(sender.tab.id, { action: "exibirResumo", resumo: resumoTexto });
-          sendResponse({ success: true, resumo: resumoTexto });
-        } else {
-          sendResponse({ resumo: resumoTexto });
-        }
+        sendTabMessageSafe(tabId, { action: "exibirResumo", resumo: resumoTexto });
+        safeSend({ success: true, resumo: resumoTexto });
 
       } catch (err) {
-        if (sender.tab) {
-          chrome.tabs.sendMessage(sender.tab.id, { action: "exibirErro", erro: "Erro: " + err.message });
-        }
-        sendResponse({ erro: "Erro: " + err.message });
+        const msg = "Erro: " + (err?.message || String(err));
+        sendTabMessageSafe(tabId, { action: "exibirErro", erro: msg });
+        safeSend({ erro: msg });
       }
-    };
-    handleGerarResumo();
+    })();
+
     return true;
   }
 
-  if (request.action === "gerarDica") {
-    const { texto } = request;
-
-    const enviarRespostaDica = (data) => {
-      sendResponse(data);
-    };
-
+  if (request?.action === "gerarDica") {
     (async () => {
       try {
-        const resp = await fetch(`${API_BASE_URL}/api/chamado/processar-dica`, {
+        const apiBaseUrl = await getApiBaseUrl();
+        const { texto } = request;
+
+        const json = await apiFetchJson(`${apiBaseUrl}/api/chamado/processar-dica`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ texto })
         });
 
-        if (!resp.ok) {
-          const erroText = await resp.text();
-          enviarRespostaDica({ erro: `HTTP ${resp.status}: ${erroText}` });
-          return;
-        }
-
-        const json = await resp.json();
-        enviarRespostaDica({ dica: json });
+        safeSend({ success: true, dica: json });
 
       } catch (err) {
-        enviarRespostaDica({ erro: "Erro ao processar dica: " + err.message });
+        safeSend({ success: false, erro: "Erro ao processar dica: " + (err?.message || String(err)) });
       }
     })();
 
     return true;
   }
 
-  if (request.action === "buscarDocumentacao") {
+  if (request?.action === "buscarDocumentacao") {
     (async () => {
       try {
+        const apiBaseUrl = await getApiBaseUrl();
         const { query } = request;
-        const url = new URL(`${API_BASE_URL}/api/docs/search`);
 
-        if (query) url.searchParams.append('query', query);
-        url.searchParams.append('categoria', 'manuais');
+        const url = new URL(`${apiBaseUrl}/api/docs/search`);
+        if (query) url.searchParams.append("query", query);
+        url.searchParams.append("categoria", "manuais");
 
-        const resp = await fetch(url.toString());
-        if (!resp.ok) throw new Error(`Erro na API (${resp.status})`);
+        const json = await apiFetchJson(url.toString(), { method: "GET" });
+        safeSend({ sucesso: true, resultado: json });
 
-        const data = await resp.json();
-        sendResponse({ sucesso: true, resultado: data });
       } catch (err) {
-        console.error("Erro buscarDocumentacao:", err);
-        sendResponse({ sucesso: false, erro: err.toString() });
+        safeSend({ sucesso: false, erro: (err?.message || String(err)) });
       }
     })();
+
     return true;
   }
 
-});
+  if (request?.action === "preControl:create") {
+    (async () => {
+      try {
+        const apiBaseUrl = await getApiBaseUrl();
 
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg?.action === "openOptions") {
-    try {
-      chrome.runtime.openOptionsPage();
-    } catch (e) {
-      const url = chrome.runtime.getURL("options.html");
-      chrome.tabs.create({ url });
-    }
+        const payload = { ...(request?.payload || {}) };
+        payload.negociation = !!payload.negociation;
+
+        if (payload.name != null) payload.name = String(payload.name).trim();
+        if (payload.nameClient != null) payload.nameClient = String(payload.nameClient).trim();
+
+        await apiFetchJson(`${apiBaseUrl}/api/pre-controls`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        sendTabMessageSafe(tabId, { action: "preControl:sucesso" });
+        safeSend({ success: true });
+
+      } catch (err) {
+        const msg = "Erro: " + (err?.message || String(err));
+        sendTabMessageSafe(tabId, { action: "exibirErro", erro: msg });
+        safeSend({ success: false, erro: msg });
+      }
+    })();
+
+    return true;
   }
+
+  if (request?.action === "preControl:query") {
+    (async () => {
+      try {
+        const apiBaseUrl = await getApiBaseUrl();
+
+        const name = normalizeName(request?.name);
+        const date = normalizeDateStr(request?.date);
+        const dateFrom = normalizeDateStr(request?.dateFrom);
+        const dateTo = normalizeDateStr(request?.dateTo);
+        const negociation = normalizeBool(request?.negociation);
+
+        const url = new URL(`${apiBaseUrl}/api/pre-controls`);
+
+        const page = request?.page != null ? String(request.page) : null;
+        const size = request?.size != null ? String(request.size) : null;
+
+        if (name) url.searchParams.set("name", name);
+
+        if (dateFrom || dateTo) {
+          if (dateFrom) url.searchParams.set("dateFrom", dateFrom);
+          if (dateTo) url.searchParams.set("dateTo", dateTo);
+        } else if (date) {
+          url.searchParams.set("date", date);
+        }
+
+        if (negociation !== null) url.searchParams.set("negociation", String(negociation));
+
+        if (page) url.searchParams.set("page", page);
+        if (size) url.searchParams.set("size", size);
+
+        const json = await apiFetchJson(url.toString(), { method: "GET" });
+        safeSend({ success: true, data: json });
+
+      } catch (err) {
+        const msg = "Erro: " + (err?.message || String(err));
+        sendTabMessageSafe(tabId, { action: "exibirErro", erro: msg });
+        safeSend({ success: false, erro: msg });
+      }
+    })();
+
+    return true;
+  }
+
+  return false;
 });
