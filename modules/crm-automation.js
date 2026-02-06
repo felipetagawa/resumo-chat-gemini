@@ -522,37 +522,81 @@ const CRMAutomationModule = (function () {
                 // Remove all markdown bold markers (**) from the source text
                 fullText = fullText.replace(/\*\*/g, '');
 
-                const getValue = (startMarker, ...endMarkers) => {
-                    const startIdx = fullText.toUpperCase().indexOf(startMarker.toUpperCase());
-                    if (startIdx === -1) return "";
-                    const contentStart = startIdx + startMarker.length;
+                const getValue = (startMarkers, endMarkers) => {
+                    const lowerText = fullText.toLowerCase();
+                    let bestStartIdx = -1;
+                    let bestStartLen = 0;
 
+                    // Find which start marker appears first/best
+                    for (const marker of startMarkers) {
+                        const idx = lowerText.indexOf(marker.toLowerCase());
+                        if (idx !== -1) {
+                            if (bestStartIdx === -1 || idx < bestStartIdx) {
+                                bestStartIdx = idx;
+                                bestStartLen = marker.length;
+                            }
+                        }
+                    }
+
+                    if (bestStartIdx === -1) return "";
+
+                    const contentStart = bestStartIdx + bestStartLen;
+
+                    // Find the nearest end marker
                     let bestEndIdx = fullText.length;
                     for (const endMarker of endMarkers) {
-                        const idx = fullText.toUpperCase().indexOf(endMarker.toUpperCase(), contentStart);
+                        // Create a list of all markers to check against to avoid partial matches on end markers
+                        const idx = lowerText.indexOf(endMarker.toLowerCase(), contentStart);
                         if (idx !== -1 && idx < bestEndIdx) bestEndIdx = idx;
                     }
 
                     let val = fullText.slice(contentStart, bestEndIdx).trim();
-                    if (val.startsWith(':')) val = val.substring(1).trim();
+                    // Remove leading colons or dashes
+                    val = val.replace(/^[:\-\s]+/, '').trim();
                     return val;
                 };
 
-                const prob = getValue("PROBLEMA / DÚVIDA", "SOLUÇÃO APRESENTADA");
-                const sol = getValue("SOLUÇÃO APRESENTADA", "OPORTUNIDADE DE UPSELL");
-                const upsellFull = getValue("OPORTUNIDADE DE UPSELL", "PRINTS DE ERRO");
-                const prints = getValue("PRINTS DE ERRO OU DE MENSAGENS RELEVANTES", "HUMOR DO CLIENTE");
-                const humor = getValue("HUMOR DO CLIENTE");
+                // Define markers with flexibility
+                const markers = {
+                    prob: ["PROBLEMA / DÚVIDA", "PROBLEMA:", "DÚVIDA:"],
+                    sol: ["SOLUÇÃO APRESENTADA", "SOLUÇÃO:", "RESOLUÇÃO:"],
+                    upsell: ["OPORTUNIDADE DE UPSELL", "UPSELL:", "VENDA:"],
+                    prints: ["PRINTS DE ERRO OU DE MENSAGENS RELEVANTES", "PRINTS DE ERRO", "PRINTS:", "IMAGENS:"],
+                    humor: ["HUMOR DO CLIENTE", "HUMOR:"]
+                };
+
+                // Flatten end markers for each section
+                const allNext = [...markers.sol, ...markers.upsell, ...markers.prints, ...markers.humor];
+
+                const prob = getValue(markers.prob, allNext);
+                const sol = getValue(markers.sol, [...markers.upsell, ...markers.prints, ...markers.humor]);
+                const upsellFull = getValue(markers.upsell, [...markers.prints, ...markers.humor]);
+                const prints = getValue(markers.prints, markers.humor);
+                const humor = getValue(markers.humor, []);
 
                 if (prob) els.problema.value = prob;
                 if (sol) els.solucao.value = sol;
+
                 if (upsellFull) {
-                    if (upsellFull.toUpperCase().includes("SIM")) {
-                        container.querySelector('input[name="crm-upsell"][value="SIM"]').click(); // Click to trigger listeners
-                        const desc = upsellFull.replace(/^SIM[\s.,]*/i, '').trim();
-                        if (desc) els.upsellDesc.value = desc;
-                    } else {
+                    // Smart detection for Upsell
+                    // Default to SIM if there is text, unless it looks like a negative
+                    const upper = upsellFull.toUpperCase();
+                    const negatives = ["NÃO", "NAO", "NENHUM", "N/A", "SEM UPSELL", "-"];
+
+                    // Check if it starts with a negative text
+                    // We check if the trimmed string IS one of the negatives, or starts with "NÃO" etc.
+                    const isNegative = negatives.some(n => upper === n || upper.startsWith(n + " ") || upper.startsWith(n + "."));
+
+                    if (isNegative) {
                         container.querySelector('input[name="crm-upsell"][value="NÃO"]').click();
+                    } else {
+                        // Likely SIM
+                        container.querySelector('input[name="crm-upsell"][value="SIM"]').click(); // Click triggers listeners
+
+                        // Clean up "Sim" from start of text if present (e.g. "Sim, oferecido X")
+                        let desc = upsellFull.replace(/^(SIM|SIM,|SIM\.)[\s]*/i, '').trim();
+                        // If original text was just "Sim", desc is empty. If it was "Sim. Oferecido X", desc is "Oferecido X".
+                        if (desc) els.upsellDesc.value = desc;
                     }
                 }
 

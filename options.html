@@ -734,7 +734,7 @@
           letter-spacing: .2px;
           white-space: nowrap;
         ">
-          v1.4.3
+          v1.4.6
         </div>
       </div>
     </div>
@@ -875,8 +875,8 @@
             </div>
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span class="app-version" style="font-size:12px; font-weight:800; color:#111827;">v1.4.3</span>
-                <span style="font-size:12px; color:#6b7280;">Melhorias e Correções</span>
+                <span class="app-version" style="font-size:12px; font-weight:800; color:#111827;">v1.4.6</span>
+                <span style="font-size:12px; color:#6b7280;">Melhorias</span>
                 <span style="
                   font-size: 11px;
                   padding: 3px 8px;
@@ -886,6 +886,21 @@
                   color: #065f46;
                   font-weight: 800;
                 ">Atual</span>
+              </div>
+              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+                Melhorias na paginação e exportação do painel Líder; Ajustes na leitura de Upsell.
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px;">
+            <div style="width:10px; display:flex; justify-content:center;">
+              <div style="width:8px; height:8px; border-radius:50%; background:#1a73e8; margin-top:6px;"></div>
+            </div>
+            <div style="flex:1;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="font-size:12px; font-weight:800; color:#111827;">v1.4.5</span>
+                <span style="font-size:12px; color:#6b7280;">Melhorias e Correções</span>
               </div>
               <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
                 Correções no fluxo de edição de mensagens padrão, restauração do histórico do branch main com merge
@@ -900,12 +915,12 @@
             </div>
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-size:12px; font-weight:800; color:#111827;">v1.4.2</span>
+                <span style="font-size:12px; font-weight:800; color:#111827;">v1.4.3</span>
                 <span style="font-size:12px; color:#6b7280;">Melhorias e Correções</span>
               </div>
               <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
-                Ajustes no fluxo de mensagens padrão e novas opções de edição nas configurações; ajustes de layout para
-                melhoria de UX.
+                Correções no fluxo de edição de mensagens padrão, restauração do histórico do branch main com merge
+                adequado da branch fix/fluxopre.
               </div>
             </div>
           </div>
@@ -1017,7 +1032,7 @@
         <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
           <div class="card" style="margin-bottom:0;">
             <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
-              💬 Mensagens Padrão - Suporte e Pré Atendimento
+              Mensagens Padrão - Suporte e Pré Atendimento
             </div>
             <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
               Cadastre respostas frequentes e use atalhos para colar mensagens com um clique, mantendo consistência no
@@ -1027,7 +1042,7 @@
 
           <div class="card" style="margin-bottom:0;">
             <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
-              🧠 Configuração IA - Suporte
+              Configuração IA - Suporte
             </div>
             <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
               Defina instruções para a IA gerar resumos no padrão da sua operação (tom, formato e foco do atendimento).
@@ -1036,7 +1051,7 @@
 
           <div class="card" style="margin-bottom:0;">
             <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
-              🗂️ Histórico - Suporte
+              Histórico - Suporte
             </div>
             <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
               Consulte resumos gerados e chamados manuais anteriores para recuperar contexto rapidamente.
@@ -1076,7 +1091,7 @@
     <section id="sec-mensagens" class="page-section">
       <div class="card">
         <div class="card-header-row">
-          <h2>💬 Mensagens Padrão</h2>
+          <h2>Mensagens Padrão</h2>
 
           <div class="header-actions">
             <details class="actions-menu">
@@ -1123,7 +1138,7 @@
 
     <section id="sec-ia" class="page-section">
       <div class="card">
-        <h2>🧠 Instruções da IA</h2>
+        <h2>Instruções da IA</h2>
 
         <label for="customInstructions">Prompt Personalizado</label>
         <textarea id="customInstructions"></textarea>
@@ -1139,13 +1154,13 @@
 
     <section id="sec-historico" class="page-section">
       <div class="card">
-        <h2>🗂️ Histórico de Resumos</h2>
+        <h2>Histórico de Resumos</h2>
         <ul id="historyList"></ul>
         <button id="limparHistorico" style="background: #e74c3c; color: #fff;">Limpar Histórico de Resumos</button>
       </div>
 
       <div class="card">
-        <h2>📝 Histórico de Chamados Manuais</h2>
+        <h2>Histórico de Chamados Manuais</h2>
         <ul id="manualCallHistoryList"></ul>
         <button id="limparHistoricoManual" style="background: #e74c3c; color: #fff;">Limpar Histórico de
           Chamados</button>
@@ -1155,7 +1170,7 @@
     <section id="sec-lider" class="page-section">
       <div class="card" style="padding:18px;">
         <div class="card-header-row">
-          <h2 style="margin:0;">📊 Controle Líder</h2>
+          <h2 style="margin:0;">Controle Líder</h2>
 
           <div class="header-actions">
             <details class="actions-menu">

@@ -1002,22 +1002,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function exportTxt() {
-      if (!pageRows.length) {
+      if (!filteredRows.length) {
         setStatus("⚠️ Nada para exportar.", "#b45309");
         return;
       }
 
       const lines = [
         "Data\tPre\tCliente\tTempo\tNegociação",
-        ...pageRows.map((r) => `${safe(r.date)}\t${safe(r.pre)}\t${safe(r.client)}\t${formatDuration(r.ms)}\t${r.negociation ? "Sim" : "Não"}`)
+        ...filteredRows.map((r) => `${safe(r.date)}\t${safe(r.pre)}\t${safe(r.client)}\t${formatDuration(r.ms)}\t${r.negociation ? "Sim" : "Não"}`)
       ];
 
       downloadFile("pre_controles.txt", lines.join("\n"), "text/plain;charset=utf-8");
-      setStatus("✅ TXT gerado.", "green");
+      setStatus("✅ TXT gerado (todos os registros do filtro).", "green");
     }
 
     function exportCsvForExcel() {
-      if (!pageRows.length) {
+      if (!filteredRows.length) {
         setStatus("⚠️ Nada para exportar.", "#b45309");
         return;
       }
@@ -1026,12 +1026,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const lines = [
         ["Data", "Pre", "Cliente", "Tempo", "Negociação"].map(esc).join(";"),
-        ...pageRows.map((r) => [r.date, r.pre, r.client, formatDuration(r.ms), (r.negociation ? "Sim" : "Não")].map(esc).join(";"))
+        ...filteredRows.map((r) => [r.date, r.pre, r.client, formatDuration(r.ms), (r.negociation ? "Sim" : "Não")].map(esc).join(";"))
       ];
 
       const content = "\uFEFF" + lines.join("\n");
       downloadFile("pre_controles.csv", content, "text/csv;charset=utf-8");
-      setStatus("✅ CSV (Excel) gerado.", "green");
+      setStatus("✅ CSV (Excel) gerado (todos os registros do filtro).", "green");
     }
 
     function applyFilters(rows, filters) {
@@ -1083,12 +1083,115 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const total = filteredRows.length;
 
-      if (pageInfoEl) {
-        pageInfoEl.textContent = String(total === 0 ? 1 : (currentPage + 1));
-      }
-
       if (pagePrevBtn) pagePrevBtn.disabled = currentPage <= 0 || total === 0;
       if (pageNextBtn) pageNextBtn.disabled = currentPage >= totalPages - 1 || total === 0;
+
+      if (!pageInfoEl) return;
+
+      pageInfoEl.innerHTML = "";
+      pageInfoEl.style.display = "flex";
+      pageInfoEl.style.alignItems = "center";
+      pageInfoEl.style.gap = "4px";
+
+      if (total === 0) {
+        pageInfoEl.textContent = "1";
+        return;
+      }
+
+      const createBtn = (pageNum, text, isActive) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = text || String(pageNum + 1);
+        btn.style.cssText = `
+          border: 1px solid ${isActive ? "#bfdbfe" : "transparent"};
+          background: ${isActive ? "#eef2ff" : "transparent"};
+          color: ${isActive ? "#1e40af" : "#334155"};
+          font-weight: 800;
+          font-size: 13px;
+          min-width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 4px;
+          margin: 0;
+          transition: background 0.2s;
+        `;
+
+        if (!isActive) {
+          btn.onmouseenter = () => btn.style.background = "#f1f5f9";
+          btn.onmouseleave = () => btn.style.background = "transparent";
+          btn.onclick = () => {
+            currentPage = pageNum;
+            renderCurrentPage();
+          };
+        }
+        return btn;
+      };
+
+      const maxVisible = 5;
+      let startPage, endPage;
+
+      if (totalPages <= maxVisible) {
+        startPage = 0;
+        endPage = totalPages - 1;
+      } else {
+        const maxPagesBeforeCurrent = Math.floor(maxVisible / 2);
+        const maxPagesAfterCurrent = Math.ceil(maxVisible / 2) - 1;
+
+        if (currentPage <= maxPagesBeforeCurrent) {
+          startPage = 0;
+          endPage = maxVisible - 1;
+        } else if (currentPage + maxPagesAfterCurrent >= totalPages) {
+          startPage = totalPages - maxVisible;
+          endPage = totalPages - 1;
+        } else {
+          startPage = currentPage - maxPagesBeforeCurrent;
+          endPage = currentPage + maxPagesAfterCurrent;
+        }
+      }
+
+      if (totalPages > maxVisible) {
+        if (currentPage > 0) {
+          pageInfoEl.appendChild(createBtn(0, "<<", false));
+        }
+      }
+
+      const hasStartGap = startPage > 0;
+
+      if (hasStartGap) {
+        pageInfoEl.appendChild(createBtn(0, "1", currentPage === 0));
+        if (startPage > 1) {
+          const dot = document.createElement("span");
+          dot.textContent = "...";
+          dot.style.color = "#94a3b8";
+          dot.style.fontSize = "12px";
+          pageInfoEl.appendChild(dot);
+        }
+      }
+
+      for (let i = startPage; i <= endPage; i++) {
+        pageInfoEl.appendChild(createBtn(i, null, currentPage === i));
+      }
+
+      if (endPage < totalPages - 1) {
+        if (endPage < totalPages - 2) {
+          const dot = document.createElement("span");
+          dot.textContent = "...";
+          dot.style.color = "#94a3b8";
+          dot.style.fontSize = "12px";
+          pageInfoEl.appendChild(dot);
+        }
+        pageInfoEl.appendChild(createBtn(totalPages - 1, String(totalPages), currentPage === totalPages - 1));
+      }
+
+      if (totalPages > maxVisible) {
+        if (currentPage < totalPages - 1) {
+          pageInfoEl.appendChild(createBtn(totalPages - 1, ">>", false));
+        }
+      }
     }
 
     function renderCurrentPage() {
