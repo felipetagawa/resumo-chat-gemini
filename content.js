@@ -587,12 +587,31 @@ function criarBotoesFlutuantes(visibility) {
     guardFeature(() => AgendaModule.exibirAgenda())
   );
 
-  const botaoChamadoManual = createButton(
-    "btnChamadoManual",
-    "Chamado Manual",
-    "chamado-manual.png",
-    guardFeature(() => CalledModule.exibirChamadoManual())
-  );
+  const sector = getUserSectorSafe();
+  let botaoChamadoManual;
+
+  if (sector === "suporte") {
+    botaoChamadoManual = createButton(
+      "btnConfiguracoes",
+      "Configurações",
+      "⚙️", // Emoji icon
+      () => {
+        try {
+          chrome.runtime.sendMessage({ action: "openOptions" });
+        } catch (e) {
+          const url = chrome.runtime.getURL("options.html");
+          window.open(url, "_blank", "noopener,noreferrer");
+        }
+      }
+    );
+  } else {
+    botaoChamadoManual = createButton(
+      "btnChamadoManual",
+      "Chamado Manual",
+      "chamado-manual.png",
+      guardFeature(() => CalledModule.exibirChamadoManual())
+    );
+  }
 
   if (isVisible("btnResumoGemini")) container.appendChild(botaoResumo);
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);
