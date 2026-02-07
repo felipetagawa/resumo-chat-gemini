@@ -104,44 +104,43 @@ document.addEventListener("DOMContentLoaded", () => {
     {
       shortcut: "1",
       text:
-        "Bom dia, tudo bem?\n" +
+        "Olá, tudo bem?\n" +
         "Eu sou o atendente {{NOME}} do pré atendimento do suporte da Soften Sistema, como posso te ajudar?"
     },
     {
       shortcut: "2",
       text:
-        "Boa tarde, tudo bem?\n" +
-        "Eu sou o atendente {{NOME}} do pré atendimento do suporte da Soften Sistema, como posso te ajudar?"
+        "Você pode me informar seu NOME, seu EMAIL e seu ID AnyDesk, caso não possua, acesse o nosso site em seu computador https://anydesk.com/pt por gentileza, irei verificar com um técnico especializado para te auxiliar."
     },
     {
       shortcut: "3",
       text:
-        "Você pode me informar seu NOME, seu EMAIL e seu ID AnyDesk, caso não possua, acesse o nosso site em seu computador https://anydesk.com/pt por gentileza, irei verificar com um técnico especializado para te auxiliar."
+        "Caso não possua, poderia realizar o download do AnyDesk por gentileza: https://anydesk.com/pt"
     },
     {
       shortcut: "4",
       text:
-        "Caso não possua, poderia realizar o download do AnyDesk por gentileza: https://anydesk.com/pt"
+        "Só um momento, irei verificar um técnico para te auxiliar e assim que estiver disponível encaminharei seu atendimento."
     },
     {
       shortcut: "5",
       text:
-        "Só um momento, irei verificar um técnico para te auxiliar e assim que estiver disponível encaminharei seu atendimento."
+        "Olá! Ainda está conosco? Caso precise de mais alguma orientação, estou à disposição para dar continuidade ao atendimento."
     },
     {
       shortcut: "6",
       text:
-        "Olá! Ainda está conosco? Caso precise de mais alguma orientação, estou à disposição para dar continuidade ao atendimento."
+        "Finalizando atendimento pela falta de resposta, tenha um ótimo dia! 🙂 Muito obrigado tenha um excelente dia e continuamos a sua disposição para quaisquer e eventuais dúvidas"
     },
     {
       shortcut: "7",
       text:
-        "Finalizando atendimento pela falta de resposta, tenha um ótimo dia! 🙂 Muito obrigado tenha um excelente dia e continuamos a sua disposição para quaisquer e eventuais dúvidas"
+        "Disponha, precisando estamos a disposição\nTenha um ótimo dia! 🙂"
     },
     {
       shortcut: "8",
       text:
-        "Disponha, precisando estamos a disposição\nTenha um ótimo dia! 🙂"
+        "Olá! 😊\nAgradecemos por aguardar. Sabemos que o tempo de espera pode ser cansativo e agradecemos a sua paciência.\n\nSou do pré-atendimento e já estou verificando o melhor técnico disponível para dar continuidade ao seu atendimento.\nSe quiser adiantar alguma informação por aqui, isso pode nos ajudar a agilizar.\n\nSeguimos acompanhando até a resolução. 💙"
     }
   ];
 
