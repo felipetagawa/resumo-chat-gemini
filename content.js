@@ -590,7 +590,7 @@ function criarBotoesFlutuantes(visibility) {
   const sector = getUserSectorSafe();
   let botaoChamadoManual;
 
-  if (sector === "suporte") {
+  if (sector === "suporte" || sector === "lider") {
     botaoChamadoManual = createButton(
       "btnConfiguracoes",
       "Configurações",
