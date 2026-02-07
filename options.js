@@ -1268,11 +1268,27 @@ document.addEventListener("DOMContentLoaded", () => {
         const rows = list.map(mapRow);
 
         rows.sort((a, b) => {
-          const da = safe(a.date), db = safe(b.date);
-          if (da !== db) return db.localeCompare(da);
-          const pa = safe(a.pre), pb = safe(b.pre);
-          if (pa !== pb) return pa.localeCompare(pb);
-          return safe(a.client).localeCompare(safe(b.client));
+          const getTimestamp = (r) => {
+            const val = pickField(r.raw, ["createdAt", "created_at", "timestamp", "date", "data", "dataRegistro", "data_registro"]);
+            if (!val) return 0;
+
+            // Try standard parser
+            let ms = new Date(val).getTime();
+            if (!Number.isNaN(ms)) return ms;
+
+            // Try DD/MM/YYYY HH:mm:ss
+            if (typeof val === 'string') {
+              // Check if it's DD/MM/YYYY
+              const parts = val.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s(\d{2}):(\d{2})(?::(\d{2}))?)?/);
+              if (parts) {
+                const [_, d, m, y, hh, mm, ss] = parts;
+                return new Date(y, m - 1, d, hh || 0, mm || 0, ss || 0).getTime();
+              }
+            }
+
+            return 0;
+          };
+          return getTimestamp(b) - getTimestamp(a);
         });
 
         masterRows = rows;
