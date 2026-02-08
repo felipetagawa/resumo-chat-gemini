@@ -362,6 +362,8 @@ const CRMAutomationModule = (function () {
             textarea.value = text;
             textarea.dispatchEvent(new Event('input', { bubbles: true }));
             textarea.dispatchEvent(new Event('change', { bubbles: true }));
+            textarea.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+            textarea.dispatchEvent(new Event('blur', { bubbles: true }));
         };
 
         // Attach listeners for sync
