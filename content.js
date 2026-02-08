@@ -274,8 +274,14 @@ function checkAndInit() {
     const modal = document.getElementById("atendeai-onboarding-overlay");
     if (modal) modal.remove();
 
-    storageGet(["atendeai_visibility"]).then(data => {
-      criarBotoesFlutuantes(data.atendeai_visibility);
+    // Fetch visibility and sector directly to ensure we have the correct data for buttons
+    chrome.storage.local.get(["atendeai_visibility", SECTOR_KEY], (items) => {
+      const visibility = items.atendeai_visibility || {};
+      const rawSector = items[SECTOR_KEY];
+      const sector = String(rawSector || "").trim().toLowerCase();
+
+      console.log("DEBUG: checkAndInit direct load. Sector:", sector, "Visibility:", visibility);
+      criarBotoesFlutuantes(visibility, sector);
     });
   });
 }
@@ -292,11 +298,17 @@ function sanitizeSector(v) {
 }
 
 async function getUserConfig() {
-  const data = await storageGet([NAME_KEY, SECTOR_KEY]);
-  const name = sanitizeName(data[NAME_KEY]);
-  const sector = sanitizeSector(data[SECTOR_KEY]);
-
-  return { name, sector };
+  try {
+    const data = await storageGet([NAME_KEY, SECTOR_KEY]);
+    console.log("DEBUG: getUserConfig raw data:", data);
+    const name = sanitizeName(data[NAME_KEY]);
+    const sector = sanitizeSector(data[SECTOR_KEY]);
+    console.log("DEBUG: getUserConfig processed:", { name, sector });
+    return { name, sector };
+  } catch (e) {
+    console.error("DEBUG: getUserConfig error:", e);
+    return { name: "", sector: "" };
+  }
 }
 
 function guardFeature(actionFn, opts = {}) {
@@ -444,13 +456,13 @@ function openConfigRequiredModal() {
   overlay.style.display = "flex";
 }
 
-function criarBotoesFlutuantes(visibility) {
+function criarBotoesFlutuantes(visibility, userSector) {
   if (DOMHelpers.exists("containerBotoesGemini")) {
-    console.log("DEBUG: containerBotoesGemini already exists, skipping creation.");
-    return;
+    console.log("DEBUG: containerBotoesGemini already exists, removing to re-create with fresh data.");
+    DOMHelpers.removeElement("containerBotoesGemini");
   }
 
-  console.log("DEBUG: criarBotoesFlutuantes called with:", visibility);
+  console.log("DEBUG: criarBotoesFlutuantes called with:", visibility, "User Sector:", userSector);
 
   const isVisible = (key, defaultVal = true) => {
     if (!visibility) return defaultVal;
@@ -587,36 +599,25 @@ function criarBotoesFlutuantes(visibility) {
     guardFeature(() => AgendaModule.exibirAgenda())
   );
 
-  const sector = getUserSectorSafe();
-  let botaoChamadoManual;
-
-  if (sector === "suporte" || sector === "lider") {
-    botaoChamadoManual = createButton(
-      "btnConfiguracoes",
-      "Configurações",
-      "⚙️", // Emoji icon
-      () => {
-        try {
-          chrome.runtime.sendMessage({ action: "openOptions" });
-        } catch (e) {
-          const url = chrome.runtime.getURL("options.html");
-          window.open(url, "_blank", "noopener,noreferrer");
-        }
+  // Botão de Configurações padrão para todos os setores (substitui Chamado Manual)
+  const botaoConfiguracoes = createButton(
+    "btnConfiguracoes",
+    "Configurações",
+    "⚙️",
+    () => {
+      try {
+        chrome.runtime.sendMessage({ action: "openOptions" });
+      } catch (e) {
+        const url = chrome.runtime.getURL("options.html");
+        window.open(url, "_blank", "noopener,noreferrer");
       }
-    );
-  } else {
-    botaoChamadoManual = createButton(
-      "btnChamadoManual",
-      "Chamado Manual",
-      "chamado-manual.png",
-      guardFeature(() => CalledModule.exibirChamadoManual())
-    );
-  }
+    }
+  );
 
   if (isVisible("btnResumoGemini")) container.appendChild(botaoResumo);
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);
   if (isVisible("btnAgenda")) container.appendChild(botaoAgenda);
-  if (isVisible("btnChamadoManual")) container.appendChild(botaoChamadoManual);
+  container.appendChild(botaoConfiguracoes); // Sempre mostra Configurações
 
   if (isVisible("btnAssistenteIA")) container.appendChild(containerDropdown);
 

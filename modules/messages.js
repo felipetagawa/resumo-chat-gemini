@@ -66,14 +66,14 @@ const MessagesModule = (() => {
     ];
 
     const PRE_FIXED_MESSAGES = [
-        { text: "Bom dia, tudo bem?\nEu sou o atendente {{NOME}} do pré atendimento do suporte da Soften Sistema, como posso te ajudar?" },
-        { text: "Boa tarde, tudo bem?\nEu sou o atendente {{NOME}} do pré atendimento do suporte da Soften Sistema, como posso te ajudar?" },
+        { text: "Olá tudo bem?\nEu sou o atendente {{NOME}} do pré atendimento do suporte da Soften Sistema, como posso te ajudar?" },
         { text: "Você pode me informar seu NOME, seu EMAIL e seu ID AnyDesk, caso não possua, acesse o nosso site em seu computador https://anydesk.com/pt por gentileza, irei verificar com um técnico especializado para te auxiliar." },
         { text: "Caso não possua, poderia realizar o download do AnyDesk por gentileza: https://anydesk.com/pt" },
         { text: "Só um momento, irei verificar um técnico para te auxiliar e assim que estiver disponível encaminharei seu atendimento." },
         { text: "Olá! Ainda está conosco? Caso precise de mais alguma orientação, estou à disposição para dar continuidade ao atendimento." },
         { text: "Finalizando atendimento pela falta de resposta, tenha um ótimo dia! 🙂 Muito obrigado tenha um excelente dia e continuamos a sua disposição para quaisquer e eventuais dúvidas" },
-        { text: "Disponha, precisando estamos a disposição\nTenha um ótimo dia! 🙂" }
+        { text: "Disponha, precisando estamos a disposição\nTenha um ótimo dia! 🙂" },
+        { text: "Olá! 😊\nAgradecemos por aguardar. Sabemos que o tempo de espera pode ser cansativo e agradecemos a sua paciência.\nSou do pré-atendimento e já estou verificando o melhor técnico disponível para dar continuidade ao seu atendimento.\nSe quiser adiantar alguma informação por aqui, isso pode nos ajudar a agilizar.\n\nSeguimos acompanhando até a resolução. 💙" }
     ];
 
     function renderizarMensagens(popup, customMessagesList, shortcuts = {}, sector = "suporte", name = "") {
