@@ -458,11 +458,10 @@ function openConfigRequiredModal() {
 
 function criarBotoesFlutuantes(visibility, userSector) {
   if (DOMHelpers.exists("containerBotoesGemini")) {
-    console.log("DEBUG: containerBotoesGemini already exists, removing to re-create with fresh data.");
     DOMHelpers.removeElement("containerBotoesGemini");
   }
 
-  console.log("DEBUG: criarBotoesFlutuantes called with:", visibility, "User Sector:", userSector);
+
 
   const isVisible = (key, defaultVal = true) => {
     if (!visibility) return defaultVal;
@@ -506,6 +505,8 @@ function criarBotoesFlutuantes(visibility, userSector) {
       btn.innerHTML = `<span class="icon">⏳</span> Gerando...`;
 
       const texto = ChatCaptureModule.capturarTextoChat();
+      const clientName = ChatCaptureModule.capturarNomeCliente(); // Captura nome para histórico
+
       if (!texto) {
         alert("Não foi possível capturar o texto do chat.");
         btn.disabled = false;
@@ -515,7 +516,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
 
       try {
         const response = await MessagingHelper.send({ action: "gerarResumo", texto });
-        if (response && response.resumo) SummaryModule.exibirResumo(response.resumo);
+        if (response && response.resumo) SummaryModule.exibirResumo(response.resumo, clientName); // Passa nome para salvar corretamente
         else if (response && response.erro) alert("Erro ao gerar resumo: " + response.erro);
       } catch (error) {
         alert("Erro de comunicação: " + error.message);
@@ -603,7 +604,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
   const botaoConfiguracoes = createButton(
     "btnConfiguracoes",
     "Configurações",
-    "⚙️",
+    "config.png",
     () => {
       try {
         chrome.runtime.sendMessage({ action: "openOptions" });
@@ -689,10 +690,16 @@ function checkAndInit() {
       modal.remove();
     }
 
-    storageGet(["atendeai_visibility"]).then(data => {
-      console.log("DEBUG: Loaded visibility from storage:", data.atendeai_visibility);
-      criarBotoesFlutuantes(data.atendeai_visibility);
-    });
+    // Verificação de existência movida para dentro do callback para evitar recriação desnecessária
+    if (!document.getElementById("containerBotoesGemini")) {
+      storageGet(["atendeai_visibility", SECTOR_KEY]).then(items => {
+        const visibility = items.atendeai_visibility || {};
+        const rawSector = items[SECTOR_KEY];
+        const sector = String(rawSector || "").trim().toLowerCase();
+
+        criarBotoesFlutuantes(visibility, sector);
+      });
+    }
   });
 }
 

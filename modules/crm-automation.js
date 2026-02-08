@@ -262,7 +262,7 @@ const CRMAutomationModule = (function () {
                     <div style="flex:1;">
                         <label style="display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase;">Oportunidade / Detalhes</label>
                         <div style="position:relative;">
-                            <input type="text" id="crm-input-upsell-desc" class="crm-input" style="width:100%; padding:10px; padding-right:40px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; background:#f3f4f6; color:#9ca3af; box-sizing:border-box;" placeholder="Descreva o que foi oferecido..." disabled>
+                            <input type="text" id="crm-input-upsell-desc" class="crm-input" style="width:100%; padding:10px; padding-right:40px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; background:#fff; color:#000; box-sizing:border-box;" placeholder="Descreva o que foi oferecido...">
                         </div>
                     </div>
                 </div>
@@ -325,9 +325,10 @@ const CRMAutomationModule = (function () {
         // --- Logic: Upsell Toggle ---
         const toggleUpsellDesc = () => {
             const isSim = container.querySelector('input[name="crm-upsell"]:checked').value === "SIM";
-            els.upsellDesc.disabled = !isSim;
-            els.upsellDesc.style.background = isSim ? '#fff' : '#f3f4f6';
-            els.upsellDesc.style.color = isSim ? '#000' : '#9ca3af';
+            // els.upsellDesc.disabled = !isSim; // REMOVIDO: Sempre habilitado
+            // els.upsellDesc.style.background = isSim ? '#fff' : '#f3f4f6'; // REMOVIDO
+            // els.upsellDesc.style.color = isSim ? '#000' : '#9ca3af'; // REMOVIDO
+            // Mantendo apenas o foco se for SIM
             if (isSim) els.upsellDesc.focus();
         };
         els.upsellRadios.forEach(r => r.addEventListener('change', () => {
@@ -350,7 +351,7 @@ const CRMAutomationModule = (function () {
             text += `SOLUÇÃO APRESENTADA: ${capitalize(solucao)}\n\n`;
 
             text += `OPORTUNIDADE DE UPSELL: ${upsell}`;
-            if (upsell === "SIM" && upsellTxt) {
+            if (upsellTxt) {
                 text += `. ${capitalize(upsellTxt)}`;
             }
             text += `. \n\n`;
@@ -376,9 +377,9 @@ const CRMAutomationModule = (function () {
             const list = [els.problema, els.solucao, ...els.upsellRadios];
 
             // Check if Upsell Desc is enabled
-            if (!els.upsellDesc.disabled) {
-                list.push(els.upsellDesc);
-            }
+            // if (!els.upsellDesc.disabled) { // REMOVIDO
+            list.push(els.upsellDesc);
+            // }
 
             list.push(...els.printRadios);
             list.push(els.humor);

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AtendeAI Manager",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Gera resumos estruturados de atendimentos usando Gemini.",
   "permissions": [
     "storage"
@@ -74,7 +74,8 @@
         "mensagem-padrao.png",
         "chamado-manual.png",
         "docs.png",
-        "dicas-inteligentes.png"
+        "dicas-inteligentes.png",
+        "config.png"
       ],
       "matches": [
         "https://softeninformatica.sz.chat/*"

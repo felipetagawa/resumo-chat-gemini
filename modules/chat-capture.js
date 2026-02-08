@@ -3,7 +3,6 @@ const ChatCaptureModule = (() => {
         const mensagensDOM = document.querySelectorAll(".msg");
 
         if (!mensagensDOM.length) {
-            alert("Nenhuma mensagem encontrada no chat aberto.");
             return "";
         }
 
