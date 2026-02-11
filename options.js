@@ -1279,6 +1279,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         filteredRows = rows;
+        renderTable(rows);
         renderAvgBox(rows);
         updatePaginationUI();
 

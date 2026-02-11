@@ -1,6 +1,5 @@
 const DEFAULT_API_BASE_URL = "https://gemini-resumo-298442462030.southamerica-east1.run.app";
 
-// rastreia versao
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === "install" || details.reason === "update") {
     try {
@@ -10,16 +9,13 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       const { versionHistory } = await chrome.storage.local.get(["versionHistory"]);
       let history = versionHistory || [];
 
-      // Se o histórico está vazio, adicionar versões anteriores conhecidas
       if (history.length === 0) {
-        // Adicionar versão 1.4.6 como primeira entrada
         history.push({
           version: "1.4.6",
           timestamp: Date.now() - 86400000 // 1 dia atrás
         });
       }
 
-      // Verificar se a versão atual já está registrada
       const alreadyRecorded = history.some(item => item.version === currentVersion);
 
       if (!alreadyRecorded) {
