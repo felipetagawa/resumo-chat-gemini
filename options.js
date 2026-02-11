@@ -745,8 +745,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function initLeaderControls() {
     if (!el.leaderBtnQuery || !el.leaderTableBody) return;
 
-    const PAGE_SIZE = 15;
+    let currentFilters = {};
+    let serverTotalPages = 0;
     let currentPage = 0;
+    const PAGE_SIZE = 15;
 
     let masterRows = [];
     let filteredRows = [];
@@ -892,10 +894,22 @@ document.addEventListener("DOMContentLoaded", () => {
           ])
         ) || 0;
 
-      const dateStr = normalizeToYMD(dateRaw).trim();
+      let displayDate = "";
+      if (dateRaw) {
+        const d = new Date(dateRaw);
+
+        if (!isNaN(d.getTime())) {
+          const dataFmt = d.toLocaleDateString('pt-BR'); // Ex: 11/02/2026
+          const horaFmt = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); // Ex: 14:30
+          displayDate = `${dataFmt} ${horaFmt}`;
+        } else {
+          displayDate = typeof normalizeToYMD === 'function' ? normalizeToYMD(dateRaw) : String(dateRaw);
+        }
+      }
+
 
       return {
-        date: dateStr || "",
+        date: displayDate.trim(),
         pre: safe(preRaw).trim(),
         client: safe(cliRaw).trim(),
         ms,
@@ -1060,25 +1074,26 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    function getTotalPages() {
-      const total = filteredRows.length;
-      return Math.max(1, Math.ceil(total / PAGE_SIZE));
-    }
 
-    function clampPage() {
-      const totalPages = getTotalPages();
-      if (currentPage < 0) currentPage = 0;
-      if (currentPage > totalPages - 1) currentPage = totalPages - 1;
-    }
+
+
 
     function updatePaginationUI() {
-      const totalPages = getTotalPages();
-      clampPage();
+      const totalPages = serverTotalPages;
+      const total = PAGE_SIZE;
 
-      const total = filteredRows.length;
-
-      if (pagePrevBtn) pagePrevBtn.disabled = currentPage <= 0 || total === 0;
-      if (pageNextBtn) pageNextBtn.disabled = currentPage >= totalPages - 1 || total === 0;
+      if (pagePrevBtn) {
+        pagePrevBtn.disabled = currentPage <= 0;
+        pagePrevBtn.onclick = () => {
+          if (currentPage > 0) query(currentFilters, currentPage - 1);
+        };
+      }
+      if (pageNextBtn) {
+        pageNextBtn.disabled = currentPage >= totalPages - 1;
+        pageNextBtn.onclick = () => {
+          if (currentPage < serverTotalPages - 1) query(currentFilters, currentPage + 1);
+        };
+      }
 
       if (!pageInfoEl) return;
 
@@ -1087,7 +1102,7 @@ document.addEventListener("DOMContentLoaded", () => {
       pageInfoEl.style.alignItems = "center";
       pageInfoEl.style.gap = "4px";
 
-      if (total === 0) {
+      if (totalPages === 0) {
         pageInfoEl.textContent = "1";
         return;
       }
@@ -1118,8 +1133,7 @@ document.addEventListener("DOMContentLoaded", () => {
           btn.onmouseenter = () => btn.style.background = "#f1f5f9";
           btn.onmouseleave = () => btn.style.background = "transparent";
           btn.onclick = () => {
-            currentPage = pageNum;
-            renderCurrentPage();
+            query(currentFilters, pageNum);
           };
         }
         return btn;
@@ -1188,25 +1202,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    function renderCurrentPage() {
-      clampPage();
-
-      const start = currentPage * PAGE_SIZE;
-      const end = start + PAGE_SIZE;
-      const slice = filteredRows.slice(start, end);
-
-      renderTable(slice);
-
-      renderAvgBox(filteredRows);
-
-      updatePaginationUI();
-    }
 
     function refreshFiltered(resetPage = false) {
       const f = getLeaderFilters();
       filteredRows = applyFilters(masterRows, f);
       if (resetPage) currentPage = 0;
-      renderCurrentPage();
     }
 
     function setCurrentMonthDefaults() {
@@ -1228,102 +1228,74 @@ document.addEventListener("DOMContentLoaded", () => {
       if (el.leaderFilterDateTo) el.leaderFilterDateTo.value = toYMD(last);
     }
 
-    async function query({ name, dateFrom, dateTo, negociation } = {}) {
+    async function query(filters = {}, pageIndex = 0) {
       disableUI(true);
       setStatus("Consultando...", "#64748b");
 
+      if (pageIndex === 0) {
+        currentFilters = filters;
+      }
+      currentPage = pageIndex;
+
       try {
         const resp = await new Promise((resolve) => {
-          chrome.runtime.sendMessage(
-            {
-              action: "preControl:query",
-              name: name || "",
-              dateFrom: dateFrom || "",
-              dateTo: dateTo || "",
-              negociation: (negociation === true ? true : negociation === false ? false : ""),
-              date: "",
-              page: 0,
-              size: 5000
-            },
-            (r) => resolve(r || {})
-          );
+          chrome.runtime.sendMessage({
+            action: "preControl:query",
+            ...currentFilters,
+            page: currentPage,
+            size: PAGE_SIZE
+          }, (r) => resolve(r || {}));
         });
 
         if (!resp.success) {
-          masterRows = [];
-          filteredRows = [];
-          currentPage = 0;
-          renderCurrentPage();
-          setStatus(`${resp.erro || "Erro na consulta"}`, "#b91c1c");
-          return;
+          throw new Error(resp.erro || "Erro na consulta");
         }
 
-        const list = normalizeApiList(resp.data);
-        const rows = list.map(mapRow);
+
+        const apiData = resp.data;
+
+        const rawList = apiData.content || (Array.isArray(apiData) ? apiData : []);
+
+        serverTotalPages = apiData.totalPages || 0;
+
+        const rows = rawList.map(mapRow);
 
         rows.sort((a, b) => {
           const getTimestamp = (r) => {
             const val = pickField(r.raw, ["createdAt", "created_at", "timestamp", "date", "data", "dataRegistro", "data_registro"]);
             if (!val) return 0;
-
-            // Try standard parser
             let ms = new Date(val).getTime();
             if (!Number.isNaN(ms)) return ms;
-
-            // Try DD/MM/YYYY HH:mm:ss
             if (typeof val === 'string') {
-              // Check if it's DD/MM/YYYY
               const parts = val.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s(\d{2}):(\d{2})(?::(\d{2}))?)?/);
               if (parts) {
                 const [_, d, m, y, hh, mm, ss] = parts;
                 return new Date(y, m - 1, d, hh || 0, mm || 0, ss || 0).getTime();
               }
             }
-
             return 0;
           };
           return getTimestamp(b) - getTimestamp(a);
         });
 
-        masterRows = rows;
+        filteredRows = rows;
+        renderAvgBox(rows);
+        updatePaginationUI();
 
-        refreshFiltered(true);
-
-        setStatus(`${filteredRows.length} registro(s) no filtro (de ${rows.length}).`, "green");
+        setStatus(`Página ${currentPage + 1} de ${serverTotalPages}`, "green");
 
       } catch (err) {
-        masterRows = [];
-        filteredRows = [];
-        currentPage = 0;
-        renderCurrentPage();
-        setStatus(`Erro: ${err?.message || String(err)}`, "#b91c1c");
+        console.error(err);
+        renderTable([]);
+        setStatus(`Erro: ${err.message}`, "#b91c1c");
       } finally {
         disableUI(false);
-        setTimeout(() => setStatus(""), 2500);
       }
     }
 
     el.leaderBtnQuery.addEventListener("click", () => {
       const f = getLeaderFilters();
-
-      query({
-        name: f.name,
-        dateFrom: f.dateFrom,
-        dateTo: f.dateTo,
-        negociation: f.neg
-      });
-    });
-
-    pagePrevBtn?.addEventListener("click", () => {
-      if (!filteredRows.length) return;
-      currentPage -= 1;
-      renderCurrentPage();
-    });
-
-    pageNextBtn?.addEventListener("click", () => {
-      if (!filteredRows.length) return;
-      currentPage += 1;
-      renderCurrentPage();
+      query(f, 0);
     });
 
     el.leaderExportTxt?.addEventListener("click", exportTxt);
@@ -1352,7 +1324,6 @@ document.addEventListener("DOMContentLoaded", () => {
     masterRows = [];
     filteredRows = [];
     currentPage = 0;
-    renderCurrentPage();
 
     el.leaderBtnQuery?.click();
   }
