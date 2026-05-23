@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AtendeAI Manager",
-  "version": "1.4.8",
+  "version": "1.4.9",
   "description": "Gera resumos estruturados de atendimentos usando Gemini.",
   "permissions": [
     "storage"
@@ -49,6 +49,7 @@
         "modules/called.js",
         "modules/notifications.js",
         "modules/pre-controls.js",
+        "modules/observations.js",
         "content.js"
       ],
       "run_at": "document_end"

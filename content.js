@@ -1,5 +1,6 @@
 const TARGET_URL = "https://softeninformatica.sz.chat/user/agent";
 let modulosInicializados = false;
+const MAX_PROMPT_COMPLEMENT_CHARS = 2000;
 
 const NAME_KEY = "atendeai_user_name";
 const SECTOR_KEY = "atendeai_user_sector";
@@ -36,6 +37,7 @@ function inicializarModulos() {
   NotificationsModule.init();
 
   PreControlModule.init();
+  ObservationsModule.init();
 
   modulosInicializados = true;
 }
@@ -515,7 +517,21 @@ function criarBotoesFlutuantes(visibility, userSector) {
       }
 
       try {
-        const response = await MessagingHelper.send({ action: "gerarResumo", texto });
+        const chatPromptComplement = ObservationsModule.getPromptComplementForCurrentChat();
+        const validatedPromptComplement = chatPromptComplement;
+
+        if (validatedPromptComplement.length > MAX_PROMPT_COMPLEMENT_CHARS) {
+          alert(`O campo "Complemento para IA" excede o limite de ${MAX_PROMPT_COMPLEMENT_CHARS} caracteres.`);
+          return;
+        }
+
+        const payload = {
+          action: "gerarResumo",
+          texto
+        };
+        if (chatPromptComplement) payload.promptComplement = chatPromptComplement;
+
+        const response = await MessagingHelper.send(payload);
         if (response && response.resumo) SummaryModule.exibirResumo(response.resumo, clientName); // Passa nome para salvar corretamente
         else if (response && response.erro) alert("Erro ao gerar resumo: " + response.erro);
       } catch (error) {
@@ -569,7 +585,21 @@ function criarBotoesFlutuantes(visibility, userSector) {
     }
 
     try {
-      const response = await MessagingHelper.send({ action: "gerarDica", texto });
+      const chatPromptComplement = ObservationsModule.getPromptComplementForCurrentChat();
+      const validatedPromptComplement = chatPromptComplement;
+
+      if (validatedPromptComplement.length > MAX_PROMPT_COMPLEMENT_CHARS) {
+        alert(`O campo "Complemento para IA" excede o limite de ${MAX_PROMPT_COMPLEMENT_CHARS} caracteres.`);
+        return;
+      }
+
+      const payload = {
+        action: "gerarDica",
+        texto
+      };
+      if (chatPromptComplement) payload.promptComplement = chatPromptComplement;
+
+      const response = await MessagingHelper.send(payload);
       if (response && response.dica) SummaryModule.exibirDica(response.dica);
       else if (response && response.erro) alert("Erro ao gerar dica: " + response.erro);
     } catch (error) {
@@ -601,6 +631,17 @@ function criarBotoesFlutuantes(visibility, userSector) {
   );
 
   // Botão de Configurações padrão para todos os setores (substitui Chamado Manual)
+  const botaoObservacoes = createButton(
+    "btnObservacoes",
+    "Observações",
+    "📝",
+    guardFeature(() => ObservationsModule.openDrawer())
+  );
+  botaoObservacoes.insertAdjacentHTML(
+    "beforeend",
+    '<span class="atendeai-observations-dot" hidden aria-hidden="true"></span><span class="atendeai-observations-ia" hidden>IA</span>'
+  );
+
   const botaoConfiguracoes = createButton(
     "btnConfiguracoes",
     "Configurações",
@@ -618,6 +659,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
   if (isVisible("btnResumoGemini")) container.appendChild(botaoResumo);
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);
   if (isVisible("btnAgenda")) container.appendChild(botaoAgenda);
+  container.appendChild(botaoObservacoes);
   container.appendChild(botaoConfiguracoes); // Sempre mostra Configurações
 
   if (isVisible("btnAssistenteIA")) container.appendChild(containerDropdown);

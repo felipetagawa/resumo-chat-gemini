@@ -1,4 +1,5 @@
 const DEFAULT_API_BASE_URL = "https://gemini-resumo-298442462030.southamerica-east1.run.app";
+const MAX_PROMPT_COMPLEMENT_CHARS = 2000;
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === "install" || details.reason === "update") {
@@ -119,21 +120,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     (async () => {
       try {
         const apiBaseUrl = await getApiBaseUrl();
-        const { texto } = request;
+        const { texto, promptComplement } = request;
 
-        const storageData = await chrome.storage.local.get(["customInstructions", "history"]);
-        const customInstructions = storageData.customInstructions || "";
+        const storageData = await chrome.storage.local.get(["history"]);
+        const composedPromptComplement = String(promptComplement || "").trim();
 
-        let textoFinal = texto;
-        if (customInstructions.trim()) {
-          textoFinal =
-            `INSTRUÇÕES ADICIONAIS DO USUÁRIO:\n${customInstructions}\n\n---\n\nHISTÓRICO DO CHAT:\n${texto}`;
+        if (composedPromptComplement.length > MAX_PROMPT_COMPLEMENT_CHARS) {
+          safeSend({ erro: `promptComplement excede o limite de ${MAX_PROMPT_COMPLEMENT_CHARS} caracteres.` });
+          return;
         }
+
+        const payload = { texto };
+        if (composedPromptComplement) payload.promptComplement = composedPromptComplement;
 
         const json = await apiFetchJson(`${apiBaseUrl}/api/gemini/resumir`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ texto: textoFinal })
+          body: JSON.stringify(payload)
         });
 
         const resumoTexto = json.summary || json.resumo || "";
@@ -161,12 +164,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     (async () => {
       try {
         const apiBaseUrl = await getApiBaseUrl();
-        const { texto } = request;
+        const { texto, promptComplement } = request;
+        const composedPromptComplement = String(promptComplement || "").trim();
+
+        if (composedPromptComplement.length > MAX_PROMPT_COMPLEMENT_CHARS) {
+          safeSend({ success: false, erro: `promptComplement excede o limite de ${MAX_PROMPT_COMPLEMENT_CHARS} caracteres.` });
+          return;
+        }
+
+        const payload = { texto };
+        if (composedPromptComplement) payload.promptComplement = composedPromptComplement;
 
         const json = await apiFetchJson(`${apiBaseUrl}/api/chamado/processar-dica`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ texto })
+          body: JSON.stringify(payload)
         });
 
         safeSend({ success: true, dica: json });
