@@ -517,11 +517,11 @@ function criarBotoesFlutuantes(visibility, userSector) {
       }
 
       try {
-        const chatPromptComplement = ObservationsModule.getPromptComplementForCurrentChat();
-        const validatedPromptComplement = chatPromptComplement;
+        const summaryObservation = ObservationsModule.getPromptComplementForCurrentChat();
+        const validatedPromptComplement = summaryObservation;
 
         if (validatedPromptComplement.length > MAX_PROMPT_COMPLEMENT_CHARS) {
-          alert(`O campo "Complemento para IA" excede o limite de ${MAX_PROMPT_COMPLEMENT_CHARS} caracteres.`);
+          alert(`O campo "Observações para o resumo" excede o limite de ${MAX_PROMPT_COMPLEMENT_CHARS} caracteres.`);
           return;
         }
 
@@ -529,7 +529,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
           action: "gerarResumo",
           texto
         };
-        if (chatPromptComplement) payload.promptComplement = chatPromptComplement;
+        if (summaryObservation) payload.promptComplement = summaryObservation;
 
         const response = await MessagingHelper.send(payload);
         if (response && response.resumo) SummaryModule.exibirResumo(response.resumo, clientName); // Passa nome para salvar corretamente
@@ -585,11 +585,11 @@ function criarBotoesFlutuantes(visibility, userSector) {
     }
 
     try {
-      const chatPromptComplement = ObservationsModule.getPromptComplementForCurrentChat();
-      const validatedPromptComplement = chatPromptComplement;
+      const summaryObservation = ObservationsModule.getPromptComplementForCurrentChat();
+      const validatedPromptComplement = summaryObservation;
 
       if (validatedPromptComplement.length > MAX_PROMPT_COMPLEMENT_CHARS) {
-        alert(`O campo "Complemento para IA" excede o limite de ${MAX_PROMPT_COMPLEMENT_CHARS} caracteres.`);
+        alert(`O campo "Observações para o resumo" excede o limite de ${MAX_PROMPT_COMPLEMENT_CHARS} caracteres.`);
         return;
       }
 
@@ -597,7 +597,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
         action: "gerarDica",
         texto
       };
-      if (chatPromptComplement) payload.promptComplement = chatPromptComplement;
+      if (summaryObservation) payload.promptComplement = summaryObservation;
 
       const response = await MessagingHelper.send(payload);
       if (response && response.dica) SummaryModule.exibirDica(response.dica);

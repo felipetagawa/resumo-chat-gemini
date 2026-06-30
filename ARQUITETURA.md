@@ -119,6 +119,13 @@ const AgendaModule = (() => {
 })();
 ```
 
+### Observações do atendimento
+- `modules/observations.js` mantém o armazenamento local por atendimento usando a mesma `chatKey` para salvar, carregar e ler no envio.
+- O drawer separa **Notas privadas** de **Observações para o resumo**.
+- Somente **Observações para o resumo** entram no payload enviado ao backend, no campo opcional `promptComplement`.
+- **Notas privadas** ficam apenas em `chrome.storage.local` e não devem aparecer em chamadas para a API.
+- Fragilidade conhecida: a estratégia atual de `chatKey` continua dependente dos metadados detectados na página e deve ser tratada em uma issue futura, fora desta entrega.
+
 ## 🛠️ Desenvolvimento
 
 ### Adicionar Nova Funcionalidade

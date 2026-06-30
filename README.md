@@ -36,6 +36,14 @@ Assim que você abrir o Sz.chat, uma barra de botões aparecerá no canto inferi
 4. Um resumo completo aparecerá na tela
 5. Copie e cole no ticket ou onde precisar
 
+### 📝 Notas privadas e observações para o resumo
+O botão **"Observações"** agora separa claramente dois usos diferentes:
+
+- **Notas privadas:** ficam somente no navegador e nunca são enviadas para a IA.
+- **Observações para o resumo:** complementam o histórico principal do chat e são enviadas automaticamente junto com **Gerar Relatório** e **Dicas Inteligentes** quando preenchidas.
+
+Use **Observações para o resumo** para registrar contexto passado por telefone, ações feitas fora do chat, conclusões do atendimento ou detalhes importantes que não ficaram no histórico.
+
 ### 💡 Dicas Inteligentes
 **O que faz:** Analisa a conversa e sugere soluções ou identifica o humor do cliente.
 

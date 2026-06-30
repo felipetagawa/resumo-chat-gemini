@@ -5,7 +5,6 @@ const ObservationsModule = (() => {
   const OVERLAY_ID = "atendeai-observations-overlay";
   const OBS_FIELD_ID = "atendeai-observation-text";
   const COMPLEMENT_FIELD_ID = "atendeai-prompt-complement";
-  const USE_COMPLEMENT_ID = "atendeai-use-prompt-complement";
   const SAVE_STATUS_ID = "atendeai-observations-save-status";
   const MAX_COMPLEMENT_CHARS = 2000;
   const SAVE_DEBOUNCE_MS = 450;
@@ -14,8 +13,7 @@ const ObservationsModule = (() => {
   let currentMeta = { contactName: "", phone: "", protocol: "" };
   let currentValues = {
     observationText: "",
-    promptComplement: "",
-    usePromptComplement: false
+    promptComplement: ""
   };
   let saveTimer = null;
   let mutationObserver = null;
@@ -167,18 +165,17 @@ const ObservationsModule = (() => {
 
     const hasObservation = !!String(currentValues.observationText || "").trim();
     const hasComplement = !!String(currentValues.promptComplement || "").trim();
-    const usesComplement = hasComplement && currentValues.usePromptComplement === true;
 
     button.classList.toggle("has-observation", hasObservation || hasComplement);
-    button.classList.toggle("uses-ia", usesComplement);
+    button.classList.toggle("uses-ia", hasComplement);
     const dot = button.querySelector(".atendeai-observations-dot");
     const iaBadge = button.querySelector(".atendeai-observations-ia");
     if (dot) dot.hidden = !(hasObservation || hasComplement);
-    if (iaBadge) iaBadge.hidden = !usesComplement;
-    button.title = usesComplement
-      ? "Este chat tem observações e complemento ativo para IA"
+    if (iaBadge) iaBadge.hidden = !hasComplement;
+    button.title = hasComplement
+      ? "Este chat tem observações para o resumo ativas"
       : hasObservation || hasComplement
-        ? "Este chat tem observações salvas"
+        ? "Este chat tem notas privadas salvas"
         : "Adicionar observações para este chat";
   }
 
@@ -208,17 +205,15 @@ const ObservationsModule = (() => {
 
     const obsInput = document.getElementById(OBS_FIELD_ID);
     const complementInput = document.getElementById(COMPLEMENT_FIELD_ID);
-    const useComplementInput = document.getElementById(USE_COMPLEMENT_ID);
-    if (!obsInput || !complementInput || !useComplementInput) return;
+    if (!obsInput || !complementInput) return;
 
     const observationText = String(obsInput.value || "");
     const promptComplement = String(complementInput.value || "");
-    const usePromptComplement = useComplementInput.checked === true;
 
-    currentValues = { observationText, promptComplement, usePromptComplement };
+    currentValues = { observationText, promptComplement };
 
     const map = await readStorageMap();
-    const isEmpty = !observationText.trim() && !promptComplement.trim() && !usePromptComplement;
+    const isEmpty = !observationText.trim() && !promptComplement.trim();
 
     if (isEmpty) {
       delete map[currentChatKey];
@@ -226,7 +221,6 @@ const ObservationsModule = (() => {
       map[currentChatKey] = {
         observationText,
         promptComplement,
-        usePromptComplement,
         updatedAt: Date.now(),
         contactName: currentMeta.contactName || "",
         phone: currentMeta.phone || "",
@@ -241,7 +235,7 @@ const ObservationsModule = (() => {
 
   async function loadCurrentValues() {
     if (!currentChatKey) {
-      currentValues = { observationText: "", promptComplement: "", usePromptComplement: false };
+      currentValues = { observationText: "", promptComplement: "" };
       applyValuesToInputs();
       updateButtonState();
       return;
@@ -251,8 +245,7 @@ const ObservationsModule = (() => {
     const item = map[currentChatKey] || {};
     currentValues = {
       observationText: String(item.observationText || ""),
-      promptComplement: String(item.promptComplement || ""),
-      usePromptComplement: item.usePromptComplement === true
+      promptComplement: String(item.promptComplement || "")
     };
     applyValuesToInputs();
     updateButtonState();
@@ -261,12 +254,10 @@ const ObservationsModule = (() => {
   function applyValuesToInputs() {
     const obsInput = document.getElementById(OBS_FIELD_ID);
     const complementInput = document.getElementById(COMPLEMENT_FIELD_ID);
-    const useComplementInput = document.getElementById(USE_COMPLEMENT_ID);
     const counter = document.getElementById("atendeai-prompt-complement-count");
 
     if (obsInput) obsInput.value = currentValues.observationText || "";
     if (complementInput) complementInput.value = currentValues.promptComplement || "";
-    if (useComplementInput) useComplementInput.checked = currentValues.usePromptComplement === true;
     if (counter) counter.textContent = `${String(currentValues.promptComplement || "").length}/${MAX_COMPLEMENT_CHARS}`;
   }
 
@@ -323,15 +314,12 @@ const ObservationsModule = (() => {
       </div>
 
       <div class="atendeai-observations-body">
-        <label class="atendeai-observations-label" for="${OBS_FIELD_ID}">Observações privadas</label>
-        <textarea id="${OBS_FIELD_ID}" rows="7" placeholder="Anote algo para lembrar depois. Este texto fica somente local e não vai para a API."></textarea>
+        <label class="atendeai-observations-label" for="${OBS_FIELD_ID}">Notas privadas</label>
+        <textarea id="${OBS_FIELD_ID}" rows="7" placeholder="Notas privadas deste atendimento. Ficam somente no navegador e não são enviadas para a IA."></textarea>
 
-        <div class="atendeai-observations-section-title">Complemento para IA</div>
-        <label class="atendeai-observations-toggle">
-          <input id="${USE_COMPLEMENT_ID}" type="checkbox" />
-          <span>Usar complemento na IA</span>
-        </label>
-        <textarea id="${COMPLEMENT_FIELD_ID}" rows="6" maxlength="${MAX_COMPLEMENT_CHARS}" placeholder="Contexto opcional para enviar junto com Gerar Relatório ou Dicas Inteligentes."></textarea>
+        <label class="atendeai-observations-label" for="${COMPLEMENT_FIELD_ID}">Observações para o resumo</label>
+        <div class="atendeai-observations-section-title">Complementam o histórico principal do chat e são enviadas automaticamente para a IA quando preenchidas.</div>
+        <textarea id="${COMPLEMENT_FIELD_ID}" rows="6" maxlength="${MAX_COMPLEMENT_CHARS}" placeholder="Adicione contexto do atendimento, ações feitas fora do chat, conclusões ou informações importantes que devem complementar o resumo."></textarea>
 
         <div class="atendeai-observations-footer-row">
           <span id="${SAVE_STATUS_ID}" data-tone="neutral">Salvo</span>
@@ -355,7 +343,6 @@ const ObservationsModule = (() => {
   function bindDrawerEvents() {
     const obsInput = document.getElementById(OBS_FIELD_ID);
     const complementInput = document.getElementById(COMPLEMENT_FIELD_ID);
-    const useComplementInput = document.getElementById(USE_COMPLEMENT_ID);
     const counter = document.getElementById("atendeai-prompt-complement-count");
 
     obsInput?.addEventListener("input", scheduleSave);
@@ -363,7 +350,6 @@ const ObservationsModule = (() => {
       if (counter) counter.textContent = `${complementInput.value.length}/${MAX_COMPLEMENT_CHARS}`;
       scheduleSave();
     });
-    useComplementInput?.addEventListener("change", scheduleSave);
   }
 
   function initObservers() {
@@ -383,17 +369,12 @@ const ObservationsModule = (() => {
 
   function getPromptComplementForCurrentChat() {
     const complementInput = document.getElementById(COMPLEMENT_FIELD_ID);
-    const useComplementInput = document.getElementById(USE_COMPLEMENT_ID);
 
     const promptComplement = complementInput
       ? String(complementInput.value || "")
       : String(currentValues.promptComplement || "");
 
-    const usePromptComplement = useComplementInput
-      ? useComplementInput.checked === true
-      : currentValues.usePromptComplement === true;
-
-    if (!usePromptComplement || !promptComplement.trim()) return "";
+    if (!promptComplement.trim()) return "";
     return promptComplement.trim();
   }
 
