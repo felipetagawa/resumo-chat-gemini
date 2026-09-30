@@ -82,27 +82,34 @@ const DocumentationSuggestionModule = (() => {
       throw new Error("Campo de Documentação do CRM não encontrado.");
     }
 
-    const originalValue = input.value;
-    const originalColor = input.style.getPropertyValue("color");
-    const originalColorPriority = input.style.getPropertyPriority("color");
-    const originalCaret = input.style.getPropertyValue("caret-color");
-    const originalCaretPriority = input.style.getPropertyPriority("caret-color");
-
     panel.style.setProperty("visibility", "hidden", "important");
     panel.style.setProperty("opacity", "0", "important");
     panel.style.setProperty("pointer-events", "none", "important");
-    input.style.setProperty("color", "transparent", "important");
-    input.style.setProperty("caret-color", "transparent", "important");
 
     try {
-      input.focus();
-      input.value = "%%%";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new KeyboardEvent("keyup", {
-        key: "%",
-        code: "Digit5",
-        bubbles: true
-      }));
+      const bridgeStatus = document.documentElement?.getAttribute(
+        "data-atendeai-documentation-bridge"
+      );
+
+      if (!bridgeStatus) {
+        throw new Error("Integração PrimeFaces ainda não está pronta. Recarregue a página.");
+      }
+
+      document.dispatchEvent(new CustomEvent("atendeai:crm-documentation-search"));
+
+      await delay(50);
+
+      const requestedStatus = document.documentElement?.getAttribute(
+        "data-atendeai-documentation-bridge"
+      );
+
+      if (requestedStatus === "widget-not-found") {
+        throw new Error("Autocomplete de Documentação do CRM não foi encontrado.");
+      }
+
+      if (requestedStatus === "error") {
+        throw new Error("O CRM não conseguiu iniciar a busca de documentações.");
+      }
 
       const candidates = await waitForCandidates(panel);
       if (!candidates.length) {
@@ -112,20 +119,6 @@ const DocumentationSuggestionModule = (() => {
       cache.set(cacheKey, candidates);
       return candidates;
     } finally {
-      input.value = originalValue;
-
-      if (originalColor) {
-        input.style.setProperty("color", originalColor, originalColorPriority);
-      } else {
-        input.style.removeProperty("color");
-      }
-
-      if (originalCaret) {
-        input.style.setProperty("caret-color", originalCaret, originalCaretPriority);
-      } else {
-        input.style.removeProperty("caret-color");
-      }
-
       panel.style.removeProperty("visibility");
       panel.style.removeProperty("opacity");
       panel.style.removeProperty("pointer-events");
