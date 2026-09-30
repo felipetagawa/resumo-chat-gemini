@@ -59,3 +59,25 @@ test("prefiltro respeita limite de candidatos", () => {
   const result = api.prefilterCandidates(candidates, "erro fiscal", 200);
   assert.equal(result.length, 200);
 });
+
+test("extrai somente PROBLEMA / DÚVIDA do resumo estruturado", () => {
+  const summary = [
+    "PROBLEMA / DÚVIDA: Cliente recebeu rejeição 610 ao emitir NF-e.",
+    "",
+    "SOLUÇÃO APRESENTADA: Foi ajustada a numeração e realizada nova emissão.",
+    "",
+    "OPORTUNIDADE DE UPSELL: NÃO."
+  ].join("\n");
+
+  assert.equal(
+    api.extractProblemFromStructuredText(summary),
+    "Cliente recebeu rejeição 610 ao emitir NF-e."
+  );
+});
+
+test("retorna vazio quando texto não possui seção de problema", () => {
+  assert.equal(
+    api.extractProblemFromStructuredText("Texto livre sem estrutura."),
+    ""
+  );
+});
