@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const extensionRoot = "/Users/felipeokamoto/Documents/Repositorios/resumo-chat-gemini/resumo-chat-gemini";
+const extensionRoot = path.resolve(process.cwd());
 
 function createFakeDocument() {
   const elements = new Map();
@@ -48,7 +48,9 @@ function createFakeDocument() {
 
 function loadObservationsModule({ storageMap = {} } = {}) {
   const sourcePath = path.join(extensionRoot, "modules/observations.js");
-  const source = fs.readFileSync(sourcePath, "utf8").replace(
+  const source = fs.readFileSync(sourcePath, "utf8")
+    .replace(/\r\n/g, "\n")
+    .replace(
     `  return {
     init,
     openDrawer,
@@ -347,4 +349,110 @@ test("trocar de atendimento nao reutiliza observacao de outro chat", async () =>
     "protocol:chat-a",
     "protocol:chat-b",
   ]);
+});
+
+test("classificacao de produto envia somente a conversa para o novo endpoint", async () => {
+  let requestedUrl;
+  let requestBody;
+  const background = loadBackground({
+    fetchImpl: async (url, options) => {
+      requestedUrl = String(url);
+      requestBody = JSON.parse(options.body);
+      return {
+        ok: true,
+        async json() {
+          return {
+            mode: "single",
+            suggestions: [
+              { productId: "4", product: "ESTOQUE", probability: 0.91 }
+            ],
+            confidence: 0.94,
+            unclearProbability: 0.01,
+            latencyMs: 120
+          };
+        },
+        async text() {
+          return "";
+        },
+      };
+    },
+  });
+
+  const response = await background.dispatch({
+    action: "classificarProduto",
+    conversation: "Cliente informa divergencia no saldo do estoque."
+  });
+
+  assert.match(requestedUrl, /\/api\/classification\/product$/);
+  assert.deepEqual(requestBody, {
+    conversation: "Cliente informa divergencia no saldo do estoque."
+  });
+  assert.equal(response.success, true);
+  assert.equal(response.classification.suggestions[0].productId, "4");
+});
+
+test("classificacao de produto vazia nao chama a API", async () => {
+  let called = false;
+  const background = loadBackground({
+    fetchImpl: async () => {
+      called = true;
+      return backgroundResponse();
+    },
+  });
+
+  const response = await background.dispatch({
+    action: "classificarProduto",
+    conversation: "   "
+  });
+
+  assert.equal(called, false);
+  assert.equal(response.success, false);
+});
+
+test("sugestao de documentacao envia contexto e candidatos ao endpoint correto", async () => {
+  let requestedUrl;
+  let requestBody;
+
+  const background = loadBackground({
+    fetchImpl: async (url, options) => {
+      requestedUrl = String(url);
+      requestBody = JSON.parse(options.body);
+      return {
+        ok: true,
+        async json() {
+          return {
+            mode: "single",
+            suggestions: [
+              { id: "1339", label: "Rejeição 610", probability: 0.97 }
+            ],
+            confidence: 0.99,
+            unclearProbability: 0.01,
+            latencyMs: 280
+          };
+        },
+        async text() {
+          return "";
+        },
+      };
+    },
+  });
+
+  const candidates = [
+    { id: "1339", label: "Rejeição 610" },
+    { id: "1702", label: "Rejeição 533" }
+  ];
+
+  const response = await background.dispatch({
+    action: "classificarDocumentacao",
+    context: "Cliente recebeu rejeição 610.",
+    candidates
+  });
+
+  assert.match(requestedUrl, /\/api\/classification\/documentation$/);
+  assert.deepEqual(requestBody, {
+    context: "Cliente recebeu rejeição 610.",
+    candidates
+  });
+  assert.equal(response.success, true);
+  assert.equal(response.classification.suggestions[0].id, "1339");
 });
