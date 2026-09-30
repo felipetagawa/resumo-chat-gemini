@@ -499,14 +499,34 @@ function criarBotoesFlutuantes(visibility, userSector) {
   productClassifierResult.className = "product-classifier-result";
   productClassifierResult.hidden = true;
 
+  const clearProductClassifierResult = () => {
+    while (productClassifierResult.firstChild) {
+      productClassifierResult.removeChild(productClassifierResult.firstChild);
+    }
+  };
+
+  const appendProductClassifierText = (className, text) => {
+    const element = document.createElement("div");
+    element.className = className;
+    element.textContent = String(text || "");
+    productClassifierResult.appendChild(element);
+    return element;
+  };
+
+  const renderProductClassifierMessage = (title, message) => {
+    clearProductClassifierResult();
+    appendProductClassifierText("product-classifier-title", title);
+    appendProductClassifierText("product-classifier-empty", message);
+    productClassifierResult.hidden = false;
+  };
+
   const renderProductClassification = (classification) => {
     const suggestions = Array.isArray(classification?.suggestions)
       ? classification.suggestions.filter(Boolean)
       : [];
 
     if (!suggestions.length) {
-      productClassifierResult.hidden = false;
-      productClassifierResult.innerHTML = '<div class="product-classifier-title">Produto</div><div class="product-classifier-empty">Não identificado</div>';
+      renderProductClassifierMessage("Produto", "Não identificado");
       return;
     }
 
@@ -516,12 +536,11 @@ function criarBotoesFlutuantes(visibility, userSector) {
       return `${Math.round(n * 100)}%`;
     };
 
+    clearProductClassifierResult();
+
     if (classification.mode === "single") {
-      const top = suggestions[0];
-      productClassifierResult.innerHTML = `
-        <div class="product-classifier-title">Produto sugerido</div>
-        <div class="product-classifier-primary">${top.product}</div>
-      `;
+      appendProductClassifierText("product-classifier-title", "Produto sugerido");
+      appendProductClassifierText("product-classifier-primary", suggestions[0].product);
       productClassifierResult.hidden = false;
       return;
     }
@@ -530,17 +549,27 @@ function criarBotoesFlutuantes(visibility, userSector) {
       ? "Produto pouco claro"
       : "Possíveis produtos";
 
-    productClassifierResult.innerHTML = `
-      <div class="product-classifier-title">${title}</div>
-      <div class="product-classifier-list">
-        ${suggestions.slice(0, 3).map((item) => `
-          <div class="product-classifier-option">
-            <span>${item.product}</span>
-            <strong>${formatPercent(item.probability)}</strong>
-          </div>
-        `).join("")}
-      </div>
-    `;
+    appendProductClassifierText("product-classifier-title", title);
+
+    const list = document.createElement("div");
+    list.className = "product-classifier-list";
+
+    suggestions.slice(0, 3).forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "product-classifier-option";
+
+      const label = document.createElement("span");
+      label.textContent = String(item.product || "");
+
+      const probability = document.createElement("strong");
+      probability.textContent = formatPercent(item.probability);
+
+      row.appendChild(label);
+      row.appendChild(probability);
+      list.appendChild(row);
+    });
+
+    productClassifierResult.appendChild(list);
     productClassifierResult.hidden = false;
   };
 
@@ -559,8 +588,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
 
       const conversation = ChatCaptureModule.capturarTextoChat();
       if (!conversation) {
-        productClassifierResult.hidden = false;
-        productClassifierResult.innerHTML = '<div class="product-classifier-title">Produto</div><div class="product-classifier-empty">Conversa não encontrada</div>';
+        renderProductClassifierMessage("Produto", "Conversa não encontrada");
         if (btn) {
           btn.disabled = false;
           btn.innerHTML = originalHtml;
@@ -580,11 +608,10 @@ function criarBotoesFlutuantes(visibility, userSector) {
 
         renderProductClassification(response.classification);
       } catch (error) {
-        productClassifierResult.hidden = false;
-        productClassifierResult.innerHTML = `
-          <div class="product-classifier-title">Produto</div>
-          <div class="product-classifier-empty">${error.message || "Falha ao identificar"}</div>
-        `;
+        renderProductClassifierMessage(
+          "Produto",
+          error?.message || "Falha ao identificar"
+        );
       } finally {
         if (btn) {
           btn.disabled = false;
