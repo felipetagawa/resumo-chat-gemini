@@ -241,7 +241,8 @@ function createOnboardingModal() {
       btnConsultarDocsLoop: true,
       btnResumoGemini: !isPre,
       btnChamadoManual: !isPre,
-      btnDica: !isPre
+      btnDica: !isPre,
+      btnProductClassifier: isPre
     };
 
     await new Promise((resolve) =>
@@ -493,6 +494,133 @@ function criarBotoesFlutuantes(visibility, userSector) {
     return btn;
   };
 
+  const productClassifierResult = document.createElement("div");
+  productClassifierResult.id = "productClassifierResult";
+  productClassifierResult.className = "product-classifier-result";
+  productClassifierResult.hidden = true;
+
+  const clearProductClassifierResult = () => {
+    while (productClassifierResult.firstChild) {
+      productClassifierResult.removeChild(productClassifierResult.firstChild);
+    }
+  };
+
+  const appendProductClassifierText = (className, text) => {
+    const element = document.createElement("div");
+    element.className = className;
+    element.textContent = String(text || "");
+    productClassifierResult.appendChild(element);
+    return element;
+  };
+
+  const renderProductClassifierMessage = (title, message) => {
+    clearProductClassifierResult();
+    appendProductClassifierText("product-classifier-title", title);
+    appendProductClassifierText("product-classifier-empty", message);
+    productClassifierResult.hidden = false;
+  };
+
+  const renderProductClassification = (classification) => {
+    const suggestions = Array.isArray(classification?.suggestions)
+      ? classification.suggestions.filter(Boolean)
+      : [];
+
+    if (!suggestions.length) {
+      renderProductClassifierMessage("Produto", "Não identificado");
+      return;
+    }
+
+    const formatPercent = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "";
+      return `${Math.round(n * 100)}%`;
+    };
+
+    clearProductClassifierResult();
+
+    if (classification.mode === "single") {
+      appendProductClassifierText("product-classifier-title", "Produto sugerido");
+      appendProductClassifierText("product-classifier-primary", suggestions[0].product);
+      productClassifierResult.hidden = false;
+      return;
+    }
+
+    const title = classification.mode === "uncertain"
+      ? "Produto pouco claro"
+      : "Possíveis produtos";
+
+    appendProductClassifierText("product-classifier-title", title);
+
+    const list = document.createElement("div");
+    list.className = "product-classifier-list";
+
+    suggestions.slice(0, 3).forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "product-classifier-option";
+
+      const label = document.createElement("span");
+      label.textContent = String(item.product || "");
+
+      const probability = document.createElement("strong");
+      probability.textContent = formatPercent(item.probability);
+
+      row.appendChild(label);
+      row.appendChild(probability);
+      list.appendChild(row);
+    });
+
+    productClassifierResult.appendChild(list);
+    productClassifierResult.hidden = false;
+  };
+
+  const botaoClassificarProduto = createButton(
+    "btnClassificarProduto",
+    "Identificar produto",
+    "🔎",
+    guardFeature(async () => {
+      const btn = document.getElementById("btnClassificarProduto");
+      const originalHtml = btn?.innerHTML || "";
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="icon">⏳</span> Identificando...';
+      }
+
+      const conversation = ChatCaptureModule.capturarTextoChat();
+      if (!conversation) {
+        renderProductClassifierMessage("Produto", "Conversa não encontrada");
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }
+        return;
+      }
+
+      try {
+        const response = await MessagingHelper.send({
+          action: "classificarProduto",
+          conversation
+        });
+
+        if (!response?.success) {
+          throw new Error(response?.erro || "Não foi possível identificar o produto.");
+        }
+
+        renderProductClassification(response.classification);
+      } catch (error) {
+        renderProductClassifierMessage(
+          "Produto",
+          error?.message || "Falha ao identificar"
+        );
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml || `${getIconHTML("🔎", "Identificar produto")} Identificar produto`;
+        }
+      }
+    })
+  );
+
   const botaoDocs = createButton(
     "btnConsultarDocs",
     "Consultar Docs",
@@ -655,6 +783,11 @@ function criarBotoesFlutuantes(visibility, userSector) {
       }
     }
   );
+
+  if (userSector === "preatendimento") {
+    container.appendChild(botaoClassificarProduto);
+    container.appendChild(productClassifierResult);
+  }
 
   if (isVisible("btnResumoGemini")) container.appendChild(botaoResumo);
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);
