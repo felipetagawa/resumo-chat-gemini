@@ -60,6 +60,17 @@
         "https://www.sistemaempresarialweb.com.br/crm-atendimento*"
       ],
       "js": [
+        "modules/crm-primefaces-bridge.js"
+      ],
+      "run_at": "document_end",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://sistemaempresarialweb.com.br/crm-atendimento*",
+        "https://www.sistemaempresarialweb.com.br/crm-atendimento*"
+      ],
+      "js": [
         "modules/documentation-suggestion.js",
         "modules/crm-automation.js"
       ],
