@@ -406,3 +406,51 @@ test("classificacao de produto vazia nao chama a API", async () => {
   assert.equal(called, false);
   assert.equal(response.success, false);
 });
+
+test("sugestao de documentacao envia contexto e candidatos ao endpoint correto", async () => {
+  let requestedUrl;
+  let requestBody;
+
+  const background = loadBackground({
+    fetchImpl: async (url, options) => {
+      requestedUrl = String(url);
+      requestBody = JSON.parse(options.body);
+      return {
+        ok: true,
+        async json() {
+          return {
+            mode: "single",
+            suggestions: [
+              { id: "1339", label: "Rejeição 610", probability: 0.97 }
+            ],
+            confidence: 0.99,
+            unclearProbability: 0.01,
+            latencyMs: 280
+          };
+        },
+        async text() {
+          return "";
+        },
+      };
+    },
+  });
+
+  const candidates = [
+    { id: "1339", label: "Rejeição 610" },
+    { id: "1702", label: "Rejeição 533" }
+  ];
+
+  const response = await background.dispatch({
+    action: "classificarDocumentacao",
+    context: "Cliente recebeu rejeição 610.",
+    candidates
+  });
+
+  assert.match(requestedUrl, /\/api\/classification\/documentation$/);
+  assert.deepEqual(requestBody, {
+    context: "Cliente recebeu rejeição 610.",
+    candidates
+  });
+  assert.equal(response.success, true);
+  assert.equal(response.classification.suggestions[0].id, "1339");
+});

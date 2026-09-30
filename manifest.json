@@ -60,6 +60,7 @@
         "https://www.sistemaempresarialweb.com.br/crm-atendimento*"
       ],
       "js": [
+        "modules/documentation-suggestion.js",
         "modules/crm-automation.js"
       ],
       "run_at": "document_end"
