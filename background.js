@@ -145,6 +145,41 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request?.action === "classificarDocumentacao") {
+    (async () => {
+      try {
+        const apiBaseUrl = await getApiBaseUrl();
+        const context = String(request?.context || "").trim();
+        const candidates = Array.isArray(request?.candidates) ? request.candidates : [];
+
+        if (!context) {
+          safeSend({ success: false, erro: "Contexto do atendimento é obrigatório." });
+          return;
+        }
+
+        if (!candidates.length) {
+          safeSend({ success: false, erro: "Nenhuma documentação candidata foi encontrada no CRM." });
+          return;
+        }
+
+        const json = await apiFetchJson(`${apiBaseUrl}/api/classification/documentation`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ context, candidates })
+        });
+
+        safeSend({ success: true, classification: json });
+      } catch (err) {
+        safeSend({
+          success: false,
+          erro: err?.message || "Não foi possível sugerir a documentação agora."
+        });
+      }
+    })();
+
+    return true;
+  }
+
   if (request?.action === "gerarResumo") {
     (async () => {
       try {

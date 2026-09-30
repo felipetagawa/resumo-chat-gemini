@@ -797,3 +797,6 @@ const CRMAutomationModule = (function () {
 
 // Auto-inicialização quando o script é carregado
 CRMAutomationModule.init();
+if (window.DocumentationSuggestionModule) {
+    window.DocumentationSuggestionModule.init();
+}
