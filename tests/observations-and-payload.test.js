@@ -348,3 +348,61 @@ test("trocar de atendimento nao reutiliza observacao de outro chat", async () =>
     "protocol:chat-b",
   ]);
 });
+
+test("classificacao de produto envia somente a conversa para o novo endpoint", async () => {
+  let requestedUrl;
+  let requestBody;
+  const background = loadBackground({
+    fetchImpl: async (url, options) => {
+      requestedUrl = String(url);
+      requestBody = JSON.parse(options.body);
+      return {
+        ok: true,
+        async json() {
+          return {
+            mode: "single",
+            suggestions: [
+              { productId: "4", product: "ESTOQUE", probability: 0.91 }
+            ],
+            confidence: 0.94,
+            unclearProbability: 0.01,
+            latencyMs: 120
+          };
+        },
+        async text() {
+          return "";
+        },
+      };
+    },
+  });
+
+  const response = await background.dispatch({
+    action: "classificarProduto",
+    conversation: "Cliente informa divergencia no saldo do estoque."
+  });
+
+  assert.match(requestedUrl, /\/api\/classification\/product$/);
+  assert.deepEqual(requestBody, {
+    conversation: "Cliente informa divergencia no saldo do estoque."
+  });
+  assert.equal(response.success, true);
+  assert.equal(response.classification.suggestions[0].productId, "4");
+});
+
+test("classificacao de produto vazia nao chama a API", async () => {
+  let called = false;
+  const background = loadBackground({
+    fetchImpl: async () => {
+      called = true;
+      return backgroundResponse();
+    },
+  });
+
+  const response = await background.dispatch({
+    action: "classificarProduto",
+    conversation: "   "
+  });
+
+  assert.equal(called, false);
+  assert.equal(response.success, false);
+});

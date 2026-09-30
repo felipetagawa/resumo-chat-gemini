@@ -241,7 +241,8 @@ function createOnboardingModal() {
       btnConsultarDocsLoop: true,
       btnResumoGemini: !isPre,
       btnChamadoManual: !isPre,
-      btnDica: !isPre
+      btnDica: !isPre,
+      btnProductClassifier: isPre
     };
 
     await new Promise((resolve) =>
@@ -493,6 +494,106 @@ function criarBotoesFlutuantes(visibility, userSector) {
     return btn;
   };
 
+  const productClassifierResult = document.createElement("div");
+  productClassifierResult.id = "productClassifierResult";
+  productClassifierResult.className = "product-classifier-result";
+  productClassifierResult.hidden = true;
+
+  const renderProductClassification = (classification) => {
+    const suggestions = Array.isArray(classification?.suggestions)
+      ? classification.suggestions.filter(Boolean)
+      : [];
+
+    if (!suggestions.length) {
+      productClassifierResult.hidden = false;
+      productClassifierResult.innerHTML = '<div class="product-classifier-title">Produto</div><div class="product-classifier-empty">Não identificado</div>';
+      return;
+    }
+
+    const formatPercent = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "";
+      return `${Math.round(n * 100)}%`;
+    };
+
+    if (classification.mode === "single") {
+      const top = suggestions[0];
+      productClassifierResult.innerHTML = `
+        <div class="product-classifier-title">Produto sugerido</div>
+        <div class="product-classifier-primary">${top.product}</div>
+      `;
+      productClassifierResult.hidden = false;
+      return;
+    }
+
+    const title = classification.mode === "uncertain"
+      ? "Produto pouco claro"
+      : "Possíveis produtos";
+
+    productClassifierResult.innerHTML = `
+      <div class="product-classifier-title">${title}</div>
+      <div class="product-classifier-list">
+        ${suggestions.slice(0, 3).map((item) => `
+          <div class="product-classifier-option">
+            <span>${item.product}</span>
+            <strong>${formatPercent(item.probability)}</strong>
+          </div>
+        `).join("")}
+      </div>
+    `;
+    productClassifierResult.hidden = false;
+  };
+
+  const botaoClassificarProduto = createButton(
+    "btnClassificarProduto",
+    "Identificar produto",
+    "🔎",
+    guardFeature(async () => {
+      const btn = document.getElementById("btnClassificarProduto");
+      const originalHtml = btn?.innerHTML || "";
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="icon">⏳</span> Identificando...';
+      }
+
+      const conversation = ChatCaptureModule.capturarTextoChat();
+      if (!conversation) {
+        productClassifierResult.hidden = false;
+        productClassifierResult.innerHTML = '<div class="product-classifier-title">Produto</div><div class="product-classifier-empty">Conversa não encontrada</div>';
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }
+        return;
+      }
+
+      try {
+        const response = await MessagingHelper.send({
+          action: "classificarProduto",
+          conversation
+        });
+
+        if (!response?.success) {
+          throw new Error(response?.erro || "Não foi possível identificar o produto.");
+        }
+
+        renderProductClassification(response.classification);
+      } catch (error) {
+        productClassifierResult.hidden = false;
+        productClassifierResult.innerHTML = `
+          <div class="product-classifier-title">Produto</div>
+          <div class="product-classifier-empty">${error.message || "Falha ao identificar"}</div>
+        `;
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml || `${getIconHTML("🔎", "Identificar produto")} Identificar produto`;
+        }
+      }
+    })
+  );
+
   const botaoDocs = createButton(
     "btnConsultarDocs",
     "Consultar Docs",
@@ -655,6 +756,11 @@ function criarBotoesFlutuantes(visibility, userSector) {
       }
     }
   );
+
+  if (userSector === "preatendimento") {
+    container.appendChild(botaoClassificarProduto);
+    container.appendChild(productClassifierResult);
+  }
 
   if (isVisible("btnResumoGemini")) container.appendChild(botaoResumo);
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);

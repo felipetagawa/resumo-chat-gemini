@@ -116,6 +116,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request?.action === "classificarProduto") {
+    (async () => {
+      try {
+        const apiBaseUrl = await getApiBaseUrl();
+        const conversation = String(request?.conversation || "").trim();
+
+        if (!conversation) {
+          safeSend({ success: false, erro: "Não foi possível capturar a conversa para identificar o produto." });
+          return;
+        }
+
+        const json = await apiFetchJson(`${apiBaseUrl}/api/classification/product`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversation })
+        });
+
+        safeSend({ success: true, classification: json });
+      } catch (err) {
+        safeSend({
+          success: false,
+          erro: err?.message || "Não foi possível identificar o produto agora."
+        });
+      }
+    })();
+
+    return true;
+  }
+
   if (request?.action === "gerarResumo") {
     (async () => {
       try {
