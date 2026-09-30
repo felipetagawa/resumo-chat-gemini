@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const extensionRoot = "/Users/felipeokamoto/Documents/Repositorios/resumo-chat-gemini/resumo-chat-gemini";
+const extensionRoot = path.resolve(process.cwd());
 
 function createFakeDocument() {
   const elements = new Map();
