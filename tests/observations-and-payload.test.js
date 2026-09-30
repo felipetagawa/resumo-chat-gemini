@@ -48,7 +48,9 @@ function createFakeDocument() {
 
 function loadObservationsModule({ storageMap = {} } = {}) {
   const sourcePath = path.join(extensionRoot, "modules/observations.js");
-  const source = fs.readFileSync(sourcePath, "utf8").replace(
+  const source = fs.readFileSync(sourcePath, "utf8")
+    .replace(/\r\n/g, "\n")
+    .replace(
     `  return {
     init,
     openDrawer,
