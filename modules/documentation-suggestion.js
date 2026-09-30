@@ -3,7 +3,9 @@ const DocumentationSuggestionModule = (() => {
   const DOCUMENTATION_PANEL_ID = "frmAtendimento:tbvAtendimento:documentacao_panel";
   const UI_ID = "atendeai-documentation-suggestion";
   const MAX_JEV_CANDIDATES = 200;
-  const LOAD_TIMEOUT_MS = 3000;
+  const LOAD_TIMEOUT_MS = 3500;
+  const MIN_LOAD_MS = 500;
+  const STABLE_WINDOW_MS = 700;
 
   const cache = new Map();
 
@@ -48,22 +50,29 @@ const DocumentationSuggestionModule = (() => {
   async function waitForCandidates(panel) {
     const startedAt = Date.now();
     let previousCount = -1;
-    let stableReads = 0;
+    let lastChangeAt = startedAt;
 
     while (Date.now() - startedAt < LOAD_TIMEOUT_MS) {
+      const now = Date.now();
       const count = extractPanelCandidates(panel).length;
 
-      if (count > 0 && count === previousCount) {
-        stableReads += 1;
-        if (stableReads >= 2) {
-          return extractPanelCandidates(panel);
-        }
-      } else {
-        stableReads = 0;
+      if (count !== previousCount) {
+        previousCount = count;
+        lastChangeAt = now;
       }
 
-      previousCount = count;
-      await delay(120);
+      const loadElapsed = now - startedAt;
+      const stableFor = now - lastChangeAt;
+
+      if (
+        count > 0 &&
+        loadElapsed >= MIN_LOAD_MS &&
+        stableFor >= STABLE_WINDOW_MS
+      ) {
+        return extractPanelCandidates(panel);
+      }
+
+      await delay(100);
     }
 
     return extractPanelCandidates(panel);
@@ -185,13 +194,48 @@ const DocumentationSuggestionModule = (() => {
     return ranked.slice(0, Math.min(limit, ranked.length)).map(item => item.candidate);
   }
 
-  function getCurrentContext() {
-    const problem = document.getElementById("crm-input-problema")?.value?.trim();
-    if (problem) return problem;
+  function extractProblemFromStructuredText(value) {
+    const text = String(value || "").replace(/\*\*/g, "").trim();
+    if (!text) return "";
 
+    const startMatch = text.match(
+      /(?:PROBLEMA\s*\/\s*D[ÚU]VIDA|PROBLEMA|D[ÚU]VIDA)\s*:\s*/i
+    );
+    if (!startMatch || startMatch.index == null) return "";
+
+    const contentStart = startMatch.index + startMatch[0].length;
+    const remainder = text.slice(contentStart);
+
+    const endMarkers = [
+      /\n\s*SOLU[CÇ][AÃ]O\s+APRESENTADA\s*:/i,
+      /\n\s*SOLU[CÇ][AÃ]O\s*:/i,
+      /\n\s*RESOLU[CÇ][AÃ]O\s*:/i,
+      /\n\s*OPORTUNIDADE\s+DE\s+UPSELL\s*:/i,
+      /\n\s*PRINTS?\s+DE\s+ERRO/i,
+      /\n\s*HUMOR\s+DO\s+CLIENTE\s*:/i
+    ];
+
+    let end = remainder.length;
+    for (const marker of endMarkers) {
+      const match = remainder.match(marker);
+      if (match?.index != null && match.index < end) {
+        end = match.index;
+      }
+    }
+
+    return remainder.slice(0, end).trim();
+  }
+
+  function getCurrentContext() {
     const resolution = document.querySelector(
       '[id="frmAtendimento:tbvAtendimento:resolucao"], textarea[name*="resolucao"], textarea[id*="resolucao"]'
     )?.value?.trim();
+
+    const problemFromSummary = extractProblemFromStructuredText(resolution);
+    if (problemFromSummary) return problemFromSummary;
+
+    const problem = document.getElementById("crm-input-problema")?.value?.trim();
+    if (problem) return problem;
 
     return resolution || "";
   }
@@ -243,7 +287,7 @@ const DocumentationSuggestionModule = (() => {
     addText(
       resultEl,
       "div",
-      `${totalCandidates} opções do CRM • ${sentCandidates} analisadas • ${Number(response?.latencyMs || 0)} ms`,
+      `${totalCandidates} opções carregadas do CRM • ${sentCandidates} analisadas • ${Number(response?.latencyMs || 0)} ms`,
       "font-size:10px;color:#94a3b8;margin-top:8px;"
     );
   }
@@ -355,6 +399,7 @@ const DocumentationSuggestionModule = (() => {
     init,
     __test: {
       normalizeText,
+      extractProblemFromStructuredText,
       extractExplicitCodes,
       prefilterCandidates
     }
