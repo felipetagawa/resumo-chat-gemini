@@ -55,13 +55,15 @@ function loadObservationsModule({ storageMap = {} } = {}) {
     init,
     openDrawer,
     getPromptComplementForCurrentChat,
-    getCurrentChatMeta
+    getCurrentChatMeta,
+    getCurrentObservationSnapshot
   };`,
     `  return {
     init,
     openDrawer,
     getPromptComplementForCurrentChat,
     getCurrentChatMeta,
+    getCurrentObservationSnapshot,
     __test: {
       persistCurrentInputs,
       loadCurrentValues,
@@ -455,4 +457,37 @@ test("sugestao de documentacao envia contexto e candidatos ao endpoint correto",
   });
   assert.equal(response.success, true);
   assert.equal(response.classification.suggestions[0].id, "1339");
+});
+
+test("snapshot de observacao separa nota privada e complemento do resumo", () => {
+  const { module, document } = loadObservationsModule();
+  document.elements.set("atendeai-observation-text", { value: "nota privada" });
+  document.elements.set("atendeai-prompt-complement", { value: "  observacao do resumo  " });
+
+  assert.deepEqual(JSON.parse(JSON.stringify(module.getCurrentObservationSnapshot())), {
+    summaryObservation: "observacao do resumo",
+    privateNote: "nota privada"
+  });
+});
+
+test("snapshot sem drawer usa os valores carregados do atendimento", async () => {
+  const { module } = loadObservationsModule({
+    storageMap: {
+      "protocol:chat-a": {
+        observationText: "nota a",
+        promptComplement: "observacao a"
+      }
+    }
+  });
+
+  module.__test.setCurrentChatContext(
+    { contactName: "Cliente A", phone: "", protocol: "chat-a" },
+    "protocol:chat-a"
+  );
+  await module.__test.loadCurrentValues();
+
+  assert.deepEqual(JSON.parse(JSON.stringify(module.getCurrentObservationSnapshot())), {
+    summaryObservation: "observacao a",
+    privateNote: "nota a"
+  });
 });

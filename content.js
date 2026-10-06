@@ -38,6 +38,7 @@ function inicializarModulos() {
 
   PreControlModule.init();
   ObservationsModule.init();
+  RecoveryBufferModule.init();
 
   modulosInicializados = true;
 }
@@ -631,18 +632,16 @@ function criarBotoesFlutuantes(visibility, userSector) {
   const botaoResumo = createButton("btnResumoGemini", "Gerar Relatório", "relatorio.png",
     guardFeature(async () => {
       const btn = document.getElementById("btnResumoGemini");
-      btn.disabled = true;
-      btn.innerHTML = `<span class="icon">⏳</span> Gerando...`;
-
       const texto = ChatCaptureModule.capturarTextoChat();
       const clientName = ChatCaptureModule.capturarNomeCliente(); // Captura nome para histórico
 
       if (!texto) {
-        alert("Não foi possível capturar o texto do chat.");
-        btn.disabled = false;
-        btn.innerHTML = `${getIconHTML("relatorio.png", "Gerar Relatório")} Gerar Relatório`;
+        await RecoveryBufferModule.openReportFallback();
         return;
       }
+
+      btn.disabled = true;
+      btn.innerHTML = `<span class="icon">⏳</span> Gerando...`;
 
       try {
         const summaryObservation = ObservationsModule.getPromptComplementForCurrentChat();

@@ -50,6 +50,7 @@
         "modules/notifications.js",
         "modules/pre-controls.js",
         "modules/observations.js",
+        "modules/recovery-buffer.js",
         "content.js"
       ],
       "run_at": "document_end"

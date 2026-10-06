@@ -378,6 +378,19 @@ const ObservationsModule = (() => {
     return promptComplement.trim();
   }
 
+  function readFieldValue(elementId, fallback) {
+    const field = document.getElementById(elementId);
+    const value = field ? String(field.value || "") : String(fallback || "");
+    return value.trim();
+  }
+
+  function getCurrentObservationSnapshot() {
+    return {
+      summaryObservation: readFieldValue(COMPLEMENT_FIELD_ID, currentValues.promptComplement),
+      privateNote: readFieldValue(OBS_FIELD_ID, currentValues.observationText)
+    };
+  }
+
   function getCurrentChatMeta() {
     return { ...currentMeta, chatKey: currentChatKey };
   }
@@ -392,7 +405,8 @@ const ObservationsModule = (() => {
     init,
     openDrawer,
     getPromptComplementForCurrentChat,
-    getCurrentChatMeta
+    getCurrentChatMeta,
+    getCurrentObservationSnapshot
   };
 })();
 
