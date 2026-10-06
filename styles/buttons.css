@@ -57,6 +57,25 @@
     background: #4aa3ff;
 }
 
+.gemini-preserved-link {
+    display: block;
+    width: 190px;
+    margin: -4px 0 8px;
+    padding: 0 4px 2px;
+    border: none;
+    background: none;
+    color: #174ea6;
+    font-family: Aptos, Inter, Manrope, "Segoe UI", system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 650;
+    text-align: left;
+    cursor: pointer;
+}
+
+.gemini-preserved-link:hover {
+    text-decoration: underline;
+}
+
 #btnMessages::before {
     background: #38bdf8;
 }

@@ -818,18 +818,68 @@ test("payload de relatorio copia so texto e observacao do buffer", () => {
   });
 });
 
+test("buffer A preservado com chat B aberto gera o relatorio de A", async () => {
+  const harness = loadRecoveryModule();
+  const now = harness.now();
+  const transcriptA = "Gabriel: preciso do relatorio deste atendimento";
+
+  await harness.module.__test.persistSnapshot({
+    sourceId: "data-chat-id:atendimento-a",
+    displayName: "Gabriel",
+    transcript: transcriptA,
+    summaryObservation: "observacao A",
+    privateNote: "NOTA-PRIVADA-A"
+  }, now);
+
+  harness.live.name = "Maria";
+  harness.live.transcript = "Maria: este e o chat B aberto";
+  harness.live.summary = "observacao B";
+  harness.live.note = "nota privada B";
+
+  await harness.module.openPreservedBuffers();
+  const panel = harness.document.getElementById("atendeai-recovery-report-fallback");
+  const panelText = textOf(panel);
+  assert.match(panelText, /Conversas preservadas/);
+  assert.match(panelText, /Gabriel — hoje 14:32/);
+  assert.doesNotMatch(panelText, /indisponível/);
+  assert.doesNotMatch(panelText, /Maria — hoje/);
+
+  const gabrielItem = collect(panel).find((node) => {
+    return node.className === "recovery-buffer-item" && textOf(node).includes("Gabriel — hoje 14:32");
+  });
+  const generateButton = collect(gabrielItem).find((node) => {
+    return node.tagName === "button" && node.textContent === "Gerar relatório";
+  });
+  await Promise.all(generateButton.click());
+
+  assert.equal(harness.complementCalls(), 0);
+  assert.deepEqual(JSON.parse(JSON.stringify(harness.sent[0])), {
+    action: "gerarResumo",
+    texto: transcriptA,
+    promptComplement: "observacao A"
+  });
+  assert.doesNotMatch(JSON.stringify(harness.sent[0]), /NOTA-PRIVADA-A/);
+  assert.doesNotMatch(JSON.stringify(harness.sent[0]), /observacao B/);
+  assert.doesNotMatch(JSON.stringify(harness.sent[0]), /chat B aberto/);
+  assert.deepEqual(harness.shown, [{ texto: "resumo pronto", clientName: "Gabriel" }]);
+});
+
 test("content e manifest ligam o fallback sem permissao nova", () => {
   const content = fs.readFileSync(path.join(extensionRoot, "content.js"), "utf8");
   const manifest = JSON.parse(fs.readFileSync(path.join(extensionRoot, "manifest.json"), "utf8"));
   const scripts = manifest.content_scripts[0].js;
 
   const reportStart = content.indexOf("const botaoResumo");
-  const reportEnd = content.indexOf("const containerDropdown");
+  const reportEnd = content.indexOf("const botaoConversasPreservadas");
   const report = content.slice(reportStart, reportEnd);
 
   assert.match(content, /RecoveryBufferModule\.init\(\)/);
+  assert.match(report, /if \(!texto\)/);
   assert.match(report, /RecoveryBufferModule\.openReportFallback\(\)/);
+  assert.doesNotMatch(report, /openPreservedBuffers/);
   assert.doesNotMatch(report, /Não foi possível capturar o texto do chat/);
+  assert.match(content, /id = "btnConversasPreservadas"/);
+  assert.match(content, /RecoveryBufferModule\.openPreservedBuffers\(\)/);
   assert.deepEqual(manifest.permissions, ["storage"]);
   assert.ok(scripts.indexOf("modules/recovery-buffer.js") > scripts.indexOf("modules/observations.js"));
   assert.ok(scripts.indexOf("modules/recovery-buffer.js") < scripts.indexOf("content.js"));

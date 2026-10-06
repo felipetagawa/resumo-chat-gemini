@@ -670,6 +670,15 @@ function criarBotoesFlutuantes(visibility, userSector) {
     })
   );
 
+  const botaoConversasPreservadas = document.createElement("button");
+  botaoConversasPreservadas.id = "btnConversasPreservadas";
+  botaoConversasPreservadas.type = "button";
+  botaoConversasPreservadas.className = "gemini-preserved-link";
+  botaoConversasPreservadas.textContent = "Conversas preservadas";
+  botaoConversasPreservadas.addEventListener("click", guardFeature(() => {
+    return RecoveryBufferModule.openPreservedBuffers();
+  }));
+
   const containerDropdown = document.createElement("div");
   containerDropdown.className = "gemini-dropdown";
 
@@ -788,7 +797,10 @@ function criarBotoesFlutuantes(visibility, userSector) {
     container.appendChild(productClassifierResult);
   }
 
-  if (isVisible("btnResumoGemini")) container.appendChild(botaoResumo);
+  if (isVisible("btnResumoGemini")) {
+    container.appendChild(botaoResumo);
+    container.appendChild(botaoConversasPreservadas);
+  }
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);
   if (isVisible("btnAgenda")) container.appendChild(botaoAgenda);
   container.appendChild(botaoObservacoes);

@@ -33,6 +33,7 @@ const RecoveryBufferModule = (() => {
   let queuedSnapshot = null;
   let activeSession = null;
   let writeQueue = Promise.resolve();
+  let currentUnavailable = true;
 
   function enqueue(task) {
     const run = writeQueue.then(task, task);
@@ -596,7 +597,7 @@ const RecoveryBufferModule = (() => {
           setStatus("Não foi possível excluir a cópia local.");
           return;
         }
-        return openReportFallback();
+        return openPreservedPanel();
       });
     });
 
@@ -631,9 +632,10 @@ const RecoveryBufferModule = (() => {
       "color:#202124"
     ].join(";");
 
+    const showUnavailable = options.currentUnavailable !== false;
     const header = createElement("div");
     header.style.cssText = "display:flex; justify-content:space-between; align-items:center; gap:8px;";
-    header.appendChild(createElement("strong", "", "Gerar relatório"));
+    header.appendChild(createElement("strong", "", showUnavailable ? "Gerar relatório" : "Conversas preservadas"));
     const closeButton = createElement("button", "", "×");
     closeButton.type = "button";
     closeButton.setAttribute("aria-label", "Fechar");
@@ -641,11 +643,13 @@ const RecoveryBufferModule = (() => {
     header.appendChild(closeButton);
     panel.appendChild(header);
 
-    panel.appendChild(createElement("div", "", "Conversa atual"));
-    const unavailable = createElement("div", "", "indisponível");
-    unavailable.style.cssText = "margin:0 0 12px 12px; color:#5f6368;";
-    panel.appendChild(unavailable);
-    panel.appendChild(createElement("div", "", "Conversas preservadas"));
+    if (showUnavailable) {
+      panel.appendChild(createElement("div", "", "Conversa atual"));
+      const unavailable = createElement("div", "", "indisponível");
+      unavailable.style.cssText = "margin:0 0 12px 12px; color:#5f6368;";
+      panel.appendChild(unavailable);
+      panel.appendChild(createElement("div", "", "Conversas preservadas"));
+    }
 
     const status = createElement("div", "recovery-buffer-status", "");
     status.style.cssText = "min-height:18px; margin-top:8px; color:#d93025; font-size:12px;";
@@ -667,7 +671,7 @@ const RecoveryBufferModule = (() => {
     document.body.appendChild(panel);
   }
 
-  async function openReportFallback() {
+  async function openPreservedPanel() {
     const now = Date.now();
     const loaded = await enqueue(async () => {
       try {
@@ -682,8 +686,21 @@ const RecoveryBufferModule = (() => {
         return { buffers: [], readFailed: true };
       }
     });
-    renderFallback(loaded.buffers, now, { readFailed: loaded.readFailed });
+    renderFallback(loaded.buffers, now, {
+      readFailed: loaded.readFailed,
+      currentUnavailable
+    });
     return loaded.buffers;
+  }
+
+  async function openReportFallback() {
+    currentUnavailable = true;
+    return openPreservedPanel();
+  }
+
+  async function openPreservedBuffers() {
+    currentUnavailable = false;
+    return openPreservedPanel();
   }
 
   function onVisibility() {
@@ -719,6 +736,7 @@ const RecoveryBufferModule = (() => {
   return {
     init,
     openReportFallback,
+    openPreservedBuffers,
     buildReportRequest,
     formatBufferLabel,
     __test: {
