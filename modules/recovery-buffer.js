@@ -3,10 +3,8 @@
 // Gerar Relatório continuar depois que o histórico sai do DOM.
 // Retenção: 24 horas, no máximo 10 conversas, com exclusão manual.
 // A captura não faz rede nem chama IA. O buffer inteiro nunca vai para o backend.
-// Identidade: reutiliza os atributos estáveis que pre-controls.js já lê no card
-// (data-chat-id, data-contact-id, data-id, id). Valor parecido com telefone é
-// ignorado. Protocolo, telefone e nome não são chave durável; sem atributo
-// estável, a sessão visível ganha um bufferId local.
+// Identidade: atributos explícitos do card ou plataforma + nome + início do
+// atendimento. Sem assinatura completa, a sessão ganha um bufferId local.
 
 const RecoveryBufferModule = (() => {
   const STORAGE_KEY = "atendeai_recovery_buffers_v1";
@@ -18,14 +16,12 @@ const RecoveryBufferModule = (() => {
   const EDIT_DEBOUNCE_MS = 400;
 
   const CONVERSATION_ATTRS = ["data-chat-id", "data-contact-id", "data-id"];
-  const CARD_ATTRS = ["data-chat-id", "data-contact-id", "data-id", "id"];
   const ACTIVE_CARD_SELECTORS = [
     ".sz_contact.active",
     ".sz_contact.selected",
     ".sz_contact.open",
     ".chats-list .chat.active"
   ];
-  const IGNORED_DOM_IDS = new Set(["contact-fields", "app", "root", "content", "messages"]);
 
   let started = false;
   let debounceTimer = null;
@@ -34,6 +30,8 @@ const RecoveryBufferModule = (() => {
   let activeSession = null;
   let writeQueue = Promise.resolve();
   let currentUnavailable = true;
+  let panelRequest = 0;
+  let panelOpening = false;
 
   function enqueue(task) {
     const run = writeQueue.then(task, task);
@@ -66,25 +64,26 @@ const RecoveryBufferModule = (() => {
     for (const attr of attrs) {
       const value = String(element.getAttribute(attr) || "").trim();
       if (!value || isPhoneLike(value)) continue;
-      if (attr === "id" && IGNORED_DOM_IDS.has(value)) continue;
       return `${attr}:${value}`;
     }
     return "";
   }
 
   function resolveSourceId(doc = document) {
-    const message = doc.querySelector?.(".msg");
-    let node = message || null;
-    while (node) {
-      const sourceId = readAttrs(node, CONVERSATION_ATTRS);
-      if (sourceId) return sourceId;
-      node = node.parentElement || null;
-    }
-
     for (const selector of ACTIVE_CARD_SELECTORS) {
       const card = doc.querySelector?.(selector);
-      const sourceId = readAttrs(card, CARD_ATTRS);
+      const sourceId = readAttrs(card, CONVERSATION_ATTRS);
       if (sourceId) return sourceId;
+      if (!card) continue;
+      const platformSrc = card.querySelector('img[alt="platform"]')?.getAttribute("src") || "";
+      const platform = platformSrc.match(/\/assets\/img\/platform\/mini\/([\w-]+)\.svg(?:[?#].*)?$/i)?.[1]?.toLowerCase();
+      const name = normalizeText(card.querySelector(".contact-name")?.textContent).toLowerCase();
+      const time = card.querySelector('.contact-times[phase="attendance"] .times');
+      const timestamp = normalizeText(time?.getAttribute("title") || time?.textContent);
+      if (platform && name && /^\d{2}\/\d{2}\/\d{2}(?:\d{2})? \d{2}:\d{2}(?::\d{2})?$/.test(timestamp)) {
+        return `attendance:${platform}|${name.replace(/%/g, "%25").replace(/\|/g, "%7C")}|${timestamp}`;
+      }
+      return "";
     }
 
     return "";
@@ -221,6 +220,7 @@ const RecoveryBufferModule = (() => {
     if (!activeSession?.bufferId) return null;
     const bySession = buffers.find((buffer) => buffer.bufferId === activeSession.bufferId);
     if (!bySession) return null;
+    if (identity.sourceId && !bySession.sourceId) return null;
     if (identity.sourceId && bySession.sourceId && bySession.sourceId !== identity.sourceId) return null;
 
     const nextName = identity.displayName || "";
@@ -465,9 +465,12 @@ const RecoveryBufferModule = (() => {
   }
 
   function closePanel() {
+    panelRequest += 1;
+    panelOpening = false;
     clearTimeout(editTimer);
     editTimer = null;
     document.getElementById(PANEL_ID)?.remove();
+    document.getElementById("atendeai-recovery-overlay")?.remove();
   }
 
   function createElement(tag, className, text) {
@@ -608,9 +611,12 @@ const RecoveryBufferModule = (() => {
   }
 
   function renderFallback(buffers, now = Date.now(), options = {}) {
-    clearTimeout(editTimer);
-    editTimer = null;
-    document.getElementById(PANEL_ID)?.remove();
+    closePanel();
+    const overlay = createElement("div");
+    overlay.id = "atendeai-recovery-overlay";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:999997;background:rgba(0,0,0,0.08);";
+    overlay.addEventListener("click", closePanel);
+    document.body.appendChild(overlay);
 
     const panel = createElement("div");
     panel.id = PANEL_ID;
@@ -619,7 +625,9 @@ const RecoveryBufferModule = (() => {
       "right:20px",
       "bottom:90px",
       "z-index:1000002",
-      "width:360px",
+      "width:440px",
+      "max-width:calc(100vw - 40px)",
+      "box-sizing:border-box",
       "max-height:70vh",
       "overflow:auto",
       "background:#fff",
@@ -634,7 +642,7 @@ const RecoveryBufferModule = (() => {
 
     const showUnavailable = options.currentUnavailable !== false;
     const header = createElement("div");
-    header.style.cssText = "display:flex; justify-content:space-between; align-items:center; gap:8px;";
+    header.style.cssText = "position:sticky;top:-16px;z-index:1;background:#fff;padding:12px 0;margin-top:-12px;display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid #eee;";
     header.appendChild(createElement("strong", "", showUnavailable ? "Gerar relatório" : "Conversas preservadas"));
     const closeButton = createElement("button", "", "×");
     closeButton.type = "button";
@@ -672,6 +680,8 @@ const RecoveryBufferModule = (() => {
   }
 
   async function openPreservedPanel() {
+    const request = ++panelRequest;
+    panelOpening = true;
     const now = Date.now();
     const loaded = await enqueue(async () => {
       try {
@@ -686,6 +696,8 @@ const RecoveryBufferModule = (() => {
         return { buffers: [], readFailed: true };
       }
     });
+    if (request !== panelRequest) return loaded.buffers;
+    panelOpening = false;
     renderFallback(loaded.buffers, now, {
       readFailed: loaded.readFailed,
       currentUnavailable
@@ -699,6 +711,10 @@ const RecoveryBufferModule = (() => {
   }
 
   async function openPreservedBuffers() {
+    if (panelOpening || document.getElementById(PANEL_ID)) {
+      closePanel();
+      return [];
+    }
     currentUnavailable = false;
     return openPreservedPanel();
   }
@@ -723,6 +739,13 @@ const RecoveryBufferModule = (() => {
       ObservationsModule.onCurrentObservationsReady?.(() => { void scheduleCapture(); });
     }
     document.addEventListener("visibilitychange", onVisibility);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closePanel();
+    });
+    document.addEventListener("click", (event) => {
+      const panel = document.getElementById(PANEL_ID);
+      if (panel && !panel.contains(event.target)) closePanel();
+    });
     window.addEventListener("pagehide", () => {
       void flushNow();
     });

@@ -27,6 +27,10 @@ function matchesComplex(element, selector) {
 }
 
 function matchesCompound(element, compound) {
+  const attributes = [...compound.matchAll(/\[([\w-]+)(?:="([^"]*)")?\]/g)];
+  if (!attributes.every(([, name, value]) => value == null
+    ? element.getAttribute(name) != null : element.getAttribute(name) === value)) return false;
+  compound = compound.replace(/\[[^\]]+\]/g, "");
   const tokens = compound.match(/[.#]?[A-Za-z_][\w-]*/g);
   if (!tokens || tokens.join("") !== compound) return false;
   return tokens.every((token) => {
@@ -73,6 +77,17 @@ class MiniNode {
     child.parentElement = this;
     this.children.push(child);
     return child;
+  }
+
+  prepend(child) {
+    this.appendChild(child);
+    this.children.unshift(this.children.pop());
+  }
+
+  setPointerCapture() {}
+
+  contains(node) {
+    return node === this || this.children.some(child => child.contains(node));
   }
 
   remove() {
@@ -520,15 +535,16 @@ test("nome igual sem id estavel nao reaproveita buffer depois que a sessao reini
   ]);
 });
 
-test("data-chat-id da conversa aberta e a identidade e sobrevive a reinicio da sessao", async () => {
+test("card ativo tem prioridade sobre atributos da mensagem e sobrevive a reinicio", async () => {
   const harness = loadRecoveryModule();
   const message = el("div", { class: "msg" });
   harness.document.body.appendChild(el("div", { "data-chat-id": "chat-42" }, [message]));
   harness.document.body.appendChild(el("div", {
     class: "sz_contact active",
-    "data-contact-id": "outro-card"
+    "data-chat-id": "chat-42"
   }));
 
+  message.setAttribute("data-chat-id", "mensagem-nao-e-card");
   assert.equal(harness.module.__test.resolveSourceId(harness.document), "data-chat-id:chat-42");
 
   harness.live.name = "Gabriel";
@@ -564,6 +580,8 @@ test("id de card e telefone nao viram identidade; protocolo tambem nao", () => {
   }, [
     el("div", { class: "chat active", "data-chat-id": "lista-7" })
   ]));
+  assert.equal(harness.module.__test.resolveSourceId(harness.document), "");
+  harness.document.querySelector(".sz_contact.active").remove();
   assert.equal(harness.module.__test.resolveSourceId(harness.document), "data-chat-id:lista-7");
 });
 
@@ -994,4 +1012,279 @@ test("R2: save ja iniciado conserva A quando o read de storage termina com B abe
   assert.equal(h.store.observations["contact:gabriel"].contactName, "Gabriel");
   assert.equal(h.store.observations["contact:maria"], undefined);
   assert.equal(h.observations.getCurrentObservationSnapshot().summaryObservation, "");
+});
+
+function attendanceCard({ name = 'CASSIA TAIS FIGURA', platform = 'webchat', timestamp = '06/10/26 08:14' } = {}) {
+  return el('div', { class: 'sz_contact active' }, [
+    el('div', { class: 'contact-name', text: name }),
+    el('div', { class: 'contact-times', phase: 'attendance' }, [
+      el('span', { class: 'times', title: timestamp, text: '08:14' })
+    ]),
+    el('img', { alt: 'platform', src: `/assets/img/platform/mini/${platform}.svg` })
+  ]);
+}
+
+test('I1: reabrir, trocar de chat, rerender e recarregar reutiliza um buffer por atendimento', async () => {
+  const h = loadRecoveryModule();
+  h.live.name = 'CASSIA TAIS FIGURA';
+  let firstId;
+  for (let i = 0; i < 3; i++) {
+    h.document.querySelector('.sz_contact.active')?.remove();
+    h.document.body.appendChild(attendanceCard());
+    h.module.__test.resetSession();
+    h.live.transcript = `CASSIA: mensagem ${i}`;
+    h.module.__test.scheduleCapture();
+    await h.flushTimers();
+    firstId ||= storedBuffers(h)[0].bufferId;
+    assert.equal(storedBuffers(h).length, 1);
+    assert.equal(storedBuffers(h)[0].bufferId, firstId);
+  }
+  assert.equal(storedBuffers(h)[0].sourceId, 'attendance:webchat|cassia tais figura|06/10/26 08:14');
+  const reloaded = loadRecoveryModule();
+  reloaded.store[STORAGE_KEY] = h.store[STORAGE_KEY];
+  reloaded.document.body.appendChild(attendanceCard());
+  reloaded.live.name = h.live.name;
+  reloaded.live.transcript = 'CASSIA: depois do F5';
+  reloaded.module.__test.scheduleCapture();
+  await reloaded.flushTimers();
+  assert.equal(storedBuffers(reloaded).length, 1);
+  assert.equal(storedBuffers(reloaded)[0].bufferId, firstId);
+  assert.equal(storedBuffers(reloaded)[0].transcript, 'CASSIA: depois do F5');
+  reloaded.document.querySelector('.sz_contact.active').remove();
+  reloaded.document.body.appendChild(attendanceCard({ name: 'MARIA' }));
+  reloaded.live.name = 'MARIA';
+  reloaded.live.transcript = 'MARIA: outro chat';
+  reloaded.module.__test.scheduleCapture();
+  await reloaded.flushTimers();
+  reloaded.document.querySelector('.sz_contact.active').remove();
+  reloaded.document.body.appendChild(attendanceCard());
+  reloaded.live.name = h.live.name;
+  reloaded.live.transcript = 'CASSIA: voltei';
+  reloaded.module.__test.scheduleCapture();
+  await reloaded.flushTimers();
+  assert.equal(storedBuffers(reloaded).length, 2);
+  const cassia = storedBuffers(reloaded).filter(b => b.sourceId.includes('cassia'));
+  assert.equal(cassia.length, 1);
+  assert.equal(cassia[0].bufferId, firstId);
+  assert.equal(cassia[0].transcript, 'CASSIA: voltei');
+});
+
+for (const [label, variant] of [
+  ['I2: outro timestamp separa atendimentos do mesmo nome', { timestamp: '06/10/26 09:14' }],
+  ['I3: outra plataforma separa nome e timestamp iguais', { platform: 'whatsapp' }]
+]) test(label, async () => {
+  const h = loadRecoveryModule();
+  h.live.name = 'CASSIA TAIS FIGURA';
+  for (const attrs of [{}, variant]) {
+    h.document.querySelector('.sz_contact.active')?.remove();
+    h.document.body.appendChild(attendanceCard(attrs));
+    h.live.transcript = 'CASSIA: oi';
+    h.module.__test.scheduleCapture();
+    await h.flushTimers();
+  }
+  assert.equal(storedBuffers(h).length, 2);
+  assert.equal(new Set(storedBuffers(h).map(b => b.sourceId)).size, 2);
+});
+
+test('I4: msg_ref e atributos das mensagens nao alteram assinatura do card', () => {
+  const h = loadRecoveryModule();
+  h.document.body.appendChild(attendanceCard());
+  const msg = el('div', { class: 'msg', id: 'msg_ref_primeira', 'data-chat-id': 'nao-conversa' });
+  h.document.body.appendChild(msg);
+  assert.equal(h.module.__test.resolveSourceId(), 'attendance:webchat|cassia tais figura|06/10/26 08:14');
+  msg.id = 'msg_ref_segunda';
+  assert.equal(h.module.__test.resolveSourceId(), 'attendance:webchat|cassia tais figura|06/10/26 08:14');
+});
+
+test('I5: assinatura incompleta continua no fallback local sem chave pelo nome', async () => {
+  for (const attrs of [{ platform: '' }, { timestamp: '' }, { name: '' }]) {
+    const h = loadRecoveryModule();
+    h.document.body.appendChild(attendanceCard(attrs));
+    h.live.name = 'CASSIA';
+    h.live.transcript = 'CASSIA: oi';
+    assert.equal(h.module.__test.resolveSourceId(), '');
+    h.module.__test.scheduleCapture();
+    await h.flushTimers();
+    h.live.transcript += '\nCASSIA: depois';
+    h.module.__test.scheduleCapture();
+    await h.flushTimers();
+    assert.equal(storedBuffers(h).length, 1);
+    assert.equal(storedBuffers(h)[0].sourceId, '');
+  }
+});
+
+for (const action of ['overlay', 'Escape', 'X', 'toggle']) test(`painel fecha por ${action} e reabre`, async () => {
+  const h = loadRecoveryModule();
+  h.module.init();
+  await h.module.openPreservedBuffers();
+  const panel = h.document.getElementById('atendeai-recovery-report-fallback');
+  if (action === 'overlay') {
+    const overlay = h.document.getElementById('atendeai-recovery-overlay');
+    assert.ok(overlay);
+    await Promise.all(overlay.click());
+  } else if (action === 'Escape') {
+    for (const entry of h.document.listeners.filter(e => e.type === 'keydown')) entry.fn({ key: 'Escape' });
+  } else if (action === 'X') await Promise.all(panel.querySelector('button').click());
+  else await h.module.openPreservedBuffers();
+  assert.equal(h.document.getElementById('atendeai-recovery-report-fallback'), null);
+  assert.equal(h.document.getElementById('atendeai-recovery-overlay'), null);
+  await h.module.openPreservedBuffers();
+  assert.ok(h.document.getElementById('atendeai-recovery-report-fallback'));
+});
+
+function loadDock(store = {}, { width = 800, height = 600 } = {}) {
+  const source = fs.readFileSync(path.join(extensionRoot, 'content.js'), 'utf8');
+  const start = source.indexOf('async function initializeExtensionDock(');
+  assert.ok(start >= 0, 'dock deve ter inicializador');
+  const end = source.indexOf('\nfunction criarBotoesFlutuantes(', start);
+  const document = createDocument();
+  const dock = el('div', { id: 'containerBotoesGemini' }, [el('button', { id: 'report', text: 'Gerar Relatório' })]);
+  dock.getBoundingClientRect = () => ({ left: (parseFloat(dock.style.left) || 590) * Number(dock.style.zoom || 1), top: (parseFloat(dock.style.top) || 200) * Number(dock.style.zoom || 1),
+    width: 190 * Number(dock.style.zoom || 1), height: 350 * Number(dock.style.zoom || 1) });
+  document.body.appendChild(dock);
+  const listeners = {};
+  const window = { innerWidth: width, innerHeight: height,
+    addEventListener(type, fn) { (listeners[type] ||= []).push(fn); },
+    removeEventListener(type, fn) { listeners[type] = (listeners[type] || []).filter(f => f !== fn); } };
+  const context = { document, window, console, chrome: { runtime: {}, storage: { local: {
+    get(keys, cb) { cb(structuredClone(store)); },
+    set(values, cb) { Object.assign(store, structuredClone(values)); cb?.(); }
+  } } } };
+  vm.createContext(context);
+  vm.runInContext(source.slice(start, end), context);
+  return { dock, store, window, listeners, ready: context.initializeExtensionDock(dock) };
+}
+
+function dispatchNode(node, type, values = {}) {
+  for (const fn of node.listeners[type] || []) fn({ target: node, button: 0, pointerId: 1,
+    preventDefault() {}, ...values });
+}
+
+test('dock inteiro arrasta somente pelo handle e restaura posicao persistida', async () => {
+  const h = loadDock();
+  await h.ready;
+  const handle = h.dock.querySelector('.gemini-dock-handle');
+  assert.ok(handle);
+  dispatchNode(h.dock.querySelector('#report'), 'pointerdown', { clientX: 600, clientY: 220 });
+  assert.equal(h.store.atendeai_dock_preferences, undefined);
+  dispatchNode(handle, 'pointerdown', { clientX: 600, clientY: 220 });
+  dispatchNode(handle, 'pointermove', { clientX: 300, clientY: 120 });
+  dispatchNode(handle, 'pointerup');
+  assert.equal(h.dock.style.left, '290px');
+  assert.equal(h.dock.style.top, '100px');
+  assert.deepEqual(h.store.atendeai_dock_preferences.position, { x: 290, y: 100 });
+  const next = loadDock(h.store);
+  await next.ready;
+  assert.equal(next.dock.style.left, '290px');
+  assert.equal(next.dock.style.top, '100px');
+});
+
+test('dock limita drag, posicao carregada e resize aos limites do viewport', async () => {
+  const h = loadDock({ atendeai_dock_preferences: { position: { x: 9000, y: -500 }, size: 'normal' } });
+  await h.ready;
+  assert.equal(h.dock.style.left, '602px');
+  assert.equal(h.dock.style.top, '8px');
+  const handle = h.dock.querySelector('.gemini-dock-handle');
+  dispatchNode(handle, 'pointerdown', { clientX: 610, clientY: 10 });
+  dispatchNode(handle, 'pointermove', { clientX: -1000, clientY: 5000 });
+  dispatchNode(handle, 'pointerup');
+  assert.equal(h.dock.style.left, '8px');
+  assert.equal(h.dock.style.top, '242px');
+  h.window.innerHeight = 400;
+  for (const fn of h.listeners.resize) fn();
+  assert.equal(h.dock.style.top, '42px');
+  assert.deepEqual(h.store.atendeai_dock_preferences.position, { x: 8, y: 42 });
+});
+
+test('tres tamanhos do dock persistem e posicao continua acessivel', async () => {
+  const h = loadDock();
+  await h.ready;
+  const select = h.dock.querySelector('select');
+  assert.deepEqual(select.children.map(n => n.textContent), ['Compacto', 'Normal', 'Grande']);
+  for (const [size, scale] of [['compact', '0.85'], ['normal', '1'], ['large', '1.15']]) {
+    select.value = size;
+    dispatchNode(select, 'change');
+    assert.equal(h.dock.style.zoom, scale);
+    assert.equal(h.store.atendeai_dock_preferences.size, size);
+    const next = loadDock(h.store);
+    await next.ready;
+    assert.equal(next.dock.style.zoom, scale);
+    assert.equal(next.dock.querySelector('select').value, size);
+  }
+});
+
+test('Gerar Relatorio do chat atual envia no primeiro clique sem abrir preservadas', async () => {
+  const source = fs.readFileSync(path.join(extensionRoot, 'content.js'), 'utf8');
+  const start = source.indexOf('function criarBotoesFlutuantes(');
+  const end = source.indexOf('\nMessagingHelper.addListener(', start);
+  const document = createDocument();
+  const sent = [];
+  const shown = [];
+  let opened = 0;
+  const context = { document, console,
+    DOMHelpers: { exists: () => false, createElement(tag, attrs) { return el(tag, { id: attrs.id }); } },
+    getIconHTML: () => '', guardFeature: fn => fn, initializeExtensionDock: () => {},
+    ChatCaptureModule: { capturarTextoChat: () => 'CASSIA: conversa atual', capturarNomeCliente: () => 'CASSIA' },
+    ObservationsModule: { getPromptComplementForCurrentChat: () => 'observacao atual' },
+    RecoveryBufferModule: { openReportFallback() { opened++; }, openPreservedBuffers() { opened++; } },
+    MessagingHelper: { async send(payload) { sent.push(JSON.parse(JSON.stringify(payload))); return { resumo: 'pronto' }; } },
+    SummaryModule: { exibirResumo(...args) { shown.push(args); } },
+    MAX_PROMPT_COMPLEMENT_CHARS: 2000,
+    alert(message) { assert.fail(message); }
+  };
+  const originalCreate = document.createElement;
+  document.createElement = tag => { const node = originalCreate(tag); node.insertAdjacentHTML = () => {}; return node; };
+  vm.createContext(context);
+  vm.runInContext(source.slice(start, end), context);
+  context.criarBotoesFlutuantes({ btnResumoGemini: true }, 'suporte');
+  const report = document.getElementById('btnResumoGemini');
+  const preserved = document.getElementById('btnConversasPreservadas');
+  assert.equal(report.parentElement, preserved.parentElement);
+  await Promise.all(report.click());
+  assert.deepEqual(sent, [{ action: 'gerarResumo', texto: 'CASSIA: conversa atual', promptComplement: 'observacao atual' }]);
+  assert.deepEqual(shown, [['pronto', 'CASSIA']]);
+  assert.equal(opened, 0);
+  assert.equal(report.disabled, false);
+});
+
+test('buffers sem sourceId nao sao migrados quando o card ganha assinatura', async () => {
+  const h = loadRecoveryModule();
+  const card = attendanceCard({ timestamp: '' });
+  h.document.body.appendChild(card);
+  h.live.name = 'CASSIA';
+  h.live.transcript = 'CASSIA: legado';
+  h.module.__test.scheduleCapture();
+  await h.flushTimers();
+  const oldId = storedBuffers(h)[0].bufferId;
+  card.querySelector('.times').setAttribute('title', '06/10/26 08:14');
+  h.live.transcript = 'CASSIA: com assinatura';
+  h.module.__test.scheduleCapture();
+  await h.flushTimers();
+  assert.equal(storedBuffers(h).length, 2);
+  const old = storedBuffers(h).find(b => b.bufferId === oldId);
+  assert.equal(old.sourceId, '');
+  assert.equal(old.transcript, 'CASSIA: legado');
+});
+
+test('toggle durante leitura pendente cancela abertura do painel', async () => {
+  const h = loadRecoveryModule();
+  const pending = h.module.openPreservedBuffers();
+  await h.module.openPreservedBuffers();
+  await pending;
+  assert.equal(h.document.getElementById('atendeai-recovery-report-fallback'), null);
+  await h.module.openPreservedBuffers();
+  assert.ok(h.document.getElementById('atendeai-recovery-report-fallback'));
+});
+
+test('clique em outro controle fora do painel fecha e clique interno preserva', async () => {
+  const h = loadRecoveryModule();
+  h.module.init();
+  await h.module.openPreservedBuffers();
+  const panel = h.document.getElementById('atendeai-recovery-report-fallback');
+  const clicks = h.document.listeners.filter(e => e.type === 'click');
+  for (const entry of clicks) entry.fn({ target: panel.querySelector('strong') });
+  assert.ok(h.document.getElementById('atendeai-recovery-report-fallback'));
+  for (const entry of clicks) entry.fn({ target: h.document.body });
+  assert.equal(h.document.getElementById('atendeai-recovery-report-fallback'), null);
+  assert.equal(h.document.getElementById('atendeai-recovery-overlay'), null);
 });

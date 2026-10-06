@@ -460,8 +460,106 @@ function openConfigRequiredModal() {
   overlay.style.display = "flex";
 }
 
+async function initializeExtensionDock(container) {
+  const key = "atendeai_dock_preferences";
+  const scales = { compact: 0.85, normal: 1, large: 1.15 };
+  const saved = await new Promise((resolve) => {
+    try {
+      chrome.storage.local.get([key], (data) => {
+        resolve(chrome.runtime.lastError ? {} : data?.[key] || {});
+      });
+    } catch { resolve({}); }
+  });
+  if (document.getElementById("containerBotoesGemini") !== container) return;
+  let size = Object.hasOwn(scales, saved.size) ? saved.size : "normal";
+  let position = saved.position;
+  let drag = null;
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "gemini-dock-toolbar";
+  const handle = document.createElement("button");
+  handle.type = "button";
+  handle.className = "gemini-dock-handle";
+  handle.textContent = "⠿";
+  handle.setAttribute("aria-label", "Arrastar dock");
+  handle.title = "Arrastar dock";
+  const select = document.createElement("select");
+  select.setAttribute("aria-label", "Tamanho do dock");
+  for (const [value, label] of [["compact", "Compacto"], ["normal", "Normal"], ["large", "Grande"]]) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    select.appendChild(option);
+  }
+  select.value = size;
+  toolbar.appendChild(handle);
+  toolbar.appendChild(select);
+  container.prepend(toolbar);
+
+  function clampPosition(next) {
+    const rect = container.getBoundingClientRect();
+    const x = Number.isFinite(next?.x) ? next.x : rect.left;
+    const y = Number.isFinite(next?.y) ? next.y : rect.top;
+    position = {
+      x: Math.max(8, Math.min(x, window.innerWidth - rect.width - 8)),
+      y: Math.max(8, Math.min(y, window.innerHeight - rect.height - 8))
+    };
+    // CSS zoom scales coordinates too; store and clamp viewport pixels.
+    container.style.left = `${position.x / scales[size]}px`;
+    container.style.top = `${position.y / scales[size]}px`;
+    container.style.right = "auto";
+    container.style.bottom = "auto";
+  }
+
+  function persist() {
+    chrome.storage.local.set({ [key]: { position, size } }, () => {
+      if (chrome.runtime.lastError) console.error("Não foi possível salvar a posição do dock.");
+    });
+  }
+
+  function applySize() {
+    container.style.zoom = String(scales[size]);
+    container.style.maxWidth = `${Math.max(1, window.innerWidth - 16) / scales[size]}px`;
+    container.style.maxHeight = `${Math.max(1, window.innerHeight - 16) / scales[size]}px`;
+    container.style.overflow = container.scrollHeight > container.clientHeight
+      || container.scrollWidth > container.clientWidth ? "auto" : "visible";
+    clampPosition(position);
+  }
+
+  select.addEventListener("change", () => {
+    size = Object.hasOwn(scales, select.value) ? select.value : "normal";
+    applySize();
+    persist();
+  });
+  handle.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    drag = { id: event.pointerId, x: event.clientX, y: event.clientY, startX: position.x, startY: position.y };
+    handle.setPointerCapture(event.pointerId);
+  });
+  handle.addEventListener("pointermove", (event) => {
+    if (!drag || event.pointerId !== drag.id) return;
+    clampPosition({ x: drag.startX + event.clientX - drag.x, y: drag.startY + event.clientY - drag.y });
+  });
+  const finishDrag = () => {
+    if (!drag) return;
+    drag = null;
+    persist();
+  };
+  handle.addEventListener("pointerup", finishDrag);
+  handle.addEventListener("pointercancel", finishDrag);
+  handle.addEventListener("lostpointercapture", finishDrag);
+  const onResize = () => { applySize(); persist(); };
+  window.addEventListener("resize", onResize);
+  const observer = typeof ResizeObserver === "function" ? new ResizeObserver(() => clampPosition(position)) : null;
+  observer?.observe(container);
+  container.dockCleanup = () => { window.removeEventListener("resize", onResize); observer?.disconnect(); };
+  applySize();
+}
+
 function criarBotoesFlutuantes(visibility, userSector) {
   if (DOMHelpers.exists("containerBotoesGemini")) {
+    document.getElementById("containerBotoesGemini")?.dockCleanup?.();
     DOMHelpers.removeElement("containerBotoesGemini");
   }
 
@@ -798,8 +896,11 @@ function criarBotoesFlutuantes(visibility, userSector) {
   }
 
   if (isVisible("btnResumoGemini")) {
-    container.appendChild(botaoResumo);
-    container.appendChild(botaoConversasPreservadas);
+    const reportGroup = document.createElement("div");
+    reportGroup.className = "gemini-report-group";
+    reportGroup.appendChild(botaoResumo);
+    reportGroup.appendChild(botaoConversasPreservadas);
+    container.appendChild(reportGroup);
   }
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);
   if (isVisible("btnAgenda")) container.appendChild(botaoAgenda);
@@ -809,6 +910,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
   if (isVisible("btnAssistenteIA")) container.appendChild(containerDropdown);
 
   document.body.appendChild(container);
+  void initializeExtensionDock(container);
 }
 
 MessagingHelper.addListener((request, sender, sendResponse) => {
