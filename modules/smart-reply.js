@@ -92,6 +92,7 @@ const SmartReplyModule = (() => {
     const warning = changed ? "O atendimento ativo mudou. Volte à conversa original ou clique em Sugerir resposta no atendimento desejado."
       : s.stale ? "Novas informações chegaram neste atendimento. Gere uma nova resposta." : "";
     if (s.warning.textContent !== warning) s.warning.textContent = warning;
+    if (s.panel?.setAttribute) s.panel.setAttribute("aria-busy", s.busy ? "true" : "false");
     setDisabled(s.insert, changed || s.stale || s.busy || !s.reply || s.profileChanged);
     setDisabled(s.regenerate, changed || s.stale || s.busy || !s.snapshot);
     setDisabled(s.profile, s.busy);
@@ -151,18 +152,22 @@ const SmartReplyModule = (() => {
     const panel = node("section", "", "smart-reply-preview");
     panel.id = PANEL_ID;
     panel.setAttribute("aria-label", "Resposta sugerida");
+    s.panel = panel;
     const header = node("div", "", "smart-reply-header");
-    header.appendChild(node("strong", "Resposta sugerida"));
-    const x = node("button", "×"); x.type = "button"; x.setAttribute("aria-label", "Fechar resposta sugerida");
+    const heading = node("div", "", "smart-reply-heading");
+    heading.appendChild(node("strong", "Resposta sugerida"));
+    heading.appendChild(node("span", "Revise antes de inserir no campo de mensagem.", "smart-reply-kicker"));
+    header.appendChild(heading);
+    const x = node("button", "×", "smart-reply-close"); x.type = "button"; x.setAttribute("aria-label", "Fechar resposta sugerida");
     x.addEventListener("click", close); header.appendChild(x);
     s.preview = node("div", "", "smart-reply-text");
     s.status = node("div", "", "smart-reply-status"); s.status.setAttribute("role", "status");
     s.warning = node("div", "", "smart-reply-warning"); s.warning.setAttribute("role", "status");
-    s.insert = node("button", "Inserir"); s.insert.type = "button";
+    s.insert = node("button", "Inserir", "smart-reply-insert"); s.insert.type = "button";
     s.insert.addEventListener("click", () => insert(s));
-    s.regenerate = node("button", "↻ Outra resposta"); s.regenerate.type = "button";
+    s.regenerate = node("button", "↻ Outra resposta", "smart-reply-regenerate"); s.regenerate.type = "button";
     s.regenerate.addEventListener("click", () => generate(s, true));
-    s.profile = node("select"); s.profile.setAttribute("aria-label", "Perfil da resposta e padrão");
+    s.profile = node("select", "", "smart-reply-profile"); s.profile.setAttribute("aria-label", "Perfil da resposta e padrão");
     for (const [value, label] of Object.entries(PROFILES)) { const option = node("option", label); option.value = value; s.profile.appendChild(option); }
     s.profile.value = "DIRECT";
     s.profile.addEventListener("change", async () => {
@@ -175,7 +180,9 @@ const SmartReplyModule = (() => {
     });
     s.choices = node("div", "", "smart-reply-draft-choices"); s.choices.hidden = true;
     for (const [label, mode] of [["Substituir", "replace"], ["Acrescentar", "append"], ["Cancelar", "cancel"]]) {
-      const button = node("button", label); button.type = "button";
+      const choiceClass = mode === "replace" ? "smart-reply-choice-primary"
+        : mode === "cancel" ? "smart-reply-choice-ghost" : "smart-reply-choice";
+      const button = node("button", label, choiceClass); button.type = "button";
       button.addEventListener("click", () => {
         if (mode === "cancel") { s.choices.hidden = true; s.status.textContent = ""; }
         else insert(s, mode, s.pendingDraft);

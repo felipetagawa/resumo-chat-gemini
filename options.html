@@ -6,698 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal AtendeAI Manager</title>
 
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      padding: 20px;
-      max-width: 900px;
-      margin: 0 auto;
-      background-color: #f4f6f8;
-      color: #333;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .app-main {
-      flex: 1 0 auto;
-    }
-
-    h1 {
-      font-size: 22px;
-      color: #4285F4;
-      margin-bottom: 25px;
-    }
-
-    h2 {
-      font-size: 17px;
-      margin-bottom: 12px;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 6px;
-    }
-
-    h3 {
-      font-size: 14px;
-      margin: 18px 0 10px;
-      color: #555;
-    }
-
-    .card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
-    }
-
-    label {
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 70px;
-      padding: 5px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-family: inherit;
-      resize: vertical;
-      margin-top: 6px;
-    }
-
-    .hint {
-      font-size: 12px;
-      color: #666;
-      margin-top: 4px;
-    }
-
-    button {
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      margin-top: 10px;
-      transition: background .2s;
-    }
-
-    .btn-primary {
-      background: #4285F4;
-      color: #fff;
-    }
-
-    .btn-primary:hover {
-      background: #3367d6;
-    }
-
-    .message-card {
-      border-radius: 10px;
-      padding: 14px;
-      margin-bottom: 12px;
-      border: 1px solid #ddd;
-      transition: all 0.2s ease;
-    }
-
-    .message-card.fixed {
-      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-      border-color: #d1d5db;
-    }
-
-    .message-card.custom {
-      background: linear-gradient(135deg, #eef4ff 0%, #dbeafe 100%);
-      border-color: #93c5fd;
-    }
-
-    .fixed {
-      background: #f9fafb;
-    }
-
-    .custom {
-      background: #eef4ff;
-      border-color: #c9ddff;
-    }
-
-    .message-text {
-      font-size: 13px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      word-break: break-word;
-      margin-bottom: 12px;
-      padding: 10px;
-      background: rgba(255, 255, 255, 0.7);
-      border-radius: 6px;
-      border: 1px solid rgba(0, 0, 0, 0.05);
-    }
-
-    .message-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }
-
-    .shortcut-config {
-      display: flex;
-      align-items: center;
-      padding: 8px;
-      background: #f8fafc;
-      border-radius: 6px;
-      border: 1px solid #e2e8f0;
-      margin-top: 8px;
-      font-size: 13px;
-    }
-
-    .btn-test-shortcut {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 6px 12px;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-test-shortcut:hover {
-      background: linear-gradient(135deg, #059669 0%, #047857 100%);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-    }
-
-    input[type="number"]::-webkit-inner-spin-button,
-    input[type="number"]::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-
-    .btn-copy {
-      background: #dbeafe;
-      color: #1e40af;
-    }
-
-    .btn-copy:hover {
-      background: #bfdbfe;
-    }
-
-    .btn-edit {
-      background: #e5e7eb;
-      color: #374151;
-    }
-
-    .btn-edit:hover {
-      background: #d1d5db;
-    }
-
-    .btn-delete {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .btn-delete:hover {
-      background: #fecaca;
-    }
-
-    .btn-backup {
-      background: #10b981;
-      color: #fff;
-      margin-top: 15px;
-    }
-
-    .btn-backup:hover {
-      background: #059669;
-    }
-
-    #historyList {
-      list-style: none;
-      padding: 0;
-    }
-
-    .history-item {
-      background: #fff;
-      padding: 12px;
-      border-radius: 10px;
-      margin-bottom: 10px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .history-preview {
-      font-size: 13px;
-      font-weight: 500;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 400px;
-    }
-
-    .history-actions button {
-      background: #eee;
-      font-size: 12px;
-      margin-left: 5px;
-    }
-
-    #limparHistorico {
-      background: #e74c3c;
-      color: #fff;
-    }
-
-    #limparHistorico:hover {
-      background: #c0392b;
-    }
-
-    .accordion {
-      margin-bottom: 15px;
-    }
-
-    .accordion-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 15px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      cursor: pointer;
-      user-select: none;
-      font-weight: 600;
-      font-size: 14px;
-      color: #334155;
-      transition: all 0.2s ease;
-    }
-
-    .accordion-header:hover {
-      background: #f1f5f9;
-    }
-
-    .accordion-header.open {
-      background: #f1f5f9;
-      border-radius: 8px 8px 0 0;
-      border-bottom: none;
-    }
-
-    .accordion-icon {
-      font-size: 18px;
-      font-weight: bold;
-      transition: transform 0.3s ease;
-    }
-
-    .accordion-content {
-      border: 1px solid #e2e8f0;
-      border-top: none;
-      border-radius: 0 0 8px 8px;
-      background: white;
-      max-height: 0;
-      overflow: hidden;
-      opacity: 0;
-      transition: all 0.3s ease;
-    }
-
-    .accordion-content.open {
-      max-height: 420px;
-      opacity: 1;
-      padding: 15px;
-      overflow-y: auto;
-      overflow-x: hidden;
-    }
-
-    .credits-log-scroll {
-      height: 120px;
-      overflow-y: scroll;
-      overflow-x: hidden;
-      padding-right: 6px;
-      scrollbar-gutter: stable;
-    }
-
-    .credits-log-scroll::-webkit-scrollbar {
-      width: 10px;
-    }
-
-    .credits-log-scroll::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .credits-log-scroll::-webkit-scrollbar-thumb {
-      background: #d1d5db;
-      border-radius: 999px;
-      border: 2px solid transparent;
-      background-clip: content-box;
-    }
-
-    .credits-log-scroll::-webkit-scrollbar-thumb:hover {
-      background: #9ca3af;
-    }
-
-    .card-header-row {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 10px;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 8px;
-    }
-
-    .card-header-row h2 {
-      margin: 0;
-      border: none;
-      padding: 0;
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .actions-menu {
-      position: relative;
-      display: inline-flex;
-    }
-
-    .actions-menu>summary::-webkit-details-marker {
-      display: none;
-    }
-
-    .actions-menu>summary {
-      list-style: none;
-    }
-
-    .actions-trigger {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 12px;
-      border-radius: 10px;
-      border: 1px solid #dbeafe;
-      background: linear-gradient(135deg, #eaf2ff, #dbeafe);
-      color: #1e40af;
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
-      margin-top: 0;
-      transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
-      box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08);
-    }
-
-    .actions-trigger:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 22px rgba(2, 6, 23, 0.12);
-    }
-
-    .actions-trigger:active {
-      transform: translateY(0);
-      box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08);
-    }
-
-    .actions-trigger .chevron {
-      font-weight: 900;
-      opacity: .9;
-    }
-
-    .actions-dropdown {
-      position: absolute;
-      right: 0;
-      top: calc(100% + 8px);
-      min-width: 240px;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.14);
-      padding: 6px;
-      z-index: 9999;
-      display: none;
-    }
-
-    .actions-menu[open] .actions-dropdown {
-      display: block;
-    }
-
-    .actions-item {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 10px;
-      border-radius: 10px;
-      border: 1px solid transparent;
-      background: transparent;
-      cursor: pointer;
-      margin-top: 0;
-      text-align: left;
-      font-size: 13px;
-      color: #0f172a;
-      transition: background .12s ease, border-color .12s ease;
-    }
-
-    .actions-item:hover {
-      background: #f8fafc;
-      border-color: #e2e8f0;
-    }
-
-    .actions-item .icon {
-      width: 28px;
-      height: 28px;
-      border-radius: 10px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      color: #1e40af;
-      font-weight: 900;
-      flex: 0 0 auto;
-    }
-
-    .actions-item.danger .icon {
-      background: #fee2e2;
-      border-color: #fecaca;
-      color: #991b1b;
-    }
-
-    .actions-item .text {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      line-height: 1.15;
-    }
-
-    .actions-item .title {
-      font-weight: 800;
-      font-size: 12.8px;
-    }
-
-    .actions-item .desc {
-      font-size: 11.2px;
-      font-weight: 600;
-      color: #64748b;
-    }
-
-    .add-message-row {
-      margin-top: 24px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 10px;
-    }
-
-    .add-message-row textarea {
-      width: 100%;
-      min-height: 100px;
-      max-height: 160px;
-    }
-
-    .add-message-row button {
-      margin-top: 0;
-      width: fit-content;
-    }
-
-    .top-nav {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 14px;
-      margin-bottom: 14px;
-    }
-
-    .nav-brand .sys-name {
-      font-size: 13px;
-      font-weight: 700;
-      color: #0f172a;
-    }
-
-    .nav-brand .sys-sub {
-      font-size: 12px;
-      font-weight: 600;
-      color: #64748b;
-      margin-top: 2px;
-    }
-
-    .nav-tabs {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .nav-tab {
-      margin-top: 0;
-      padding: 8px 12px;
-      border-radius: 10px;
-      border: 1px solid #e2e8f0;
-      background: #f8fafc;
-      color: #334155;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background .15s ease, border-color .15s ease, transform .12s ease;
-    }
-
-    .nav-tab:hover {
-      background: #f1f5f9;
-    }
-
-    .nav-tab.active {
-      background: #eaf2ff;
-      border-color: #bfdbfe;
-      color: #1e40af;
-    }
-
-    .home-hero {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 16px 18px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
-      margin-bottom: 20px;
-    }
-
-    .home-hero .title {
-      margin: 0 0 6px 0;
-      font-weight: 800;
-      color: #0f172a;
-    }
-
-    .home-hero .desc {
-      margin: 0;
-      font-weight: 600;
-      color: #64748b;
-    }
-
-    .page-section {
-      display: none;
-    }
-
-    .page-section.active {
-      display: block;
-    }
-
-    .app-footer {
-      margin-top: auto;
-      padding-top: 14px;
-      border-top: 1px solid #e5e7eb;
-      display: flex;
-      justify-content: center;
-    }
-
-    .footer-link {
-      font-size: 13px;
-      color: #4285F4;
-      text-decoration: none;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .footer-link:hover {
-      text-decoration: underline;
-    }
-
-    .name-chip {
-      font-weight: 900;
-      font-size: 22px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      cursor: pointer;
-      color: #06349e;
-      text-decoration: underline;
-      background: none;
-      line-height: 1;
-      margin-left: 2px;
-    }
-
-    .name-chip:hover {
-      background: #dbeafe;
-    }
-
-    .leader-filters {
-      display: grid;
-      gap: 12px;
-      margin-bottom: 12px;
-      align-items: center;
-      grid-template-columns: minmax(220px, 1.2fr) minmax(180px, .8fr) 180px 180px;
-    }
-
-    .leader-filters input,
-    .leader-filters select {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      background: #fff;
-      box-sizing: border-box;
-      min-width: 0;
-    }
-
-    .leader-actions-row {
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 12px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-
-    .leader-status-inline {
-      font-size: 12px;
-      font-weight: 800;
-      color: #16a34a;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      min-height: 18px;
-      margin-top: 0;
-    }
-
-    @media (max-width: 860px) {
-      .leader-filters {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    @media (max-width: 520px) {
-      .leader-filters {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .leader-pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      margin-top: 12px;
-    }
-
-    .leader-page-btn {
-      margin-top: 0;
-      width: 44px;
-      height: 40px;
-      border-radius: 12px;
-      font-weight: 900;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      line-height: 1;
-    }
-
-    .leader-page-number {
-      font-size: 13px;
-      font-weight: 900;
-      color: #0f172a;
-      min-width: 36px;
-      text-align: center;
-      padding: 0 6px;
-      user-select: none;
-    }
-
-    .leader-page-btn:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-  </style>
+  <link rel="stylesheet" href="styles/options.css">
 
   <dialog id="creditsDialog" style="
     border: none;
@@ -711,8 +20,9 @@
   ">
     <div style="
       padding: 18px 20px;
-      background: linear-gradient(135deg, #1a73e8, #4285F4);
-      color: #fff;
+      background: #f7f8fa;
+      color: #1f2937;
+      border-bottom: 1px solid #e4e7ec;
     ">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
         <div>
@@ -725,14 +35,15 @@
         </div>
 
         <div class="app-version" style="
-          background: rgba(255,255,255,0.18);
-          border: 1px solid rgba(255,255,255,0.22);
-          padding: 6px 10px;
+          background: #eef3f9;
+          border: 1px solid #c5d4e8;
+          padding: 4px 9px;
           border-radius: 999px;
           font-size: 12px;
-          font-weight: 700;
+          font-weight: 650;
           letter-spacing: .2px;
           white-space: nowrap;
+          color: #2f5ea8;
         ">
           v1.4.7
         </div>
@@ -986,24 +297,12 @@
 
   <main class="app-main">
 
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
-      <h1 style="margin:0;">Painel de Configurações</h1>
-    </div>
-
     <div class="top-nav" role="navigation" aria-label="Navegação de Configurações">
       <div class="nav-brand">
-        <div class="sys-name" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <h1 style="margin:0 0 4px;">Painel de Configurações</h1>
+        <div class="sys-name" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <span>AtendeAI Manager</span>
-          <span id="sectorBadge" style="
-          display:none;
-          font-size:12px;
-          font-weight:800;
-          padding:4px 10px;
-          border-radius:999px;
-          border:1px solid #e2e8f0;
-          background:#f8fafc;
-          color:#0f172a;
-        "></span>
+          <span id="sectorBadge"></span>
         </div>
       </div>
 
@@ -1017,74 +316,84 @@
     </div>
 
     <section id="sec-home" class="page-section active">
-      <div class="home-hero" style="display:flex; flex-direction:column; gap:14px;">
-        <div>
-          <div style="font-size:22px; font-weight:900; color:#0f172a; line-height:1.15;">
-            <span id="homeGreetingPrefix">Olá</span><span id="homeGreetingComma">,</span>
-            <button id="editNameTrigger" type="button" class="name-chip" aria-label="Editar nome" hidden></button>
-          </div>
-
-          <div style="margin-top:6px; font-size:13px; color:#64748b; font-weight:600;">
-            Centralize configurações e atalhos para acelerar seu atendimento e padronizar respostas.
-          </div>
+      <div class="home-hero">
+        <div class="title">
+          <span id="homeGreetingPrefix">Olá</span><span id="homeGreetingComma">,</span>
+          <button id="editNameTrigger" type="button" class="name-chip" aria-label="Editar nome" hidden></button>
         </div>
+        <p class="desc">Ajustes do atendimento, mensagens padrão e visibilidade dos botões.</p>
+      </div>
 
-        <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
-          <div class="card" style="margin-bottom:0;">
-            <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
-              Mensagens Padrão - Suporte e Pré Atendimento
-            </div>
-            <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
-              Cadastre respostas frequentes e use atalhos para colar mensagens com um clique, mantendo consistência no
-              atendimento.
+      <div class="home-grid">
+        <div class="home-feature">
+          <strong>Mensagens Padrão</strong>
+          <p>Cadastre respostas frequentes e atalhos para colar mensagens com um clique.</p>
+        </div>
+        <div class="home-feature">
+          <strong>Configuração IA</strong>
+          <p>Defina o tom, o formato e o perfil padrão das sugestões de resposta.</p>
+        </div>
+        <div class="home-feature">
+          <strong>Histórico</strong>
+          <p>Consulte resumos e chamados manuais anteriores quando precisar de contexto.</p>
+        </div>
+      </div>
+
+      <div class="card news-card" style="margin-top:16px;">
+        <h2>Novidades</h2>
+        <p class="hint">Atualizações recentes desta extensão.</p>
+        <div id="changelogList" class="changelog-list" hidden></div>
+        <div class="changelog-static">
+          <div class="changelog-item">
+            <span class="changelog-dot current" aria-hidden="true"></span>
+            <div>
+              <div class="changelog-meta">
+                <strong class="app-version">v1.4.7</strong>
+                <span>Melhorias</span>
+                <span class="changelog-badge">Atual</span>
+              </div>
+              <div class="changelog-body">Melhorias na paginação e exportação do painel Líder; ajustes na leitura de Upsell.</div>
             </div>
           </div>
-
-          <div class="card" style="margin-bottom:0;">
-            <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
-              Configuração IA - Suporte
-            </div>
-            <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
-              Defina instruções para a IA gerar resumos no padrão da sua operação (tom, formato e foco do atendimento).
+          <div class="changelog-item">
+            <span class="changelog-dot" aria-hidden="true"></span>
+            <div>
+              <div class="changelog-meta">
+                <strong>v1.4.5</strong>
+                <span>Melhorias e correções</span>
+              </div>
+              <div class="changelog-body">Correções no fluxo de edição de mensagens padrão e restauração do histórico.</div>
             </div>
           </div>
-
-          <div class="card" style="margin-bottom:0;">
-            <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
-              Histórico - Suporte
-            </div>
-            <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
-              Consulte resumos gerados e chamados manuais anteriores para recuperar contexto rapidamente.
+          <div class="changelog-item">
+            <span class="changelog-dot" aria-hidden="true"></span>
+            <div>
+              <div class="changelog-meta">
+                <strong>v1.2</strong>
+                <span>Mensagens, dicas e Agenda</span>
+              </div>
+              <div class="changelog-body">Mensagens padrão, dicas com IA e área Agenda &amp; Gestão.</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div id="nameSetupBlock" style="margin-top: 16px;">
-        <label style="display:block; margin-bottom:6px; font-weight:800;">Nome</label>
-
+      <div id="nameSetupBlock" class="card">
+        <label for="nameInput" style="display:block; margin-bottom:6px;">Nome</label>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <input id="nameInput" type="text" placeholder="Digite seu nome"
-            style="flex:1; min-width:260px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; outline:none;" />
+          <input id="nameInput" type="text" placeholder="Digite seu nome" style="flex:1; min-width:260px; margin-top:0;" />
           <button id="saveNameBtn" class="btn-primary" type="button" style="margin-top:0;">Salvar</button>
         </div>
-
-        <div class="hint" style="margin-top:8px;">
-          Obrigatório na primeira configuração. Depois, você altera clicando no seu nome acima.
-        </div>
-
-        <div id="nameStatus" style="font-size:12px; margin-top:8px; min-height:18px; color:#64748b;"></div>
+        <div class="hint">Obrigatório na primeira configuração. Depois, altere clicando no seu nome acima.</div>
+        <div id="nameStatus"></div>
       </div>
 
-      <div class="card" style="margin-top: 20px;">
-        <div style="font-weight:900; color:#0f172a; margin-bottom: 10px;">👁️ Visibilidade dos Botões</div>
-        <div style="font-size:13px; color:#475569; margin-bottom: 14px;">
-          Selecione quais botões devem aparecer na interface.
-        </div>
-
+      <div class="card">
+        <div class="visibility-title">Visibilidade dos botões</div>
+        <p class="hint" style="margin-bottom:12px;">Escolha quais botões aparecem no painel flutuante do atendimento.</p>
         <div id="visibilityOptions" style="display:flex; flex-direction:column; gap:8px;"></div>
-        <button id="saveVisibilityBtn" class="btn-primary" style="margin-top:14px;">Salvar Visibilidade</button>
-        <div id="visStatus" style="font-size:12px; margin-top:8px; min-height:18px;"></div>
+        <button id="saveVisibilityBtn" class="btn-primary">Salvar visibilidade</button>
+        <div id="visStatus"></div>
       </div>
     </section>
 
@@ -1283,11 +592,9 @@
     overflow:hidden;
     font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   ">
-    <div style="padding:16px 18px; background: linear-gradient(135deg, #1a73e8, #4285F4); color:#fff;">
-      <div style="font-size:16px; font-weight:900;">Configuração inicial</div>
-      <div style="margin-top:6px; font-size:12.8px; opacity:.95; font-weight:600;">
-        Para continuar, informe seu nome e selecione seu setor.
-      </div>
+    <div class="dialog-header">
+      <div style="font-size:15px; font-weight:650;">Configuração inicial</div>
+      <div class="kicker">Informe seu nome e selecione seu setor para continuar.</div>
     </div>
 
     <div style="padding:16px 18px; background:#fff;">
@@ -1375,11 +682,7 @@
   overflow:hidden;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 ">
-    <div style="
-    padding:16px 18px;
-    background: linear-gradient(135deg, #1a73e8, #4285F4);
-    color:#fff;
-  ">
+    <div class="dialog-header">
       <div style="
       display:flex;
       align-items:center;
@@ -1390,14 +693,14 @@
 
         <button id="editCloseNameDialog" type="button" aria-label="Fechar" style="
           appearance:none;
-          border:none;
-          background: rgba(255,255,255,0.18);
-          color:#fff;
-          width:34px;
-          height:34px;
-          border-radius:10px;
+          border:1px solid #e4e7ec;
+          background: #fff;
+          color:#4b5563;
+          width:32px;
+          height:32px;
+          border-radius:6px;
           cursor:pointer;
-          font-weight:900;
+          font-weight:650;
           display:inline-flex;
           align-items:center;
           justify-content:center;

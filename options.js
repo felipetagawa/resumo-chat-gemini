@@ -53,6 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
     visibilityOptions: document.getElementById("visibilityOptions"),
     saveVisibilityBtn: document.getElementById("saveVisibilityBtn"),
     visStatus: document.getElementById("visStatus"),
+    changelogList: document.getElementById("changelogList"),
     leaderPasswordWrap: document.getElementById("leaderPasswordWrap"),
     leaderPasswordInput: document.getElementById("leaderPasswordInput"),
     leaderFilterName: document.getElementById("leaderFilterName"),
@@ -1335,21 +1336,25 @@ document.addEventListener("DOMContentLoaded", () => {
     el.changelogList.innerHTML = "";
 
     if (!history || history.length === 0) {
-      el.changelogList.innerHTML = "<div style='font-size:12px; color:#666; font-style:italic;'>Nenhum registro de atualização.</div>";
+      el.changelogList.hidden = true;
       return;
     }
 
     const sorted = [...history].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    el.changelogList.hidden = false;
 
     sorted.forEach(item => {
       const div = document.createElement("div");
-      div.style.cssText = "display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:6px;";
-
+      div.className = "changelog-item";
       const dateStr = new Date(item.timestamp).toLocaleString("pt-BR");
-
       div.innerHTML = `
-        <div style="font-size:13px; font-weight:700; color:#333;">v${item.version}</div>
-        <div style="font-size:11px; color:#888;">${dateStr}</div>
+        <span class="changelog-dot" aria-hidden="true"></span>
+        <div>
+          <div class="changelog-meta">
+            <strong>v${item.version}</strong>
+            <span>${dateStr}</span>
+          </div>
+        </div>
       `;
       el.changelogList.appendChild(div);
     });

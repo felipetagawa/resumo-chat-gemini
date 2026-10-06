@@ -29,8 +29,10 @@
         "https://softeninformatica.sz.chat/*"
       ],
       "css": [
+        "styles/tokens.css",
         "styles/main.css",
         "styles/buttons.css",
+        "styles/recovery.css",
         "styles/smart-reply.css",
         "styles/modals.css",
         "styles/calendar.css",
