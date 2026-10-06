@@ -10,7 +10,7 @@ const DocumentationSuggestionModule = (() => {
   const LOAD_TIMEOUT_MS = 3500;
   const MIN_LOAD_MS = 500;
   const STABLE_WINDOW_MS = 700;
-  const SELECT_CONFIRM_TIMEOUT_MS = 500;
+  const SELECT_CONFIRM_TIMEOUT_MS = 1600;
   const SELECT_CONFIRM_POLL_MS = 25;
   const AUTOFILL_KEY = "atendeai_documentation_autofill_enabled";
   const LEARNING_ENABLED_KEY = "atendeai_documentation_learning_enabled";
@@ -472,8 +472,7 @@ const DocumentationSuggestionModule = (() => {
   }
 
   async function dispatchSelectAndWait(id, label) {
-    const status = dispatchSelect(id, label);
-    if (status !== "selecting") return status;
+    dispatchSelect(id, label);
     return waitForBridgeSelectStatus();
   }
 
@@ -658,7 +657,7 @@ const DocumentationSuggestionModule = (() => {
     const ok = await selectDocumentation(item.id, item.label);
     if (!ok) {
       renderMessage(resultEl, "Não foi possível selecionar a documentação no CRM.", true);
-      return;
+      return false;
     }
     if (shouldLearnFromSelection({ source: "use-button" })) {
       await window.DocumentationLearningModule?.recordPositive?.({
@@ -687,6 +686,7 @@ const DocumentationSuggestionModule = (() => {
       context: viewState.context,
       labelsById
     });
+    return true;
   }
 
   function renderResult(resultEl, response, totalCandidates, sentCandidates, viewState = {}) {
@@ -916,6 +916,7 @@ const DocumentationSuggestionModule = (() => {
       shouldLearnFromSelection,
       rememberAutofillOutcome,
       selectDocumentation,
+      useSuggestedDocumentation,
       watchTrustedManualSelection,
       containsTerm,
       MAX_JEV_CANDIDATES,

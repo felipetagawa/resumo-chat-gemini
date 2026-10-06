@@ -9,6 +9,7 @@
   const SELECT_ID_ATTR = "data-atendeai-documentation-select-id";
   const SELECT_LABEL_ATTR = "data-atendeai-documentation-select-label";
   const SELECT_CONFIRM_TIMEOUT_MS = 450;
+  const SELECT_CONFIRM_TIMEOUT_WITH_BEHAVIOR_MS = 1400;
   const SELECT_CONFIRM_INTERVAL_MS = 50;
 
   let selectConfirmTimer = null;
@@ -114,7 +115,7 @@
     return "";
   }
 
-  function confirmSelection(widget, id, label) {
+  function confirmValues(widget, id, label) {
     const input = document.getElementById(INPUT_ID);
     if (normalize(input?.value) !== normalize(label)) return false;
 
@@ -122,21 +123,277 @@
     return Boolean(hiddenValue) && String(hiddenValue) === String(id);
   }
 
-  function confirmSelectionWhenReady(widget, id, label) {
-    if (confirmSelection(widget, id, label)) {
-      setStatus("selected");
-      return;
+  function hasConfiguredItemSelectBehavior(widget) {
+    if (!widget) return false;
+    if (typeof widget.hasBehavior === "function") {
+      try {
+        if (widget.hasBehavior("itemSelect") === true) return true;
+      } catch (_) {
+        /* ignore feature-detect errors */
+      }
+    }
+    return typeof widget.cfg?.behaviors?.itemSelect === "function";
+  }
+
+  function confirmSelection(widget, id, label, observer) {
+    if (!confirmValues(widget, id, label)) return false;
+    if (hasConfiguredItemSelectBehavior(widget) && observer.count() === 0) return false;
+    return true;
+  }
+
+  function noopObserver() {
+    return {
+      count() {
+        return 0;
+      },
+      restore() {}
+    };
+  }
+
+  function observeItemSelect(widget) {
+    if (!widget) return noopObserver();
+
+    const state = { count: 0, restored: false };
+    const restorers = [];
+    const behaviors = widget.cfg && widget.cfg.behaviors;
+    const originalBehavior = behaviors && behaviors.itemSelect;
+    const hasBehaviorFn = typeof originalBehavior === "function";
+
+    function install(target, name, wrap) {
+      const original = target?.[name];
+      if (typeof original !== "function") return;
+      const wrapped = wrap(original);
+      target[name] = wrapped;
+      restorers.push(() => {
+        target[name] = original;
+      });
     }
 
-    const startedAt = Date.now();
-    selectConfirmTimer = setInterval(() => {
-      if (confirmSelection(widget, id, label)) {
-        clearSelectConfirmTimer();
-        setStatus("selected");
-        return;
+    if (hasBehaviorFn) {
+      install(behaviors, "itemSelect", (original) => function wrappedItemSelectBehavior() {
+        state.count += 1;
+        return original.apply(this, arguments);
+      });
+    }
+
+    install(widget, "callBehavior", (original) => function wrappedCallBehavior(name) {
+      const result = original.apply(this, arguments);
+      if (name === "itemSelect" && !hasBehaviorFn) state.count += 1;
+      return result;
+    });
+
+    install(widget, "invokeItemSelectBehavior", (original) => {
+      const wrapped = function wrappedInvokeItemSelectBehavior() {
+        const before = state.count;
+        const result = original.apply(this, arguments);
+        if (state.count === before && hasConfiguredItemSelectBehavior(widget)) {
+          state.count += 1;
+        }
+        return result;
+      };
+      wrapped.__atendeaiArity = original.length;
+      return wrapped;
+    });
+
+    return {
+      count() {
+        return state.count;
+      },
+      restore() {
+        if (state.restored) return;
+        state.restored = true;
+        restorers.forEach((fn) => {
+          try {
+            fn();
+          } catch (_) {
+            /* ignore restore errors */
+          }
+        });
       }
-      if (Date.now() - startedAt >= SELECT_CONFIRM_TIMEOUT_MS) {
+    };
+  }
+
+  function itemValueOf(item) {
+    try {
+      if (typeof item?.attr === "function") {
+        const value = item.attr("data-item-value");
+        if (value != null && String(value)) return String(value);
+      }
+      if (typeof item?.getAttribute === "function") {
+        return String(item.getAttribute("data-item-value") || "");
+      }
+      if (item?.[0]?.getAttribute) {
+        return String(item[0].getAttribute("data-item-value") || "");
+      }
+    } catch (_) {
+      return "";
+    }
+    return "";
+  }
+
+  function makeSyntheticEvent() {
+    try {
+      if (typeof MouseEvent === "function") {
+        return new MouseEvent("click", { bubbles: true, cancelable: true });
+      }
+    } catch (_) {
+      /* fall through */
+    }
+    return { type: "click", bubbles: true };
+  }
+
+  function fireWidgetItemSelect(widget, item) {
+    if (typeof widget.invokeItemSelectBehavior === "function") {
+      const arity = Number(
+        widget.invokeItemSelectBehavior.__atendeaiArity ?? widget.invokeItemSelectBehavior.length
+      ) || 0;
+      const itemValue = itemValueOf(item);
+      const event = makeSyntheticEvent();
+      try {
+        if (arity >= 2) widget.invokeItemSelectBehavior(event, itemValue);
+        else if (arity === 1) widget.invokeItemSelectBehavior(itemValue);
+        else widget.invokeItemSelectBehavior();
+      } catch (_) {
+        try {
+          widget.invokeItemSelectBehavior();
+        } catch (__) {
+          /* ignore */
+        }
+      }
+      return true;
+    }
+
+    if (typeof widget.callBehavior === "function") {
+      try {
+        widget.callBehavior("itemSelect");
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  function triggerDomEvent(element, type) {
+    if (!element || typeof element.dispatchEvent !== "function") return false;
+    try {
+      const EventCtor = typeof MouseEvent === "function" ? MouseEvent : Event;
+      return element.dispatchEvent(new EventCtor(type, { bubbles: true, cancelable: true }));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function activateViaJQuery(element) {
+    const jquery = window.jQuery || window.$;
+    if (typeof jquery !== "function") return false;
+    try {
+      const wrapped = jquery(element);
+      if (typeof wrapped.trigger === "function") {
+        wrapped.trigger("mousedown");
+        wrapped.trigger("click");
+        return true;
+      }
+      if (typeof wrapped.click === "function") {
+        wrapped.click();
+        return true;
+      }
+    } catch (_) {
+      return false;
+    }
+    return false;
+  }
+
+  function activatePrimaryItem(element) {
+    if (!element) return false;
+    triggerDomEvent(element, "mousedown");
+    if (typeof element.click === "function") {
+      element.click();
+      return true;
+    }
+    return activateViaJQuery(element);
+  }
+
+  function markItemSelectFired(observer) {
+    if (observer.count() > 0) setStatus("item-select-fired");
+  }
+
+  function finishSuccess(observer) {
+    markItemSelectFired(observer);
+    observer.restore();
+    setStatus("selected");
+  }
+
+  function finishIfConfirmed(widget, id, label, observer) {
+    if (!confirmSelection(widget, id, label, observer)) return false;
+    finishSuccess(observer);
+    return true;
+  }
+
+  function waitIfItemSelectFired(widget, id, label, observer) {
+    if (observer.count() === 0) return false;
+    markItemSelectFired(observer);
+    confirmSelectionWhenReady(widget, id, label, observer);
+    return true;
+  }
+
+  function revertPartialSelection(widget, id, label) {
+    const input = document.getElementById(INPUT_ID);
+    const matchesInput = Boolean(input) && normalize(input.value) === normalize(label);
+    const matchesHidden = String(readHiddenValue(widget) || "") === String(id);
+    if (!matchesInput && !matchesHidden) return;
+
+    try {
+      if (input) input.value = "";
+      const hidden = document.getElementById(HIDDEN_ID);
+      if (hidden) hidden.value = "";
+      if (typeof widget?.hinput?.val === "function") widget.hinput.val("");
+    } catch (_) {
+      /* ignore */
+    }
+
+    try {
+      if (typeof widget.search === "function") {
+        widget.search(label || "%%%");
+      }
+    } catch (_) {
+      /* ignore */
+    }
+
+    const item = findExactItem(id, label);
+    if (!item) return;
+    try {
+      item.classList?.add("ui-state-highlight");
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function confirmTimeoutMs(widget) {
+    return hasConfiguredItemSelectBehavior(widget)
+      ? SELECT_CONFIRM_TIMEOUT_WITH_BEHAVIOR_MS
+      : SELECT_CONFIRM_TIMEOUT_MS;
+  }
+
+  function confirmSelectionWhenReady(widget, id, label, observer) {
+    const settle = () => {
+      if (!confirmSelection(widget, id, label, observer)) return false;
+      clearSelectConfirmTimer();
+      finishSuccess(observer);
+      return true;
+    };
+
+    if (settle()) return;
+
+    const startedAt = Date.now();
+    const timeout = confirmTimeoutMs(widget);
+    selectConfirmTimer = setInterval(() => {
+      if (settle()) return;
+      if (Date.now() - startedAt >= timeout) {
         clearSelectConfirmTimer();
+        observer.restore();
+        revertPartialSelection(widget, id, label);
         setStatus("select-failed");
       }
     }, SELECT_CONFIRM_INTERVAL_MS);
@@ -151,7 +408,36 @@
     };
   }
 
+  function runPrimaryNativeItemFlow(widget, element, id, label, observer) {
+    setStatus("activating-item");
+    const primaryUsed = activatePrimaryItem(element);
+
+    if (primaryUsed && finishIfConfirmed(widget, id, label, observer)) return true;
+    if (waitIfItemSelectFired(widget, id, label, observer)) return true;
+
+    if (!confirmSelection(widget, id, label, observer)) {
+      activateViaJQuery(element);
+    }
+
+    if (finishIfConfirmed(widget, id, label, observer)) return true;
+    return waitIfItemSelectFired(widget, id, label, observer);
+  }
+
+  function runControlledFallback(widget, item, id, label, observer) {
+    if (typeof widget.selectItem === "function") {
+      widget.selectItem(item);
+    }
+
+    if (hasConfiguredItemSelectBehavior(widget) && observer.count() === 0) {
+      fireWidgetItemSelect(widget, item);
+    }
+
+    markItemSelectFired(observer);
+    confirmSelectionWhenReady(widget, id, label, observer);
+  }
+
   function selectDocumentation(id, label) {
+    const observer = { current: noopObserver() };
     try {
       clearSelectConfirmTimer();
 
@@ -169,19 +455,15 @@
         return;
       }
 
-      const item = wrapItem(element);
-      if (typeof widget.selectItem === "function") {
-        widget.selectItem(item);
-      } else if (typeof element.click === "function") {
-        element.click();
-      } else {
-        setStatus("select-failed");
-        return;
-      }
+      setStatus("candidate-found");
+      observer.current = observeItemSelect(widget);
 
-      confirmSelectionWhenReady(widget, id, label);
+      if (runPrimaryNativeItemFlow(widget, element, id, label, observer.current)) return;
+
+      runControlledFallback(widget, wrapItem(element), id, label, observer.current);
     } catch (error) {
       clearSelectConfirmTimer();
+      observer.current.restore();
       console.warn("AtendeAI: falha ao selecionar documentação PrimeFaces.", error);
       setStatus("select-failed");
     }
