@@ -83,15 +83,23 @@ const SmartReplyModule = (() => {
   function syncChat(s) {
     if (session !== s) return;
     const changed = !current(s);
-    const warning = changed ? "O atendimento ativo mudou. Volte à conversa original ou clique em Sugerir resposta no atendimento desejado." : "";
+    // Compare the full capture, including any text omitted from the API payload.
+    // Once stale, only an explicit new suggestion can capture a new snapshot.
+    if (!changed && s.freshness && !s.stale) {
+      s.stale = text(ChatCaptureModule.capturarTextoChat()) !== s.freshness.conversation
+        || text(ObservationsModule.getPromptComplementForCurrentChat()) !== s.freshness.promptComplement;
+    }
+    const warning = changed ? "O atendimento ativo mudou. Volte à conversa original ou clique em Sugerir resposta no atendimento desejado."
+      : s.stale ? "Novas informações chegaram neste atendimento. Gere uma nova resposta." : "";
     if (s.warning.textContent !== warning) s.warning.textContent = warning;
-    setDisabled(s.insert, changed || s.busy || !s.reply || s.profileChanged);
-    setDisabled(s.regenerate, changed || s.busy || !s.snapshot);
+    setDisabled(s.insert, changed || s.stale || s.busy || !s.reply || s.profileChanged);
+    setDisabled(s.regenerate, changed || s.stale || s.busy || !s.snapshot);
     setDisabled(s.profile, s.busy);
-    if (changed && !s.choices.hidden) s.choices.hidden = true;
+    if ((changed || s.stale) && !s.choices.hidden) s.choices.hidden = true;
   }
   async function generate(s, regenerate) {
-    if (session !== s || s.busy || !current(s) || !s.snapshot) return;
+    syncChat(s);
+    if (session !== s || s.busy || !current(s) || s.stale || !s.snapshot) return;
     s.busy = true;
     s.reply = "";
     s.preview.textContent = "Gerando resposta…";
@@ -117,7 +125,7 @@ const SmartReplyModule = (() => {
   }
   function insert(s, mode, expected) {
     syncChat(s);
-    if (!current(s) || s.busy || !s.reply || s.profileChanged) return;
+    if (!current(s) || s.stale || s.busy || !s.reply || s.profileChanged) return;
     const el = composer();
     if (!el || !ChatCaptureModule.capturarTextoChat().trim()) {
       s.status.textContent = "Não foi possível localizar com segurança o campo de mensagem deste atendimento.";
@@ -131,13 +139,14 @@ const SmartReplyModule = (() => {
       return;
     }
     // Recheck immediately before mutation; choices never retain a different composer.
-    if (!current(s) || composer() !== el) return;
+    syncChat(s);
+    if (!current(s) || s.stale || composer() !== el) return;
     setComposer(el, mode === "append" && value ? `${value}\n${s.reply}` : s.reply);
     close();
   }
   async function open() {
     close();
-    const s = { token: chatToken(), reply: "", busy: true, profileChanged: false };
+    const s = { token: chatToken(), reply: "", busy: true, profileChanged: false, stale: false };
     session = s;
     const panel = node("section", "", "smart-reply-preview");
     panel.id = PANEL_ID;
@@ -187,6 +196,7 @@ const SmartReplyModule = (() => {
       syncChat(s); return;
     }
     s.snapshot = { conversation: boundedConversation(conversation), promptComplement };
+    s.freshness = { conversation: text(conversation), promptComplement: text(promptComplement) };
     s.observer = new MutationObserver(() => syncChat(s));
     s.observer.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
     syncChat(s);
@@ -201,6 +211,8 @@ const SmartReplyModule = (() => {
     await generate(s, false);
   }
   document.addEventListener("keydown", event => { if (event.key === "Escape") close(); });
+  // Textarea value edits do not create DOM mutations; capture input without intercepting it.
+  document.addEventListener("input", () => { if (session) syncChat(session); }, true);
   return { open };
 })();
 window.SmartReplyModule = SmartReplyModule;

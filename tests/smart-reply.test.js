@@ -69,6 +69,7 @@ function harness(store = {}) {
     normal() { deferred = false; },
     fail() { fail = true; }, succeed() { fail = false; },
     notify() { observers.filter(o => !o.disconnected).forEach(o => o.fn()); },
+    input() { (listeners.input || []).forEach(fn => fn({ type: 'input' })); },
     escape() { (listeners.keydown || []).forEach(fn => fn({ key: 'Escape' })); }
   };
 }
@@ -87,7 +88,6 @@ test('E2/E3/E4: regeneracao usa snapshot original, perfil escolhido persiste sem
   const h = harness(); await h.module.open();
   const options = h.profile().children.map(n => n.value);
   assert.deepEqual(options, ['DIRECT', 'EMPATHETIC', 'DIDACTIC']);
-  h.live.conversation = 'Gabriel: nova mensagem'; h.live.complement = 'outra observação';
   for (const profile of ['EMPATHETIC', 'DIDACTIC']) {
     const before = h.sent.length;
     h.profile().value = profile; await h.profile().emit('change');
@@ -198,4 +198,91 @@ test('duas geracoes sobrepostas nao retargetam resposta tardia ao novo preview',
   assert.equal(h.sent.length, 2);
   assert.equal(h.sent[1].conversation, 'Maria: ajuda');
   assert.equal(h.composer.value, '');
+});
+
+test('nova mensagem no mesmo atendimento durante request torna a resposta desatualizada', async () => {
+  const h = harness(); h.defer(); const pending = h.module.open(); await new Promise(setImmediate);
+  h.live.conversation += '\nGabriel: apareceu outro erro';
+  // No observer delivery is needed: completion must revalidate the context itself.
+  h.respond(); await pending;
+  assert.match(h.status(), /Novas informações chegaram/);
+  assert.equal(h.button('Inserir').disabled, true);
+  assert.equal(h.button('↻ Outra resposta').disabled, true);
+  await h.button('Inserir').emit('click'); await h.button('↻ Outra resposta').emit('click');
+  assert.deepEqual(h.composer.events, []); assert.equal(h.sent.length, 1);
+});
+
+test('nova mensagem depois do preview bloqueia insercao e exige nova captura explicita', async () => {
+  const h = harness(); await h.module.open();
+  h.live.conversation += '\nGabriel: novo detalhe'; h.notify();
+  assert.equal(h.button('Inserir').disabled, true);
+  await h.button('Inserir').emit('click'); await h.button('↻ Outra resposta').emit('click');
+  assert.equal(h.composer.value, ''); assert.equal(h.sent.length, 1);
+  // Reverting the text does not silently revive a stale snapshot.
+  h.live.conversation = h.sent[0].conversation; h.notify();
+  assert.equal(h.button('Inserir').disabled, true);
+  h.live.conversation += '\nGabriel: contexto atualizado'; await h.module.open();
+  assert.equal(h.sent.length, 2); assert.equal(h.sent[1].conversation, h.live.conversation);
+  await h.button('Inserir').emit('click'); assert.equal(h.composer.events.length, 1);
+});
+
+test('promptComplement editado por input bloqueia inserir e regenerar sem atualizar snapshot', async () => {
+  const h = harness(); await h.module.open();
+  h.live.complement = 'nova informação técnica'; h.input();
+  assert.match(h.status(), /Gere uma nova resposta/);
+  assert.equal(h.button('Inserir').disabled, true);
+  assert.equal(h.button('↻ Outra resposta').disabled, true);
+  await h.button('Inserir').emit('click'); await h.button('↻ Outra resposta').emit('click');
+  assert.equal(h.sent.length, 1); assert.equal(h.composer.value, '');
+  assert.equal(h.sent[0].promptComplement, 'verificação em andamento');
+});
+
+test('acoes revalidam freshness mesmo sem notificacao de DOM ou input', async () => {
+  for (const action of ['Inserir', '↻ Outra resposta']) {
+    const h = harness(); await h.module.open(); h.live.complement = 'alterado';
+    await h.button(action).emit('click');
+    assert.match(h.status(), /Novas informações chegaram/);
+    assert.equal(h.sent.length, 1); assert.deepEqual(h.composer.events, []);
+  }
+});
+
+test('whitespace irrelevante preserva freshness e regeneracao usa exatamente o snapshot original', async () => {
+  const h = harness(); await h.module.open();
+  h.live.conversation = ' \n Gabriel:\t preciso   de ajuda \r\n';
+  h.live.complement = '\t verificação \n em   andamento  '; h.notify(); h.input();
+  assert.equal(h.button('Inserir').disabled, false);
+  assert.equal(h.button('↻ Outra resposta').disabled, false);
+  await h.button('↻ Outra resposta').emit('click');
+  assert.deepEqual(h.sent[1], { ...h.sent[0], regenerate: true });
+  await h.button('Inserir').emit('click'); assert.deepEqual(h.composer.events, ['input']);
+});
+
+test('freshness considera transcript completo inclusive trecho omitido do payload', async () => {
+  const h = harness(); h.live.conversation = 'a'.repeat(10000) + 'b'.repeat(10000);
+  await h.module.open(); const payload = h.sent[0].conversation;
+  h.live.conversation = h.live.conversation.slice(0, 7000) + 'novo detalhe' + h.live.conversation.slice(7012);
+  h.notify(); assert.equal(h.button('Inserir').disabled, true);
+  assert.equal(h.sent[0].conversation, payload); assert.equal(h.sent.length, 1);
+});
+
+test('mudanca de privateNote nao afeta freshness e nunca entra no payload', async () => {
+  const store = { privateNote: 'segredo inicial' }; const h = harness(store);
+  await h.module.open(); store.privateNote = 'segredo atualizado'; h.notify(); h.input();
+  assert.equal(h.button('Inserir').disabled, false);
+  await h.button('↻ Outra resposta').emit('click');
+  for (const payload of h.sent) {
+    assert.deepEqual(Object.keys(payload).sort(), ['action', 'conversation', 'profile', 'promptComplement', 'regenerate']);
+    assert.equal(JSON.stringify(payload).includes('segredo'), false);
+  }
+  await h.button('Inserir').emit('click'); assert.deepEqual(h.composer.events, ['input']);
+});
+
+test('contexto alterado durante escolha de composer bloqueia substituir e acrescentar', async () => {
+  for (const choice of ['Substituir', 'Acrescentar']) {
+    const h = harness(); h.composer.value = 'meu rascunho'; await h.module.open();
+    await h.button('Inserir').emit('click'); h.live.conversation += '\nGabriel: novidade';
+    await h.button(choice).emit('click');
+    assert.equal(h.composer.value, 'meu rascunho'); assert.deepEqual(h.composer.events, []);
+    assert.match(h.status(), /Novas informações chegaram/);
+  }
 });
