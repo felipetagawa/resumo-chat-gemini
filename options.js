@@ -83,9 +83,8 @@ document.addEventListener("DOMContentLoaded", () => {
     { id: "btnMessages", label: "Mensagens Padrão", defaultSupport: true, defaultPre: true },
     { id: "btnResumoGemini", label: "Gerar Relatório (IA)", defaultSupport: true, defaultPre: false },
     { id: "btnChamadoManual", label: "Chamado Manual", defaultSupport: true, defaultPre: false },
-    { id: "btnAssistenteIA", label: "Botão Assistente IA (Dropdown)", defaultSupport: true, defaultPre: true },
-    { id: "btnConsultarDocsLoop", label: "↳ Consultar Docs (no Menu)", defaultSupport: true, defaultPre: true },
-    { id: "btnDica", label: "↳ Dicas Inteligentes (no Menu)", defaultSupport: true, defaultPre: false }
+    { id: "btnSmartReply", label: "Sugerir resposta", defaultSupport: true, defaultPre: true },
+    { id: "btnConsultarDocsLoop", label: "↳ Consultar Docs", defaultSupport: true, defaultPre: true }
   ];
 
   const FIXED_MESSAGES = [
@@ -1668,6 +1667,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const sector = data[SECTOR_KEY] || "";
       settings = getDefaultVisibility(sector);
     }
+    if (settings.btnSmartReply === undefined) {
+      settings = { ...settings, btnSmartReply: settings.btnAssistenteIA ?? true };
+    }
     return settings;
   }
 
@@ -1684,7 +1686,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function saveVisibilitySettings() {
-    const settings = {};
+    const settings = { ...(await loadVisibilitySettings()) };
     const checkboxes = el.visibilityOptions.querySelectorAll("input[type='checkbox']");
     checkboxes.forEach(cb => {
       settings[cb.value] = cb.checked;

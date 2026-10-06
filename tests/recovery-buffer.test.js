@@ -1227,6 +1227,7 @@ test('Gerar Relatorio do chat atual envia no primeiro clique sem abrir preservad
   const context = { document, console,
     DOMHelpers: { exists: () => false, createElement(tag, attrs) { return el(tag, { id: attrs.id }); } },
     getIconHTML: () => '', guardFeature: fn => fn, initializeExtensionDock: () => {},
+    SupportFocusModule: { async mount() {} },
     ChatCaptureModule: { capturarTextoChat: () => 'CASSIA: conversa atual', capturarNomeCliente: () => 'CASSIA' },
     ObservationsModule: { getPromptComplementForCurrentChat: () => 'observacao atual' },
     RecoveryBufferModule: { openReportFallback() { opened++; }, openPreservedBuffers() { opened++; } },

@@ -238,11 +238,10 @@ function createOnboardingModal() {
     const newVisibility = {
       btnAgenda: true,
       btnMessages: true,
-      btnAssistenteIA: true,
+      btnSmartReply: true,
       btnConsultarDocsLoop: true,
       btnResumoGemini: !isPre,
       btnChamadoManual: !isPre,
-      btnDica: !isPre,
       btnProductClassifier: isPre
     };
 
@@ -791,85 +790,14 @@ function criarBotoesFlutuantes(visibility, userSector) {
     return RecoveryBufferModule.openPreservedBuffers();
   }));
 
-  const containerDropdown = document.createElement("div");
-  containerDropdown.className = "gemini-dropdown";
-
-  const botaoMain = createButton("btnAssistenteIA", "Assistente IA", "icon48.png", (e) => {
-    e.stopPropagation();
-    containerDropdown.classList.toggle("active");
-  });
-  botaoMain.onclick = null;
-
-  const dropdownContent = document.createElement("div");
-  dropdownContent.className = "gemini-dropdown-content";
-
-  document.addEventListener("click", () => {
-    containerDropdown.classList.remove("active");
-  });
-
-  const itemDocs = document.createElement("button");
-  itemDocs.className = "gemini-dropdown-item";
-  itemDocs.id = "btnConsultarDocsLoop";
-  itemDocs.innerHTML = `${getIconHTML("docs.png", "Consultar Docs")} Consultar Docs`;
-  itemDocs.onclick = guardFeature(() => DocsModule.exibirPainelConsultaDocs());
-
-  const itemDica = document.createElement("button");
-  itemDica.className = "gemini-dropdown-item";
-  itemDica.id = "btnDica";
-  itemDica.innerHTML = `${getIconHTML("dicas-inteligentes.png", "Dicas Inteligentes")} Dicas Inteligentes`;
-
-  itemDica.onclick = guardFeature(async () => {
-    const btn = document.getElementById("btnDica");
-    btn.disabled = true;
-    const textoOriginal = btn.innerHTML;
-    btn.innerHTML = `<span class="icon">⏳</span> Pensando...`;
-
-    const texto = ChatCaptureModule.capturarTextoChat();
-    if (!texto) {
-      alert("Não foi possível capturar o texto do chat.");
-      btn.disabled = false;
-      btn.innerHTML = textoOriginal;
-      return;
-    }
-
-    try {
-      const summaryObservation = ObservationsModule.getPromptComplementForCurrentChat();
-      const validatedPromptComplement = summaryObservation;
-
-      if (validatedPromptComplement.length > MAX_PROMPT_COMPLEMENT_CHARS) {
-        alert(`O campo "Observações para o resumo" excede o limite de ${MAX_PROMPT_COMPLEMENT_CHARS} caracteres.`);
-        return;
-      }
-
-      const payload = {
-        action: "gerarDica",
-        texto
-      };
-      if (summaryObservation) payload.promptComplement = summaryObservation;
-
-      const response = await MessagingHelper.send(payload);
-      if (response && response.dica) SummaryModule.exibirDica(response.dica);
-      else if (response && response.erro) alert("Erro ao gerar dica: " + response.erro);
-    } catch (error) {
-      alert("Erro de comunicação: " + error.message);
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = `${getIconHTML("dicas-inteligentes.png", "Dicas Inteligentes")} Dicas Inteligentes`;
-    }
-  });
-
-  if (isVisible("btnConsultarDocsLoop")) dropdownContent.appendChild(itemDocs);
-  const itemSmartReply = document.createElement("button");
-  itemSmartReply.id = "btnSmartReply";
-  itemSmartReply.className = "gemini-dropdown-item";
-  itemSmartReply.type = "button";
-  itemSmartReply.textContent = "Sugerir resposta";
-  itemSmartReply.addEventListener("click", guardFeature(() => SmartReplyModule.open()));
-  dropdownContent.appendChild(itemSmartReply);
-  if (isVisible("btnDica")) dropdownContent.appendChild(itemDica);
-
-  containerDropdown.appendChild(botaoMain);
-  containerDropdown.appendChild(dropdownContent);
+  const botaoSmartReply = createButton('btnSmartReply', 'Sugerir resposta', '',
+    guardFeature(() => SmartReplyModule.open()));
+  botaoSmartReply.type = 'button';
+  botaoSmartReply.className += ' atendeai-focus-primary';
+  botaoSmartReply.innerHTML = '<svg class="atendeai-focus-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14v10H8l-5 4V3Z"/><path d="M6 7h8M6 10h5"/></svg> Sugerir resposta';
+  botaoDocs.id = 'btnConsultarDocsLoop';
+  botaoDocs.className = 'gemini-preserved-link';
+  botaoDocs.textContent = 'Consultar Docs';
 
   const botaoMessages = createButton(
     "btnMessages",
@@ -916,6 +844,14 @@ function criarBotoesFlutuantes(visibility, userSector) {
     container.appendChild(productClassifierResult);
   }
 
+  const showSmartReply = visibility?.btnSmartReply ?? visibility?.btnAssistenteIA ?? true;
+  if (showSmartReply || isVisible('btnConsultarDocsLoop')) {
+    const replyGroup = document.createElement('div');
+    replyGroup.className = 'gemini-report-group';
+    if (showSmartReply) replyGroup.appendChild(botaoSmartReply);
+    if (isVisible('btnConsultarDocsLoop')) replyGroup.appendChild(botaoDocs);
+    container.appendChild(replyGroup);
+  }
   if (isVisible("btnResumoGemini")) {
     const reportGroup = document.createElement("div");
     reportGroup.className = "gemini-report-group";
@@ -928,9 +864,8 @@ function criarBotoesFlutuantes(visibility, userSector) {
   container.appendChild(botaoObservacoes);
   container.appendChild(botaoConfiguracoes); // Sempre mostra Configurações
 
-  if (isVisible("btnAssistenteIA")) container.appendChild(containerDropdown);
-
   document.body.appendChild(container);
+  void SupportFocusModule.mount(container);
   void initializeExtensionDock(container);
 }
 

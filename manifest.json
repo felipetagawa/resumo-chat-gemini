@@ -34,6 +34,7 @@
         "styles/buttons.css",
         "styles/recovery.css",
         "styles/smart-reply.css",
+        "styles/support-focus.css",
         "styles/modals.css",
         "styles/calendar.css",
         "styles/called.css"
@@ -55,6 +56,7 @@
         "modules/observations.js",
         "modules/recovery-buffer.js",
         "modules/smart-reply.js",
+        "modules/support-focus.js",
         "content.js"
       ],
       "run_at": "document_end"

@@ -79,24 +79,40 @@ const RecoveryBufferModule = (() => {
     return "";
   }
 
+  function sourceIdFromCard(card) {
+    const sourceId = readAttrs(card, CONVERSATION_ATTRS);
+    if (sourceId) return sourceId;
+    if (!card) return "";
+    const platformSrc = card.querySelector('img[alt="platform"]')?.getAttribute("src") || "";
+    const platform = platformSrc.match(/\/assets\/img\/platform\/mini\/([\w-]+)\.svg(?:[?#].*)?$/i)?.[1]?.toLowerCase();
+    const name = normalizeText(card.querySelector(".contact-name")?.textContent).toLowerCase();
+    const time = card.querySelector('.contact-times[phase="attendance"] .times');
+    const timestamp = normalizeText(time?.getAttribute("title") || time?.textContent);
+    if (platform && name && /^\d{2}\/\d{2}\/\d{2}(?:\d{2})? \d{2}:\d{2}(?::\d{2})?$/.test(timestamp)) {
+      return `attendance:${platform}|${name.replace(/%/g, "%25").replace(/\|/g, "%7C")}|${timestamp}`;
+    }
+    return "";
+  }
+
   function resolveSourceId(doc = document) {
     for (const selector of ACTIVE_CARD_SELECTORS) {
       const card = doc.querySelector?.(selector);
-      const sourceId = readAttrs(card, CONVERSATION_ATTRS);
-      if (sourceId) return sourceId;
-      if (!card) continue;
-      const platformSrc = card.querySelector('img[alt="platform"]')?.getAttribute("src") || "";
-      const platform = platformSrc.match(/\/assets\/img\/platform\/mini\/([\w-]+)\.svg(?:[?#].*)?$/i)?.[1]?.toLowerCase();
-      const name = normalizeText(card.querySelector(".contact-name")?.textContent).toLowerCase();
-      const time = card.querySelector('.contact-times[phase="attendance"] .times');
-      const timestamp = normalizeText(time?.getAttribute("title") || time?.textContent);
-      if (platform && name && /^\d{2}\/\d{2}\/\d{2}(?:\d{2})? \d{2}:\d{2}(?::\d{2})?$/.test(timestamp)) {
-        return `attendance:${platform}|${name.replace(/%/g, "%25").replace(/\|/g, "%7C")}|${timestamp}`;
-      }
-      return "";
+      if (card) return sourceIdFromCard(card);
     }
-
     return "";
+  }
+
+  function getConversationIdentityFromCard(card) {
+    const sourceId = sourceIdFromCard(card);
+    return sourceId ? Object.freeze({ sourceId, displayName: normalizeText(card.querySelector(".contact-name")?.textContent) || "Conversa" }) : null;
+  }
+
+  function getCurrentConversationIdentity() {
+    for (const selector of ACTIVE_CARD_SELECTORS) {
+      const card = document.querySelector(selector);
+      if (card) return getConversationIdentityFromCard(card);
+    }
+    return null;
   }
 
   function detectAnydeskCandidate(transcript) {
@@ -1203,6 +1219,8 @@ const RecoveryBufferModule = (() => {
 
   return {
     init,
+    getCurrentConversationIdentity,
+    getConversationIdentityFromCard,
     openReportFallback,
     openPreservedBuffers,
     buildReportRequest,

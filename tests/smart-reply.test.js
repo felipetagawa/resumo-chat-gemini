@@ -10,12 +10,13 @@ class Node {
     this.offsetWidth = 200; this.offsetHeight = 50; this.events = [];
   }
   appendChild(n) { this.children.push(n); n.parent = this; return n; }
-  setAttribute(k, v) { this.attrs[k] = v; }
+  setAttribute(k, v) { (this.attributeWrites ||= []).push([k, v]); this.attrs[k] = v; this.onAttribute?.(this); }
   getAttribute(k) { return this.attrs[k] || null; }
   addEventListener(k, fn) { (this.listeners[k] ||= []).push(fn); }
   async emit(k) { for (const fn of this.listeners[k] || []) await fn({ target: this }); }
   remove() { if (this.parent) this.parent.children = this.parent.children.filter(n => n !== this); }
   focus() { this.focused = true; }
+  contains(n) { return n === this || this.children.some(child => child.contains(n)); }
   closest() { return null; }
   setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
   dispatchEvent(event) { this.events.push(event.type); }
@@ -32,10 +33,16 @@ function harness(store = {}) {
     return null;
   };
   card.getAttribute = attr => attr === 'data-chat-id' ? live.explicit : null;
-  const listeners = {}, observers = [], sent = [];
+  const listeners = {}, observers = [], sent = [], pendingMutations = [];
   let resolveReply, rejectReply;
   let deferred = false, fail = false;
-  const document = { body, createElement: tag => new Node(tag),
+  const document = { body, createElement: tag => {
+    const n = new Node(tag);
+    n.onAttribute = target => {
+      if (observers.some(o => o.observing && !o.disconnected)) pendingMutations.push({ target, type: 'attributes' });
+    };
+    return n;
+  },
     getElementById: id => all(body).find(n => n.id === id) || null,
     querySelector: sel => sel === '.sz_contact.active' ? card : null,
     querySelectorAll: sel => sel === '.msg' ? live.messages : [composer],
@@ -45,7 +52,7 @@ function harness(store = {}) {
   const context = { document, window: { getSelection: () => ({ removeAllRanges() {}, addRange() {} }) },
     getComputedStyle: () => ({ visibility: 'visible' }), HTMLTextAreaElement: Node,
     Event: class { constructor(type) { this.type = type; } },
-    MutationObserver: class { constructor(fn) { this.fn = fn; observers.push(this); } observe() {} disconnect() { this.disconnected = true; } },
+    MutationObserver: class { constructor(fn) { this.fn = fn; observers.push(this); } observe() { this.observing = true; } disconnect() { this.disconnected = true; } },
     StorageHelper: { async get() { return store; }, async set(data) { Object.assign(store, data); } },
     ChatCaptureModule: { capturarTextoChat: () => live.conversation },
     ObservationsModule: { getPromptComplementForCurrentChat: () => live.complement,
@@ -68,7 +75,15 @@ function harness(store = {}) {
     defer() { deferred = true; }, respond() { resolveReply({ success: true, reply: 'Resposta de Gabriel' }); },
     normal() { deferred = false; },
     fail() { fail = true; }, succeed() { fail = false; },
-    notify() { observers.filter(o => !o.disconnected).forEach(o => o.fn()); },
+    notify(records = [{ target: card }]) { observers.filter(o => !o.disconnected).forEach(o => o.fn(records)); },
+    flushMutations() {
+      let cycles = 0;
+      while (pendingMutations.length) {
+        assert.ok(++cycles <= 10, 'observer loop starves the storage/API continuation');
+        const batch = pendingMutations.splice(0);
+        observers.filter(o => !o.disconnected).forEach(o => o.fn(batch));
+      }
+    },
     input() { (listeners.input || []).forEach(fn => fn({ type: 'input' })); },
     escape() { (listeners.keydown || []).forEach(fn => fn({ key: 'Escape' })); }
   };
@@ -285,4 +300,38 @@ test('contexto alterado durante escolha de composer bloqueia substituir e acresc
     assert.equal(h.composer.value, 'meu rascunho'); assert.deepEqual(h.composer.events, []);
     assert.match(h.status(), /Novas informações chegaram/);
   }
+});
+
+
+test('S1/S2/S4/S5: opening sends once and own mutations never sync or rewrite aria-busy', async () => {
+  const h = harness(); await h.module.open();
+  const panel = h.panel();
+  const before = panel.attributeWrites.filter(([key]) => key === 'aria-busy').length;
+  h.live.conversation += '\nGabriel: nova mensagem';
+  for (let i = 0; i < 20; i++) h.notify([{ target: panel.children[0] }]);
+  assert.equal(h.button('Inserir').disabled, false, 'internal mutations must not run freshness');
+  assert.equal(panel.attributeWrites.filter(([key]) => key === 'aria-busy').length, before);
+  assert.equal(h.sent.length, 1);
+  h.notify();
+  assert.equal(h.button('Inserir').disabled, true, 'S3: external mutation checks freshness');
+  assert.equal(panel.attributeWrites.filter(([key]) => key === 'aria-busy').length, before);
+});
+
+test('S1/S4: attribute mutation delivery settles before API continuation and sends exactly once', async () => {
+  const h = harness();
+  const opening = h.module.open();
+  h.flushMutations();
+  await opening;
+  h.flushMutations();
+  assert.equal(h.sent.length, 1);
+  assert.deepEqual(h.panel().attributeWrites.filter(([key]) => key === 'aria-busy').map(([, value]) => value),
+    ['true', 'false', 'true', 'false']);
+});
+
+test('F14: local Focus nextStep never enters Smart Reply payload', async () => {
+  const h = harness({ atendeai_support_focus_v1: { version: 1, items: { x: { status: 'CHECKING', nextStep: 'FOCUS_ONLY_SECRET' } } } });
+  await h.module.open();
+  assert.equal(h.sent.length, 1);
+  assert.equal(JSON.stringify(h.sent).includes('FOCUS_ONLY_SECRET'), false);
+  assert.deepEqual(Object.keys(h.sent[0]).sort(), ['action', 'conversation', 'profile', 'promptComplement', 'regenerate']);
 });

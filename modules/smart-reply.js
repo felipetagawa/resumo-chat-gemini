@@ -92,7 +92,8 @@ const SmartReplyModule = (() => {
     const warning = changed ? "O atendimento ativo mudou. Volte à conversa original ou clique em Sugerir resposta no atendimento desejado."
       : s.stale ? "Novas informações chegaram neste atendimento. Gere uma nova resposta." : "";
     if (s.warning.textContent !== warning) s.warning.textContent = warning;
-    if (s.panel?.setAttribute) s.panel.setAttribute("aria-busy", s.busy ? "true" : "false");
+    const nextBusy = s.busy ? "true" : "false";
+    if (s.panel?.getAttribute("aria-busy") !== nextBusy) s.panel.setAttribute("aria-busy", nextBusy);
     setDisabled(s.insert, changed || s.stale || s.busy || !s.reply || s.profileChanged);
     setDisabled(s.regenerate, changed || s.stale || s.busy || !s.snapshot);
     setDisabled(s.profile, s.busy);
@@ -204,7 +205,9 @@ const SmartReplyModule = (() => {
     }
     s.snapshot = { conversation: boundedConversation(conversation), promptComplement };
     s.freshness = { conversation: text(conversation), promptComplement: text(promptComplement) };
-    s.observer = new MutationObserver(() => syncChat(s));
+    s.observer = new MutationObserver(records => {
+      if (records.some(record => !s.panel.contains(record.target))) syncChat(s);
+    });
     s.observer.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
     syncChat(s);
     try {

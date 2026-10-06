@@ -150,3 +150,12 @@ test("injected stylesheets do not style the host document", () => {
   }
   assert.deepEqual(leaks, []);
 });
+
+test('F15: Focus selectors only target its namespace and never SZ classes', () => {
+  const selectors = extractSelectors(fs.readFileSync('styles/support-focus.css', 'utf8'));
+  assert.ok(injectedCss.includes('styles/support-focus.css'));
+  for (const selector of selectors) {
+    assert.match(selector, /\.atendeai-focus-/);
+    assert.doesNotMatch(selector, /\.(?:sz_contact|contact-layout|content|name|contact-name)(?:\W|$)/);
+  }
+});

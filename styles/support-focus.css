@@ -1,0 +1,90 @@
+.atendeai-focus-card {
+  box-sizing: border-box;
+  width: var(--ai-dock-width);
+  margin: 0 0 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--ai-border);
+  border-radius: var(--ai-radius-sm);
+  background: var(--ai-surface);
+  color: var(--ai-text);
+  font: var(--ai-font-size-sm)/1.35 var(--ai-font);
+}
+.atendeai-focus-card[hidden] { display: none; }
+.atendeai-focus-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.atendeai-focus-status { margin-top: 3px; color: var(--ai-text-secondary); }
+.atendeai-focus-next {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  margin-top: 3px;
+  color: var(--ai-text-muted);
+}
+.atendeai-focus-edit,
+.atendeai-focus-button,
+.atendeai-focus-choice {
+  border: 1px solid var(--ai-border);
+  border-radius: var(--ai-radius-sm);
+  padding: 4px 6px;
+  background: var(--ai-surface);
+  color: var(--ai-text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+.atendeai-focus-edit { margin-top: 5px; }
+.atendeai-focus-choices { display: grid; gap: 4px; margin: 6px 0; }
+.atendeai-focus-choice { text-align: left; }
+.atendeai-focus-choice[aria-pressed="true"] {
+  background: var(--ai-primary-soft);
+  border-color: var(--ai-primary-border);
+  color: var(--ai-primary);
+}
+.atendeai-focus-input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  margin-top: 3px;
+  border: 1px solid var(--ai-border-strong);
+  border-radius: var(--ai-radius-sm);
+  padding: 5px;
+  background: var(--ai-surface);
+  color: var(--ai-text);
+  font: inherit;
+}
+.atendeai-focus-actions { display: flex; gap: 5px; margin-top: 6px; }
+.atendeai-focus-feedback { color: var(--ai-danger); }
+.atendeai-focus-edit:focus-visible,
+.atendeai-focus-choice:focus-visible,
+.atendeai-focus-button:focus-visible,
+.atendeai-focus-input:focus-visible { outline: none; box-shadow: var(--ai-focus); }
+.atendeai-focus-badge {
+  display: inline-block;
+  margin-inline-start: 4px;
+  font: 12px/1 "Segoe UI", system-ui, sans-serif;
+  vertical-align: baseline;
+  color: #6b7280;
+}
+.atendeai-focus-my_turn { color: #2f5ea8; }
+.atendeai-focus-checking { color: #92651f; }
+.atendeai-focus-waiting_customer { color: #6b7280; }
+.atendeai-focus-waiting_third_party { color: #79639a; }
+#containerBotoesGemini .atendeai-focus-primary {
+  background: var(--ai-primary-soft);
+  border-color: var(--ai-primary-border);
+  color: var(--ai-primary);
+}
+.atendeai-focus-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  flex: 0 0 auto;
+}
