@@ -255,14 +255,14 @@ const DocumentationSuggestionModule = (() => {
     }
 
     for (const token of tokens) {
-      if (normalizedLabel.includes(token)) {
+      if (containsTerm(normalizedLabel, token)) {
         tokenScore += 5 * idf(token);
       }
     }
 
     for (let i = 0; i < tokens.length - 1; i++) {
       const pair = `${tokens[i]} ${tokens[i + 1]}`;
-      if (normalizedLabel.includes(pair)) {
+      if (containsTerm(normalizedLabel, pair)) {
         bigramScore += 16 * idf(pair);
       }
     }
@@ -542,6 +542,31 @@ const DocumentationSuggestionModule = (() => {
     };
   }
 
+  function readLiveContext() {
+    try {
+      return String(getCurrentContext() || "").trim();
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function resolveManualLearningContext(sessionContext) {
+    const current = readLiveContext();
+    const session = String(sessionContext || "").trim();
+    const currentKey = normalizeText(current);
+    const sessionKey = normalizeText(session);
+    if (currentKey) {
+      return {
+        text: current,
+        sameAsSession: currentKey === sessionKey
+      };
+    }
+    return {
+      text: session,
+      sameAsSession: true
+    };
+  }
+
   function watchTrustedManualSelection({ lastConfirmedId, suggestionIds, context, labelsById }) {
     if (typeof manualSelectionCleanup === "function") {
       manualSelectionCleanup();
@@ -572,23 +597,29 @@ const DocumentationSuggestionModule = (() => {
         const confirmed = await waitForSelectionConfirmed(id, label);
         if (seq !== pendingSeq) return;
         if (!confirmed) return;
+        if (id === previousId) return;
 
-        if (previousId && id !== previousId) {
+        const learningContext = resolveManualLearningContext(context);
+        if (!normalizeText(learningContext.text)) return;
+
+        if (previousId && learningContext.sameAsSession) {
           await learning.recordCorrection({
             previousId,
             previousLabel: labels.get(previousId) || "",
             selectedId: id,
             selectedLabel: label,
-            context
+            context: learningContext.text
           });
           lastSelectedId = id;
           return;
         }
 
-        if (suggestionIds.includes(id) && id !== previousId) {
-          await learning.recordPositive({ docId: id, label, context });
-          lastSelectedId = id;
-        }
+        await learning.recordPositive({
+          docId: id,
+          label,
+          context: learningContext.text
+        });
+        lastSelectedId = id;
       })();
     };
 

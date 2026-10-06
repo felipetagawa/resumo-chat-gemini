@@ -337,10 +337,12 @@ function createManualLearningDom() {
       for (const fn of panelListeners[event.type] || []) fn(event);
     }
   };
+  const problem = { id: "crm-input-problema", value: "" };
   const elements = new Map([
     [INPUT_ID, input],
     [PANEL_ID, panel],
-    [HINPUT_ID, hidden]
+    [HINPUT_ID, hidden],
+    [problem.id, problem]
   ]);
   const document = {
     documentElement: {
@@ -354,12 +356,15 @@ function createManualLearningDom() {
     getElementById(id) {
       return elements.get(id) || null;
     },
+    querySelector() {
+      return null;
+    },
     addEventListener() {},
     dispatchEvent() {
       return true;
     }
   };
-  return { document, input, hidden, panel, attrs };
+  return { document, input, hidden, panel, attrs, problem };
 }
 
 function loadSuggestionApi() {
@@ -627,4 +632,152 @@ test("PF4. click humano + hinput confirmado aprende", async () => {
 
   assert.equal(store[KEY].docs.B.confirmations, 1);
   assert.ok(Object.keys(store[KEY].docs.A.negativeFeatures || {}).length >= 1);
+});
+
+function panelItem(id, label) {
+  return {
+    getAttribute(name) {
+      if (name === "data-item-value") return id;
+      if (name === "data-item-label") return label;
+      return null;
+    }
+  };
+}
+
+function dispatchManualClick(panel, item, { trusted = true } = {}) {
+  panel.dispatch({
+    type: "click",
+    isTrusted: trusted,
+    target: {
+      closest() {
+        return item;
+      }
+    }
+  });
+}
+
+test("ML1. manual confirmado fora do top 3 aprende positivo", async () => {
+  const { module, store } = loadLearning();
+  const KEY = "atendeai_documentation_learning_v1";
+  const { document, panel, input, hidden, problem } = createManualLearningDom();
+  const api = loadSuggestionWithDom(document, module);
+  const contextText = "IE do destinatário está incorreta";
+  problem.value = contextText;
+
+  api.watchTrustedManualSelection({
+    lastConfirmedId: null,
+    suggestionIds: ["X", "Y", "Z"],
+    context: contextText,
+    labelsById: new Map()
+  });
+
+  dispatchManualClick(panel, panelItem("B", "IE incorreta"));
+  await delay(20);
+  input.value = "IE incorreta";
+  hidden.value = "B";
+  await delay(80);
+
+  assert.equal(store[KEY].docs.B.confirmations, 1);
+  assert.ok(Object.keys(store[KEY].docs.B.positiveFeatures || {}).length >= 1);
+  assert.equal(store[KEY].docs.A, undefined);
+  assert.doesNotMatch(JSON.stringify(store[KEY]), /IE do destinatário está incorreta/);
+});
+
+test("ML2. manual fora do top 3 sem hinput confirmado não aprende", async () => {
+  const { module, store } = loadLearning();
+  const KEY = "atendeai_documentation_learning_v1";
+  const { document, panel, input, problem } = createManualLearningDom();
+  const api = loadSuggestionWithDom(document, module);
+  problem.value = "IE do destinatário está incorreta";
+
+  api.watchTrustedManualSelection({
+    lastConfirmedId: null,
+    suggestionIds: ["X", "Y", "Z"],
+    context: "IE do destinatário está incorreta",
+    labelsById: new Map()
+  });
+
+  dispatchManualClick(panel, panelItem("B", "IE incorreta"));
+  await delay(20);
+  input.value = "IE incorreta";
+  await delay(550);
+
+  assert.equal(store[KEY], undefined);
+});
+
+test("ML3. A auto-filled -> B manual, mesmo contexto: positivo B + negativo A", async () => {
+  const { module, store } = loadLearning();
+  const KEY = "atendeai_documentation_learning_v1";
+  const { document, panel, input, hidden, problem } = createManualLearningDom();
+  const api = loadSuggestionWithDom(document, module);
+  const sessionContext = "A IE do destinatário está incorreta";
+  problem.value = "a ie do destinatario esta incorreta";
+
+  api.watchTrustedManualSelection({
+    lastConfirmedId: "A",
+    suggestionIds: ["A"],
+    context: sessionContext,
+    labelsById: new Map([["A", "IE ausente"]])
+  });
+
+  dispatchManualClick(panel, panelItem("B", "IE incorreta"));
+  await delay(20);
+  input.value = "IE incorreta";
+  hidden.value = "B";
+  await delay(80);
+
+  assert.equal(store[KEY].docs.B.confirmations, 1);
+  assert.ok(Object.keys(store[KEY].docs.B.positiveFeatures || {}).length >= 1);
+  assert.ok(Object.keys(store[KEY].docs.A.negativeFeatures || {}).length >= 1);
+  assert.doesNotMatch(JSON.stringify(store[KEY]), /destinatário está incorreta/);
+});
+
+test("ML4. A auto-filled -> contexto mudou -> B manual: positivo B sem negativo em A", async () => {
+  const { module, store } = loadLearning();
+  const KEY = "atendeai_documentation_learning_v1";
+  const { document, panel, input, hidden, problem } = createManualLearningDom();
+  const api = loadSuggestionWithDom(document, module);
+  problem.value = "IE do destinatário não foi informada";
+
+  api.watchTrustedManualSelection({
+    lastConfirmedId: "A",
+    suggestionIds: ["A"],
+    context: "IE do destinatário não foi informada",
+    labelsById: new Map([["A", "REJEIÇÃO 232: IE DO DESTINATÁRIO NÃO INFORMADA"]])
+  });
+
+  dispatchManualClick(panel, panelItem("B", "IE incorreta"));
+  problem.value = "A IE do destinatário está incorreta";
+  await delay(20);
+  input.value = "IE incorreta";
+  hidden.value = "B";
+  await delay(80);
+
+  assert.equal(store[KEY].docs.B.confirmations, 1);
+  assert.ok(store[KEY].docs.B.positiveFeatures.incorreta || store[KEY].docs.B.positiveFeatures.ie);
+  assert.equal(store[KEY].docs.A, undefined);
+  assert.doesNotMatch(JSON.stringify(store[KEY]), /está incorreta|nao foi informada|não foi informada/);
+});
+
+test("ML5. synthetic click fora do top 3 não aprende", async () => {
+  const { module, store } = loadLearning();
+  const KEY = "atendeai_documentation_learning_v1";
+  const { document, panel, input, hidden, problem } = createManualLearningDom();
+  const api = loadSuggestionWithDom(document, module);
+  problem.value = "IE do destinatário está incorreta";
+
+  api.watchTrustedManualSelection({
+    lastConfirmedId: null,
+    suggestionIds: ["X", "Y", "Z"],
+    context: "IE do destinatário está incorreta",
+    labelsById: new Map()
+  });
+
+  dispatchManualClick(panel, panelItem("B", "IE incorreta"), { trusted: false });
+  await delay(20);
+  input.value = "IE incorreta";
+  hidden.value = "B";
+  await delay(80);
+
+  assert.equal(store[KEY], undefined);
 });

@@ -236,6 +236,57 @@ test("M6. código explícito sem candidato correspondente => WEAK / até 200", (
   assert.equal(result.length, 200);
 });
 
+test('LX1. "ie" não pontua "cliente"', () => {
+  const ranked = api.rankCandidates(
+    [{ id: "cliente", label: "Cadastro do CLIENTE" }],
+    "problema na IE"
+  );
+  assert.equal(ranked[0].tokenScore, 0);
+  assert.equal(ranked[0].bigramScore, 0);
+  assert.equal(ranked[0].lexicalScore, 0);
+});
+
+test('LX2. "ie" pontua token IE', () => {
+  const ranked = api.rankCandidates(
+    [{ id: "ie", label: "IE incorreta" }],
+    "problema na IE"
+  );
+  assert.ok(ranked[0].tokenScore > 0);
+  assert.equal(ranked[0].candidate.id, "ie");
+});
+
+test('LX3. "nao informada" não pontua substring parcial', () => {
+  const ranked = api.rankCandidates(
+    [
+      { id: "parcial", label: "Zona informadax auxiliar" },
+      { id: "sequencia", label: "Campo não informada" }
+    ],
+    "nao informada"
+  );
+  const byId = Object.fromEntries(ranked.map((item) => [item.candidate.id, item]));
+  assert.equal(byId.parcial.tokenScore, 0);
+  assert.equal(byId.parcial.bigramScore, 0);
+  assert.equal(byId.parcial.lexicalScore, 0);
+  assert.ok(byId.sequencia.bigramScore > 0);
+  assert.ok(byId.sequencia.lexicalScore > byId.parcial.lexicalScore);
+});
+
+test('LX4. "IE do destinatário não foi informada" mantém REJEIÇÃO 232 acima das alternativas próximas', () => {
+  const candidates = [
+    { id: "cliente", label: "Cadastro do CLIENTE" },
+    { id: "incorreta", label: "IE incorreta" },
+    { id: "ausente", label: "IE ausente" },
+    { id: "invalida", label: "IE inválida" },
+    { id: "nao-habilitada", label: "IE não habilitada" },
+    { id: "232", label: "REJEIÇÃO 232: IE DO DESTINATÁRIO NÃO INFORMADA" }
+  ];
+  const ranked = api.rankCandidates(candidates, "IE do destinatário não foi informada");
+  assert.equal(ranked[0].candidate.id, "232");
+  const cliente = ranked.find((item) => item.candidate.id === "cliente");
+  assert.equal(cliente.tokenScore, 0);
+  assert.equal(cliente.lexicalScore, 0);
+});
+
 test("M7. código explícito com candidato correspondente => STRONG / top 40", () => {
   const context = "rejeição 232";
   const candidates = [
