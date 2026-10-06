@@ -335,3 +335,26 @@ test('F14: local Focus nextStep never enters Smart Reply payload', async () => {
   assert.equal(JSON.stringify(h.sent).includes('FOCUS_ONLY_SECRET'), false);
   assert.deepEqual(Object.keys(h.sent[0]).sort(), ['action', 'conversation', 'profile', 'promptComplement', 'regenerate']);
 });
+
+test('SMART1: Smart Reply continua chegando a exatamente uma request', async () => {
+  const h = harness();
+  const opening = h.module.open();
+  h.flushMutations();
+  await opening;
+  h.flushMutations();
+  assert.equal(h.sent.length, 1);
+  assert.deepEqual(h.sent[0], {
+    action: 'gerarResposta', conversation: 'Gabriel: preciso de ajuda',
+    promptComplement: 'verificação em andamento', profile: 'DIRECT', regenerate: false
+  });
+});
+
+test('SMART2: Mutação interna do preview continua sem loop', async () => {
+  const h = harness(); await h.module.open();
+  const panel = h.panel();
+  const before = panel.attributeWrites.filter(([key]) => key === 'aria-busy').length;
+  for (let i = 0; i < 20; i++) h.notify([{ target: panel.children[0] }]);
+  h.flushMutations();
+  assert.equal(h.sent.length, 1);
+  assert.equal(panel.attributeWrites.filter(([key]) => key === 'aria-busy').length, before);
+});

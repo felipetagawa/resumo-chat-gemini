@@ -194,6 +194,7 @@ const SmartReplyModule = (() => {
     for (const el of [s.insert, s.regenerate, s.profile]) actions.appendChild(el);
     for (const el of [header, s.warning, s.preview, s.status, actions, s.choices]) panel.appendChild(el);
     document.body.appendChild(panel);
+    globalThis.ThemeModule?.apply?.(panel);
     const conversation = String(ChatCaptureModule.capturarTextoChat() || "").trim();
     const promptComplement = ObservationsModule.getPromptComplementForCurrentChat();
     if (!conversation || !s.token || promptComplement.length > 2000) {

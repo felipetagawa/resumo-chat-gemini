@@ -94,6 +94,16 @@ class MiniNode {
     this.listeners[type].push(fn);
   }
 
+  get innerText() { return this.textContent; }
+  set innerText(value) { this.textContent = value; }
+  get classList() {
+    const self = this;
+    return {
+      contains(name) { return String(self.className || "").split(/\s+/).includes(name); }
+    };
+  }
+  get parentNode() { return this.parentElement; }
+
   querySelectorAll(selector) {
     const matches = [];
     const walk = (node) => {

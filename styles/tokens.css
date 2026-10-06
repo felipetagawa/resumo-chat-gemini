@@ -7,13 +7,17 @@
 #geminiAgendaModal,
 #geminiResumoPopup,
 #geminiDicaPopup,
+#geminiDocsPopup,
 #gemini-notification-toast,
 #atendeai-onboarding-overlay,
+#atendeai-config-modal-overlay,
 #chamadoManualPopup,
 #productClassifierResult,
+#popupMensagensPadrao,
 .atendeai-modal-overlay,
 .atendeai-observations-drawer,
-.atendeai-observations-overlay {
+.atendeai-observations-overlay,
+.atendeai-observations-button {
   --ai-font: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --ai-font-size: 13px;
   --ai-font-size-sm: 12px;
@@ -30,8 +34,10 @@
   --ai-surface: #ffffff;
   --ai-surface-muted: #f7f8fa;
   --ai-surface-hover: #eef1f5;
+  --ai-surface-active: #e7ebf0;
   --ai-border: #e4e7ec;
   --ai-border-strong: #d0d5dd;
+  --ai-border-hover: #b8c0cc;
   --ai-text: #1f2937;
   --ai-text-secondary: #4b5563;
   --ai-text-muted: #6b7280;
@@ -54,6 +60,7 @@
   --ai-radius-lg: 12px;
   --ai-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
   --ai-shadow-md: 0 8px 24px rgba(16, 24, 40, 0.10);
+  --ai-overlay: rgba(15, 23, 42, 0.18);
   --ai-focus: 0 0 0 2px #ffffff, 0 0 0 4px rgba(47, 94, 168, 0.45);
   --ai-space-1: 4px;
   --ai-space-2: 8px;
@@ -65,6 +72,54 @@
   font-family: var(--ai-font);
   color: var(--ai-text);
   -webkit-font-smoothing: antialiased;
+}
+
+#containerBotoesGemini[data-atendeai-theme="dark"],
+#atendeai-recovery-report-fallback[data-atendeai-theme="dark"],
+#atendeai-recovery-overlay[data-atendeai-theme="dark"],
+#atendeai-smart-reply[data-atendeai-theme="dark"],
+#geminiAgendaModal[data-atendeai-theme="dark"],
+#geminiResumoPopup[data-atendeai-theme="dark"],
+#geminiDicaPopup[data-atendeai-theme="dark"],
+#geminiDocsPopup[data-atendeai-theme="dark"],
+#gemini-notification-toast[data-atendeai-theme="dark"],
+#atendeai-onboarding-overlay[data-atendeai-theme="dark"],
+#atendeai-config-modal-overlay[data-atendeai-theme="dark"],
+#chamadoManualPopup[data-atendeai-theme="dark"],
+#productClassifierResult[data-atendeai-theme="dark"],
+#popupMensagensPadrao[data-atendeai-theme="dark"],
+.atendeai-modal-overlay[data-atendeai-theme="dark"],
+.atendeai-observations-drawer[data-atendeai-theme="dark"],
+.atendeai-observations-overlay[data-atendeai-theme="dark"],
+.atendeai-observations-button[data-atendeai-theme="dark"] {
+  --ai-bg: #1b2433;
+  --ai-surface: #243044;
+  --ai-surface-muted: #1e2a3c;
+  --ai-surface-hover: #2c3a50;
+  --ai-surface-active: #33465f;
+  --ai-border: #3d4d63;
+  --ai-border-strong: #4a5d75;
+  --ai-border-hover: #6b7c94;
+  --ai-text: #f3f4f6;
+  --ai-text-secondary: #d1d5db;
+  --ai-text-muted: #9ca3af;
+  --ai-primary: #5b8def;
+  --ai-primary-hover: #7aa2f2;
+  --ai-primary-active: #4a7ae0;
+  --ai-primary-soft: #2a3f66;
+  --ai-primary-border: #3d5a8c;
+  --ai-danger: #f87171;
+  --ai-danger-hover: #fca5a5;
+  --ai-danger-soft: #3f1d1d;
+  --ai-danger-border: #7f1d1d;
+  --ai-warning: #fbbf24;
+  --ai-warning-soft: #3f2f12;
+  --ai-success: #4ade80;
+  --ai-success-soft: #163226;
+  --ai-shadow-sm: 0 1px 2px rgba(8, 12, 20, 0.28);
+  --ai-shadow-md: 0 8px 24px rgba(8, 12, 20, 0.38);
+  --ai-overlay: rgba(8, 12, 20, 0.55);
+  --ai-focus: 0 0 0 2px #243044, 0 0 0 4px rgba(91, 141, 239, 0.55);
 }
 
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, #chamadoManualPopup, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(.ai-btn, .btn-primary, .btn-secondary, .btn-danger),
@@ -160,11 +215,11 @@
 .smart-reply-choice:hover:not(:disabled),
 .recovery-buffer-view:hover:not(:disabled) {
   background: var(--ai-surface-hover);
-  border-color: #b8c0cc;
+  border-color: var(--ai-border-hover);
 }
 
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-secondary, .btn-secondary):active:not(:disabled) {
-  background: #e7ebf0;
+  background: var(--ai-surface-active);
 }
 
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) .ai-btn-ghost,

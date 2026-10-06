@@ -1,6 +1,7 @@
 // SUPPORT_FOCUS_V1: local attendance notes; never participates in AI payloads.
 const SupportFocusModule = (() => {
   const KEY = "atendeai_support_focus_v1";
+  const BADGES_KEY = "atendeai_support_focus_badges_enabled";
   const TTL = 24 * 60 * 60 * 1000;
   const STATES = Object.freeze({
     MY_TURN: { label: "Minha vez", symbol: "●" },
@@ -9,6 +10,8 @@ const SupportFocusModule = (() => {
     WAITING_THIRD_PARTY: { label: "Aguardando terceiro", symbol: "↗" }
   });
   let root, observer, timer, identity, editing = false, renderKey = "", generation = 0;
+  let badgesEnabled = true;
+  let inboundWatch = null;
   let queue = Promise.resolve();
   function enqueue(task) {
     // Chrome's same-origin Web Lock also serializes whole-key read/write
@@ -28,9 +31,60 @@ const SupportFocusModule = (() => {
       });
     });
   }
+  function textOf(el) {
+    return String(el?.innerText || el?.textContent || "").replace(/\s+/g, " ").trim();
+  }
+  function hasClass(el, name) {
+    return String(el?.className || "").split(/\s+/).includes(name);
+  }
+  function lastInbound() {
+    let count = 0;
+    let last = null;
+    for (const msg of document.querySelectorAll(".msg")) {
+      if (hasClass(msg, "sent")) continue;
+      const name = textOf(msg.querySelector(".name"));
+      if (/^autom[aá]tico$/i.test(name)) continue;
+      const content = textOf(msg.querySelector(".message span"));
+      if (!content) continue;
+      count += 1;
+      last = { node: msg, name, content };
+    }
+    return { count, last, signature: last ? `${count}|${last.name}|${last.content}` : "0|" };
+  }
+  function noteInbound(identityNow) {
+    if (!identityNow) {
+      inboundWatch = null;
+      return false;
+    }
+    const inbound = lastInbound();
+    if (!inboundWatch || inboundWatch.sourceId !== identityNow.sourceId) {
+      inboundWatch = {
+        sourceId: identityNow.sourceId,
+        signature: inbound.signature,
+        node: inbound.last?.node || null,
+        primed: inbound.count > 0
+      };
+      return false;
+    }
+    if (!inboundWatch.primed) {
+      inboundWatch.signature = inbound.signature;
+      inboundWatch.node = inbound.last?.node || null;
+      if (inbound.count > 0) inboundWatch.primed = true;
+      return false;
+    }
+    if (inbound.signature === inboundWatch.signature) return false;
+    if (inbound.last?.node && inbound.last.node === inboundWatch.node) {
+      inboundWatch.signature = inbound.signature;
+      return false;
+    }
+    inboundWatch.signature = inbound.signature;
+    inboundWatch.node = inbound.last?.node || null;
+    return inbound.count > 0;
+  }
   // Read/write cleanup share the same serialized queue to avoid losing rapid edits.
   async function read() {
-    const data = await storage("get", [KEY]);
+    const data = await storage("get", [KEY, BADGES_KEY]);
+    badgesEnabled = data?.[BADGES_KEY] !== false;
     const stored = data?.[KEY];
     const items = Object.create(null);
     for (const [id, item] of Object.entries(stored?.items || {})) {
@@ -42,6 +96,21 @@ const SupportFocusModule = (() => {
       await storage("set", { [KEY]: { version: 1, items } });
     }
     return { version: 1, items };
+  }
+  async function autoMyTurn(identityNow, state) {
+    if (editing || !noteInbound(identityNow)) return state;
+    if (RecoveryBufferModule.getCurrentConversationIdentity()?.sourceId !== identityNow.sourceId) return state;
+    const item = state.items[identityNow.sourceId];
+    if (item?.status === "MY_TURN") return state;
+    state.items[identityNow.sourceId] = {
+      sourceId: identityNow.sourceId,
+      displayName: identityNow.displayName,
+      status: "MY_TURN",
+      nextStep: item?.nextStep || "",
+      updatedAt: Date.now()
+    };
+    await storage("set", { [KEY]: state });
+    return state;
   }
   function node(tag, label, className) {
     const el = document.createElement(tag);
@@ -61,6 +130,10 @@ const SupportFocusModule = (() => {
     return [state?.label || "Sem estado definido", item?.nextStep].filter(Boolean).join(" — ");
   }
   function decorate(items) {
+    if (!badgesEnabled) {
+      document.querySelectorAll(".atendeai-focus-badge").forEach(badge => badge.remove());
+      return;
+    }
     for (const card of document.querySelectorAll(".sz_contact")) {
       const id = RecoveryBufferModule.getConversationIdentityFromCard(card);
       const item = id && items[id.sourceId];
@@ -91,10 +164,12 @@ const SupportFocusModule = (() => {
     const status = node("div", state ? `${state.symbol} ${state.label}` : "Sem estado definido", "status");
     if (state) status.className += ` atendeai-focus-${item.status.toLowerCase()}`;
     root.appendChild(status);
-    if (item?.nextStep) {
-      const next = node("div", item.nextStep, "next"); next.title = item.nextStep; root.appendChild(next);
-    }
-    const edit = button(item ? "Editar" : "Definir", () => showEditor(item), "edit");
+    root.appendChild(node("div", "Próximo passo", "kicker"));
+    const nextStep = String(item?.nextStep || "").trim();
+    const next = node("div", nextStep || "Próximo passo não definido", nextStep ? "next" : "next-empty");
+    if (nextStep) next.title = nextStep;
+    root.appendChild(next);
+    const edit = button("Alterar", () => showEditor(item), "edit");
     edit.setAttribute("aria-expanded", "false");
     root.appendChild(edit);
   }
@@ -152,7 +227,10 @@ const SupportFocusModule = (() => {
   async function refresh() {
     const request = ++generation;
     try {
-      const state = await enqueue(read);
+      const state = await enqueue(async () => {
+        const current = await read();
+        return autoMyTurn(RecoveryBufferModule.getCurrentConversationIdentity(), current);
+      });
       if (request !== generation || !root) return;
       const current = RecoveryBufferModule.getCurrentConversationIdentity();
       if (current?.sourceId !== identity?.sourceId) editing = false;
@@ -182,7 +260,7 @@ const SupportFocusModule = (() => {
     root?.remove();
     root = node("section", "", "card"); root.hidden = true;
     root.setAttribute("aria-label", "Estado do atendimento");
-    dock.prepend(root); identity = null; editing = false; renderKey = "";
+    dock.prepend(root); identity = null; editing = false; renderKey = ""; inboundWatch = null;
     if (!observer) {
       observer = new MutationObserver(records => {
         // Insertion/removal of only our nodes has the SZ parent as target.
@@ -192,7 +270,7 @@ const SupportFocusModule = (() => {
       });
       observer.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
       chrome.storage.onChanged?.addListener((changes, area) => {
-        if (area === "local" && changes[KEY]) schedule();
+        if (area === "local" && (changes[KEY] || changes[BADGES_KEY])) schedule();
       });
     }
     await refresh();

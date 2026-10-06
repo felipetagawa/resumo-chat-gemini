@@ -1109,10 +1109,11 @@ const RecoveryBufferModule = (() => {
     overlay.style.cssText = "position:fixed;inset:0;z-index:999997;";
     overlay.addEventListener("click", closePanel);
     document.body.appendChild(overlay);
+    globalThis.ThemeModule?.apply?.(overlay);
 
     const panel = createElement("div", "recovery-buffer-panel");
     panel.id = PANEL_ID;
-    panel.style.cssText = "position:fixed;right:20px;bottom:90px;z-index:1000002;background:#fff;";
+    panel.style.cssText = "position:fixed;right:20px;bottom:90px;z-index:1000002;";
     panel.setAttribute("role", "dialog");
     panel.setAttribute("data-mode", "list");
     const header = createElement("div", "recovery-buffer-header");
@@ -1130,6 +1131,7 @@ const RecoveryBufferModule = (() => {
     };
     bindPanelDrag(header, panel);
     document.body.appendChild(panel);
+    globalThis.ThemeModule?.apply?.(panel);
     renderList(buffers);
     if (options.position) applyPanelPosition(panel, options.position);
   }

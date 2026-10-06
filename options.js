@@ -54,6 +54,10 @@ document.addEventListener("DOMContentLoaded", () => {
     saveVisibilityBtn: document.getElementById("saveVisibilityBtn"),
     visStatus: document.getElementById("visStatus"),
     changelogList: document.getElementById("changelogList"),
+    themeDark: document.getElementById("themeDark"),
+    themeLight: document.getElementById("themeLight"),
+    themeSystem: document.getElementById("themeSystem"),
+    supportFocusBadgesEnabled: document.getElementById("supportFocusBadgesEnabled"),
     leaderPasswordWrap: document.getElementById("leaderPasswordWrap"),
     leaderPasswordInput: document.getElementById("leaderPasswordInput"),
     leaderFilterName: document.getElementById("leaderFilterName"),
@@ -1728,6 +1732,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  const THEME_KEY = "atendeai_theme";
+  const BADGES_KEY = "atendeai_support_focus_badges_enabled";
+
+  async function initAppearanceSettings() {
+    const radios = [el.themeDark, el.themeLight, el.themeSystem].filter(Boolean);
+    if (!radios.length) return;
+    const data = await storageGet([THEME_KEY]);
+    const value = ["dark", "light", "system"].includes(data[THEME_KEY]) ? data[THEME_KEY] : "dark";
+    radios.forEach(radio => { radio.checked = radio.value === value; });
+    radios.forEach(radio => {
+      radio.addEventListener("change", async () => {
+        if (!radio.checked || !["dark", "light", "system"].includes(radio.value)) return;
+        await storageSet({ [THEME_KEY]: radio.value });
+      });
+    });
+  }
+
+  async function initSupportFocusBadgesSetting() {
+    if (!el.supportFocusBadgesEnabled) return;
+    const data = await storageGet([BADGES_KEY]);
+    el.supportFocusBadgesEnabled.checked = data[BADGES_KEY] !== false;
+    el.supportFocusBadgesEnabled.addEventListener("change", async () => {
+      await storageSet({ [BADGES_KEY]: el.supportFocusBadgesEnabled.checked });
+    });
+  }
+
   async function initApp() {
     updateVersionDisplay();
 
@@ -1739,6 +1769,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderVisibilityUI();
     applyPreAtendimentoMessagesUI();
+    await initAppearanceSettings();
+    await initSupportFocusBadgesSetting();
 
     const name = await loadUserName();
     setNameUI(name);

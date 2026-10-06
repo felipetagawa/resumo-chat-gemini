@@ -4,8 +4,9 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { el, createDocument, collect, textOf } = require('./mini-dom');
 const KEY = 'atendeai_support_focus_v1';
+const BADGES_KEY = 'atendeai_support_focus_badges_enabled';
 function harness(store = {}, locks) {
-  const document = createDocument(), observers = [], timers = new Map(); let seq = 0, clock = 100000000;
+  const document = createDocument(), observers = [], timers = new Map(), changeListeners = []; let seq = 0, clock = 100000000;
   const context = { document, window: {}, console, navigator: { locks }, Date: class extends Date { static now() { return clock; } },
     setTimeout(fn) { timers.set(++seq, fn); return seq; }, clearTimeout(id) { timers.delete(id); },
     MutationObserver: class { constructor(fn) { this.fn=fn; observers.push(this); } observe() {} disconnect() {} },
@@ -14,7 +15,7 @@ function harness(store = {}, locks) {
     chrome: { runtime: {}, storage: { local: {
       get(keys, callback) { callback(structuredClone(store)); },
       set(data, callback) { Object.assign(store, structuredClone(data)); callback(); }
-    } } } };
+    }, onChanged: { addListener(fn) { changeListeners.push(fn); } } } } };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('modules/recovery-buffer.js', 'utf8'), context);
   vm.runInContext(fs.readFileSync('modules/support-focus.js', 'utf8'), context);
@@ -35,8 +36,23 @@ function harness(store = {}, locks) {
     const pending=[...timers.values()]; timers.clear(); for(const fn of pending) await fn();
   }
   async function mount() { await context.window.SupportFocusModule.mount(dock); }
-  async function save() { await click('Definir'); await click('◐ Verificando'); dock.querySelector('.atendeai-focus-input').value='Conferir emissão'; await click('Salvar'); }
-  return { document, dock, lucia, cassia, card, store, context, button, click, flush, mount, save, advance() { clock+=86400001; } };
+  async function save() { await click('Alterar'); await click('◐ Verificando'); dock.querySelector('.atendeai-focus-input').value='Conferir emissão'; await click('Salvar'); }
+  function addMessage({ name = 'Lucia', text = 'preciso de ajuda', sent = false, auto = false } = {}) {
+    const msg = el('div', { class: sent ? 'msg sent' : 'msg' }, [
+      el('div', { class: 'name', text: auto ? 'Automático' : name }),
+      el('div', { class: 'message' }, [el('span', { text })])
+    ]);
+    document.body.appendChild(msg);
+    return msg;
+  }
+  async function setStorage(data) {
+    const changes = {};
+    for (const [key, value] of Object.entries(data)) changes[key] = { oldValue: store[key], newValue: value };
+    Object.assign(store, structuredClone(data));
+    changeListeners.forEach(fn => fn(changes, 'local'));
+    await flush([]);
+  }
+  return { document, dock, lucia, cassia, card, store, context, button, click, flush, mount, save, addMessage, setStorage, changeListeners, tick(ms=1000) { clock+=ms; }, advance() { clock+=86400001; } };
 }
 test('F1/F2/F8/F9/F11/F12: local save, restore, accessible badge and idempotent rerender', async () => {
   const h=harness(); await h.mount(); await h.save();
@@ -56,10 +72,10 @@ test('F3/F5: same name with new attendance and Lucia to Cássia never share stat
   h.cassia.className='sz_contact'; h.card('Lucia','06/10/26 09:00',true); await h.flush(); assert.match(textOf(h.dock),/Sem estado definido/);
 });
 test('F4: unsafe identity never offers editing or persists by name', async () => {
-  const h=harness(); h.lucia.querySelector('.times').setAttribute('title',''); await h.mount(); assert.equal(h.button('Definir'),undefined); assert.equal(Object.keys(h.store[KEY]?.items || {}).length,0);
+  const h=harness(); h.lucia.querySelector('.times').setAttribute('title',''); await h.mount(); assert.equal(h.button('Alterar'),undefined); assert.equal(Object.keys(h.store[KEY]?.items || {}).length,0);
 });
 test('F6/F10: clear removes item and badge', async () => {
-  const h=harness(); await h.mount(); await h.save(); await h.click('Editar'); await h.click('Limpar');
+  const h=harness(); await h.mount(); await h.save(); await h.click('Alterar'); await h.click('Limpar');
   assert.equal(Object.keys(h.store[KEY].items).length,0); assert.equal(h.lucia.querySelector('.atendeai-focus-badge'),null); assert.match(textOf(h.dock),/Sem estado definido/);
 });
 test('F7: reading and writing clean expired items', async () => {
@@ -125,13 +141,13 @@ test('F13/F14: saved Focus stays out of actual report and direct Smart Reply req
 });
 
 test('editor cannot save after chat switch, all four states and text bound are exact', async () => {
-  const h = harness(); await h.mount(); await h.click('Definir');
+  const h = harness(); await h.mount(); await h.click('Alterar');
   assert.deepEqual(h.dock.querySelectorAll('.atendeai-focus-choice').map(n => n.textContent),
     ['● Minha vez', '◐ Verificando', '○ Aguardando cliente', '↗ Aguardando terceiro']);
   await h.click('● Minha vez'); h.dock.querySelector('.atendeai-focus-input').value = 'x'.repeat(350);
   await h.click('Salvar');
   assert.equal(Object.values(h.store[KEY].items)[0].nextStep.length, 300);
-  await h.click('Editar');
+  await h.click('Alterar');
   h.lucia.className = 'sz_contact'; h.cassia.className = 'sz_contact active';
   h.dock.querySelector('.atendeai-focus-input').value = 'Não salvar em Cássia'; await h.click('Salvar');
   assert.equal(Object.keys(h.store[KEY].items).length, 1);
@@ -148,11 +164,11 @@ test('explicit identity takes priority and phone/name/msg_ref never provide Focu
   h.lucia.querySelector('.times').setAttribute('title', '');
   h.lucia.appendChild(el('span', { msg_ref: 'message-only' }));
   assert.equal(recovery.getConversationIdentityFromCard(h.lucia), null);
-  await h.mount(); assert.equal(h.button('Definir'), undefined);
+  await h.mount(); assert.equal(h.button('Alterar'), undefined);
 });
 
 test('Focus storage error keeps editor and reports failure without false saved state', async () => {
-  const h = harness(); await h.mount(); await h.click('Definir'); await h.click('◐ Verificando');
+  const h = harness(); await h.mount(); await h.click('Alterar'); await h.click('◐ Verificando');
   h.context.chrome.storage.local.set = (data, callback) => {
     h.context.chrome.runtime.lastError = { message: 'quota exceeded' }; callback(); delete h.context.chrome.runtime.lastError;
   };
@@ -163,7 +179,7 @@ test('Focus storage error keeps editor and reports failure without false saved s
 });
 
 test('storage read pending across chat switch cannot save an old editor', async () => {
-  const h = harness(); await h.mount(); await h.save(); await h.click('Editar');
+  const h = harness(); await h.mount(); await h.save(); await h.click('Alterar');
   const before = structuredClone(h.store);
   h.dock.querySelector('.atendeai-focus-input').value = 'Rascunho antigo';
   let deliver;
@@ -177,12 +193,12 @@ test('storage read pending across chat switch cannot save an old editor', async 
 });
 
 test('nextStep alone is local and saving an empty editor removes the item', async () => {
-  const h = harness(); await h.mount(); await h.click('Definir');
+  const h = harness(); await h.mount(); await h.click('Alterar');
   h.dock.querySelector('.atendeai-focus-input').value = 'Cliente enviar XML'; await h.click('Salvar');
   assert.equal(Object.values(h.store[KEY].items)[0].status, '');
   assert.match(textOf(h.dock), /Cliente enviar XML/);
   assert.equal(h.lucia.querySelector('.atendeai-focus-badge'), null);
-  await h.click('Editar'); h.dock.querySelector('.atendeai-focus-input').value = ' '; await h.click('Salvar');
+  await h.click('Alterar'); h.dock.querySelector('.atendeai-focus-input').value = ' '; await h.click('Salvar');
   assert.equal(Object.keys(h.store[KEY].items).length, 0);
 });
 
@@ -195,7 +211,7 @@ test('two tabs saving different attendances preserve both items under the shared
   const a = harness(store, locks), b = harness(store, locks);
   b.lucia.className = 'sz_contact'; b.cassia.className = 'sz_contact active';
   await Promise.all([a.mount(), b.mount()]);
-  for (const h of [a, b]) { await h.click('Definir'); await h.click('◐ Verificando'); }
+  for (const h of [a, b]) { await h.click('Alterar'); await h.click('◐ Verificando'); }
   a.dock.querySelector('.atendeai-focus-input').value = 'Passo Lucia';
   b.dock.querySelector('.atendeai-focus-input').value = 'Passo Cássia';
   await Promise.all([a.click('Salvar'), b.click('Salvar')]);
@@ -223,4 +239,137 @@ test('visibility options retain old preference, direct override, Docs and sector
     }
   }
   assert.doesNotMatch(configs, /btnAssistenteIA|btnDica|Dropdown/);
+});
+
+test('UX1: Support Focus inicia resumido', async () => {
+  const h = harness(); await h.mount();
+  assert.equal(h.dock.querySelector('.atendeai-focus-choice'), null);
+  assert.equal(h.dock.querySelector('.atendeai-focus-input'), null);
+  assert.equal(h.button('Alterar')?.getAttribute('aria-expanded'), 'false');
+  assert.match(textOf(h.dock), /Próximo passo não definido/);
+  assert.doesNotMatch(textOf(h.dock), /Aguardando cliente/);
+});
+
+test('UX2: Alterar expande editor', async () => {
+  const h = harness(); await h.mount(); await h.click('Alterar');
+  assert.equal(h.dock.querySelectorAll('.atendeai-focus-choice').length, 4);
+  assert.ok(h.dock.querySelector('.atendeai-focus-input'));
+  assert.ok(h.button('Salvar'));
+});
+
+test('UX3: Salvar recolhe editor', async () => {
+  const h = harness(); await h.mount(); await h.save();
+  assert.equal(h.dock.querySelector('.atendeai-focus-choice'), null);
+  assert.equal(h.dock.querySelector('.atendeai-focus-input'), null);
+  assert.equal(h.button('Alterar')?.textContent, 'Alterar');
+  assert.match(textOf(h.dock), /Verificando/);
+});
+
+test('UX4: Limpar recolhe editor', async () => {
+  const h = harness(); await h.mount(); await h.save(); await h.click('Alterar'); await h.click('Limpar');
+  assert.equal(h.dock.querySelector('.atendeai-focus-choice'), null);
+  assert.equal(h.button('Alterar')?.textContent, 'Alterar');
+});
+
+test('UX9: Badge toggle false remove badges e não apaga storage', async () => {
+  const h = harness(); await h.mount(); await h.save();
+  const id = h.context.window.RecoveryBufferModule.getConversationIdentityFromCard(h.lucia).sourceId;
+  assert.equal(h.lucia.querySelectorAll('.atendeai-focus-badge').length, 1);
+  await h.setStorage({ [BADGES_KEY]: false });
+  assert.equal(h.lucia.querySelector('.atendeai-focus-badge'), null);
+  assert.equal(h.store[KEY].items[id].status, 'CHECKING');
+  assert.match(textOf(h.dock), /Verificando/);
+});
+
+test('UX10: Reativar badge recria indicadores', async () => {
+  const h = harness(); await h.mount(); await h.save();
+  await h.setStorage({ [BADGES_KEY]: false });
+  assert.equal(h.lucia.querySelector('.atendeai-focus-badge'), null);
+  await h.setStorage({ [BADGES_KEY]: true });
+  assert.equal(h.lucia.querySelectorAll('.atendeai-focus-badge').length, 1);
+  assert.equal(h.lucia.querySelector('.atendeai-focus-badge').textContent, '◐');
+});
+
+test('UX11: Não existe barra/header de foco superior', () => {
+  const files = ['content.js', 'modules/support-focus.js', 'modules/ui-builder.js', 'modules/theme.js'];
+  for (const file of files) {
+    const source = fs.readFileSync(file, 'utf8');
+    assert.doesNotMatch(source, /Seu foco agora|Responder primeiro|ranking 1\/2\/3/);
+    assert.doesNotMatch(source, /atendeai-focus-topbar|atendeai-focus-header|focus-priority-bar/);
+  }
+});
+
+test('AUTO1: Baseline inicial não marca MY_TURN retroativamente', async () => {
+  const h = harness();
+  h.addMessage({ text: 'histórico antigo' });
+  h.addMessage({ text: 'outra mensagem antiga' });
+  await h.mount();
+  assert.equal(h.store[KEY], undefined);
+  assert.doesNotMatch(textOf(h.dock), /Minha vez/);
+});
+
+test('AUTO2: Nova mensagem inbound depois do baseline marca MY_TURN', async () => {
+  const h = harness();
+  h.addMessage({ text: 'histórico conhecido' });
+  await h.mount();
+  h.addMessage({ text: 'nova dúvida do cliente' });
+  await h.flush();
+  const id = h.context.window.RecoveryBufferModule.getConversationIdentityFromCard(h.lucia).sourceId;
+  assert.equal(h.store[KEY].items[id].status, 'MY_TURN');
+  assert.equal(h.store[KEY].items[id].nextStep, '');
+  assert.match(textOf(h.dock), /Minha vez/);
+});
+
+test('AUTO3: Mensagem .sent não marca MY_TURN', async () => {
+  const h = harness();
+  h.addMessage({ text: 'histórico conhecido' });
+  await h.mount();
+  h.addMessage({ text: 'resposta do técnico', sent: true });
+  await h.flush();
+  assert.equal(h.store[KEY], undefined);
+  assert.doesNotMatch(textOf(h.dock), /Minha vez/);
+});
+
+test('AUTO4: Automático não marca MY_TURN', async () => {
+  const h = harness();
+  h.addMessage({ text: 'histórico conhecido' });
+  await h.mount();
+  h.addMessage({ text: 'protocolo gerado', auto: true });
+  await h.flush();
+  assert.equal(h.store[KEY], undefined);
+});
+
+test('AUTO5: Rerender da mesma mensagem não gera nova transição', async () => {
+  const h = harness();
+  h.addMessage({ text: 'histórico conhecido' });
+  await h.mount();
+  const inbound = h.addMessage({ text: 'nova dúvida' });
+  await h.flush();
+  const id = h.context.window.RecoveryBufferModule.getConversationIdentityFromCard(h.lucia).sourceId;
+  const first = h.store[KEY].items[id].updatedAt;
+  h.tick(5000);
+  inbound.querySelector('.message span').textContent = 'nova dúvida editada';
+  await h.flush([{ target: inbound }]);
+  assert.equal(h.store[KEY].items[id].status, 'MY_TURN');
+  assert.equal(h.store[KEY].items[id].updatedAt, first);
+});
+
+test('AUTO6: Nova inbound em outro atendimento não escreve na identidade anterior', async () => {
+  const h = harness(); await h.mount(); await h.save();
+  const luciaId = h.context.window.RecoveryBufferModule.getConversationIdentityFromCard(h.lucia).sourceId;
+  h.lucia.className = 'sz_contact'; h.cassia.className = 'sz_contact active';
+  await h.flush();
+  h.addMessage({ name: 'Cássia', text: 'mensagem da Cássia' });
+  await h.flush();
+  assert.equal(h.store[KEY].items[luciaId].status, 'CHECKING');
+  assert.equal(h.store[KEY].items[luciaId].displayName, 'Lucia');
+});
+
+test('AUTO7: Nenhuma MessagingHelper/API é chamada pelo Support Focus automático', async () => {
+  const h = harness();
+  h.addMessage({ text: 'histórico conhecido' });
+  await h.mount();
+  h.addMessage({ text: 'nova inbound' });
+  await h.flush();
+  assert.equal(h.store[KEY] && Object.values(h.store[KEY].items)[0].status, 'MY_TURN');
 });

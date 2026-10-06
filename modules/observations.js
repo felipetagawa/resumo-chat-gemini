@@ -361,6 +361,8 @@ const ObservationsModule = (() => {
 
     document.body.appendChild(overlay);
     document.body.appendChild(drawer);
+    globalThis.ThemeModule?.apply?.(overlay);
+    globalThis.ThemeModule?.apply?.(drawer);
 
     const client = drawer.querySelector(".atendeai-observations-client");
     client.textContent = currentMeta.contactName || currentMeta.phone || currentMeta.protocol || "Chat atual";
