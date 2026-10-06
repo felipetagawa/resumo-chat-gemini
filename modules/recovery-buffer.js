@@ -534,16 +534,17 @@ const RecoveryBufferModule = (() => {
     }
   }
 
-  function renderBufferItem(buffer, now, setStatus) {
+  function renderBufferItem(buffer, now, setStatus, index) {
     const item = createElement("div", "recovery-buffer-item");
-    item.style.cssText = "padding:12px 0; border-top:1px solid #eee;";
+    item.setAttribute("data-tone", String((Number(index) || 0) % 4));
 
-    item.appendChild(createElement("div", "recovery-buffer-label", formatBufferLabel(buffer, now)));
-    item.appendChild(createElement("div", "recovery-buffer-count", formatMessageCount(buffer.transcript)));
+    const head = createElement("div", "recovery-buffer-head");
+    head.appendChild(createElement("div", "recovery-buffer-label", formatBufferLabel(buffer, now)));
+    head.appendChild(createElement("div", "recovery-buffer-count", formatMessageCount(buffer.transcript)));
+    item.appendChild(head);
 
     if (buffer.anydeskCandidate) {
       const anydeskRow = createElement("div", "recovery-buffer-anydesk");
-      anydeskRow.style.cssText = "margin-top:8px; display:flex; gap:8px; align-items:center;";
       anydeskRow.appendChild(createElement("span", "", `AnyDesk: ${buffer.anydeskCandidate}`));
       const copyButton = createElement("button", "", "Copiar");
       copyButton.type = "button";
@@ -555,12 +556,10 @@ const RecoveryBufferModule = (() => {
     }
 
     const observationLabel = createElement("label", "recovery-buffer-observation-label", "Observações para o resumo");
-    observationLabel.style.cssText = "display:block; margin-top:8px; font-size:12px; color:#3c4043;";
     const observationInput = document.createElement("textarea");
     observationInput.className = "recovery-buffer-observation";
     observationInput.rows = 3;
     observationInput.value = String(buffer.summaryObservation || "");
-    observationInput.style.cssText = "width:100%; box-sizing:border-box; margin-top:4px;";
     observationInput.addEventListener("input", () => {
       clearTimeout(editTimer);
       editTimer = setTimeout(() => {
@@ -578,14 +577,12 @@ const RecoveryBufferModule = (() => {
     const privateNote = String(buffer.privateNote || "").trim();
     if (privateNote) {
       const note = createElement("div", "recovery-private-note");
-      note.style.cssText = "margin-top:8px; font-size:12px; color:#5f6368;";
       note.appendChild(createElement("div", "", "Notas privadas (somente neste navegador)"));
       note.appendChild(createElement("div", "recovery-private-note-text", privateNote));
       item.appendChild(note);
     }
 
     const actions = createElement("div", "recovery-buffer-actions");
-    actions.style.cssText = "display:flex; gap:8px; margin-top:8px;";
     const generateButton = createElement("button", "recovery-buffer-generate", "Gerar relatório");
     generateButton.type = "button";
     const deleteButton = createElement("button", "recovery-buffer-delete", "Excluir");
@@ -612,39 +609,30 @@ const RecoveryBufferModule = (() => {
 
   function renderFallback(buffers, now = Date.now(), options = {}) {
     closePanel();
-    const overlay = createElement("div");
+    const overlay = createElement("div", "recovery-buffer-overlay");
     overlay.id = "atendeai-recovery-overlay";
-    overlay.style.cssText = "position:fixed;inset:0;z-index:999997;background:rgba(0,0,0,0.08);";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:999997;";
     overlay.addEventListener("click", closePanel);
     document.body.appendChild(overlay);
 
-    const panel = createElement("div");
-    panel.id = PANEL_ID;
-    panel.style.cssText = [
-      "position:fixed",
-      "right:20px",
-      "bottom:90px",
-      "z-index:1000002",
-      "width:440px",
-      "max-width:calc(100vw - 40px)",
-      "box-sizing:border-box",
-      "max-height:70vh",
-      "overflow:auto",
-      "background:#fff",
-      "border:1px solid #dadce0",
-      "border-radius:8px",
-      "padding:16px",
-      "box-shadow:0 4px 15px rgba(0,0,0,0.15)",
-      "font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      "font-size:14px",
-      "color:#202124"
-    ].join(";");
-
     const showUnavailable = options.currentUnavailable !== false;
-    const header = createElement("div");
-    header.style.cssText = "position:sticky;top:-16px;z-index:1;background:#fff;padding:12px 0;margin-top:-12px;display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid #eee;";
-    header.appendChild(createElement("strong", "", showUnavailable ? "Gerar relatório" : "Conversas preservadas"));
-    const closeButton = createElement("button", "", "×");
+    const panel = createElement("div", "recovery-buffer-panel");
+    panel.id = PANEL_ID;
+    panel.style.cssText = "position:fixed;right:20px;bottom:90px;z-index:1000002;background:#fff;";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", showUnavailable ? "Gerar relatório" : "Conversas preservadas");
+
+    const header = createElement("div", "recovery-buffer-header");
+    const titleWrap = createElement("div", "recovery-buffer-title-wrap");
+    const titleRow = createElement("div", "recovery-buffer-title-row");
+    const icon = createElement("span", "recovery-buffer-icon");
+    icon.setAttribute("aria-hidden", "true");
+    titleRow.appendChild(icon);
+    titleRow.appendChild(createElement("strong", "recovery-buffer-title", showUnavailable ? "Gerar relatório" : "Conversas preservadas"));
+    titleWrap.appendChild(titleRow);
+    titleWrap.appendChild(createElement("p", "recovery-buffer-desc", "Recupere atendimentos importantes quando precisar."));
+    header.appendChild(titleWrap);
+    const closeButton = createElement("button", "recovery-buffer-close", "×");
     closeButton.type = "button";
     closeButton.setAttribute("aria-label", "Fechar");
     closeButton.addEventListener("click", closePanel);
@@ -652,27 +640,25 @@ const RecoveryBufferModule = (() => {
     panel.appendChild(header);
 
     if (showUnavailable) {
-      panel.appendChild(createElement("div", "", "Conversa atual"));
-      const unavailable = createElement("div", "", "indisponível");
-      unavailable.style.cssText = "margin:0 0 12px 12px; color:#5f6368;";
-      panel.appendChild(unavailable);
-      panel.appendChild(createElement("div", "", "Conversas preservadas"));
+      panel.appendChild(createElement("div", "recovery-buffer-section", "Conversa atual"));
+      panel.appendChild(createElement("div", "recovery-buffer-unavailable", "indisponível"));
+      panel.appendChild(createElement("div", "recovery-buffer-section", "Conversas preservadas"));
     }
 
     const status = createElement("div", "recovery-buffer-status", "");
-    status.style.cssText = "min-height:18px; margin-top:8px; color:#d93025; font-size:12px;";
     const setStatus = (text) => {
       status.textContent = text || "";
     };
 
     if (!buffers.length) {
-      const empty = createElement("div", "", options.readFailed
+      const empty = createElement("div", "recovery-buffer-empty", options.readFailed
         ? "Não foi possível ler as conversas preservadas."
         : "Nenhuma conversa preservada.");
-      empty.style.cssText = "margin-top:8px; color:#5f6368;";
       panel.appendChild(empty);
     } else {
-      buffers.forEach((buffer) => panel.appendChild(renderBufferItem(buffer, now, setStatus)));
+      const list = createElement("div", "recovery-buffer-list");
+      buffers.forEach((buffer, index) => list.appendChild(renderBufferItem(buffer, now, setStatus, index)));
+      panel.appendChild(list);
     }
 
     panel.appendChild(status);

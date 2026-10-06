@@ -8,15 +8,15 @@
     background: white;
     z-index: 1000000;
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.10);
     display: flex;
     flex-direction: column;
-    font-family: 'Segoe UI', sans-serif;
-    border: 1px solid #dadce0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    border: 1px solid #d0d5dd;
     overflow: hidden;
 }
 
-.agenda-header {
+:where(#geminiAgendaModal) .agenda-header {
     background: #f8f9fa;
     padding: 15px 20px;
     border-bottom: 1px solid #e0e0e0;
@@ -26,14 +26,14 @@
     flex-shrink: 0;
 }
 
-.agenda-tabs-container {
+:where(#geminiAgendaModal) .agenda-tabs-container {
     background: #fff;
     border-bottom: 1px solid #e0e0e0;
     flex-shrink: 0;
     padding: 0 20px;
 }
 
-.agenda-tabs {
+:where(#geminiAgendaModal) .agenda-tabs {
     display: flex;
     position: relative;
     overflow-x: auto;
@@ -43,11 +43,11 @@
     min-height: 46px;
 }
 
-.agenda-tabs::-webkit-scrollbar {
+:where(#geminiAgendaModal) .agenda-tabs::-webkit-scrollbar {
     display: none;
 }
 
-.agenda-tab {
+:where(#geminiAgendaModal) .agenda-tab {
     padding: 12px 20px;
     cursor: pointer;
     transition: all 0.2s;
@@ -66,21 +66,21 @@
     border-radius: 6px 6px 0 0;
 }
 
-.agenda-tab:hover {
+:where(#geminiAgendaModal) .agenda-tab:hover {
     background: rgba(0,0,0,0.03);
 }
 
-.agenda-tab.active {
-    border-bottom-color: #1a73e8;
+:where(#geminiAgendaModal) .agenda-tab.active {
+    border-bottom-color: #2f5ea8;
     background: white;
-    color: #1a73e8;
+    color: #2f5ea8;
     font-weight: 600;
     margin-bottom: -1px;
     z-index: 2;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.agenda-body {
+:where(#geminiAgendaModal) .agenda-body {
     flex: 1;
     overflow-y: auto;
     padding: 20px;
@@ -88,24 +88,24 @@
 }
 
 /* Estilos para modo de edição */
-.agenda-tabs-container.editing {
+:where(#geminiAgendaModal) .agenda-tabs-container.editing {
     background: #f8f9fa;
 }
 
-.agenda-tabs-container.editing .agenda-tab {
+:where(#geminiAgendaModal) .agenda-tabs-container.editing .agenda-tab {
     cursor: grab;
     border: 1px solid rgba(0,0,0,0.1);
     margin: 0 -1px;
     z-index: 1;
 }
 
-.agenda-tabs-container.editing .agenda-tab.active {
+:where(#geminiAgendaModal) .agenda-tabs-container.editing .agenda-tab.active {
     border: 1px solid #4caf50;
     border-bottom: 3px solid #4caf50;
     z-index: 3;
 }
 
-.agenda-tabs-container.editing .drag-handle {
+:where(#geminiAgendaModal) .agenda-tabs-container.editing .drag-handle {
     margin-left: 6px;
     opacity: 0.6;
     font-size: 12px;
@@ -113,25 +113,25 @@
     user-select: none;
 }
 
-.agenda-tabs-container.editing .agenda-tab:hover .drag-handle {
+:where(#geminiAgendaModal) .agenda-tabs-container.editing .agenda-tab:hover .drag-handle {
     opacity: 1;
 }
 
 /* Estilos durante arrasto */
-.agenda-tab.dragging {
+:where(#geminiAgendaModal) .agenda-tab.dragging {
     opacity: 0.5;
     transform: rotate(2deg);
     z-index: 1000 !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-.agenda-tab.drag-over {
-    border-left: 2px solid #1a73e8 !important;
-    background: rgba(26, 115, 232, 0.05) !important;
+:where(#geminiAgendaModal) .agenda-tab.drag-over {
+    border-left: 2px solid #2f5ea8 !important;
+    background: rgba(47, 94, 168, 0.05) !important;
 }
 
 /* Botão de reordenar */
-#btnEditTabs {
+:where(#geminiAgendaModal) #btnEditTabs {
     background: #f0f0f0;
     border: 1px solid #ddd;
     padding: 6px 12px;
@@ -145,20 +145,18 @@
     font-weight: 500;
 }
 
-#btnEditTabs:hover {
-    background: #e0e0e0;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+:where(#geminiAgendaModal) #btnEditTabs:hover {
+    background: #e8eaed;
 }
 
-#btnEditTabs.editing {
+:where(#geminiAgendaModal) #btnEditTabs.editing {
     background: #e8f5e9 !important;
     border-color: #4caf50;
     color: #2e7d32;
 }
 
 /* Botão fechar */
-#fecharAgenda {
+:where(#geminiAgendaModal) #fecharAgenda {
     background: none;
     border: none;
     font-size: 20px;
@@ -173,12 +171,12 @@
     border-radius: 4px;
 }
 
-#fecharAgenda:hover {
+:where(#geminiAgendaModal) #fecharAgenda:hover {
     background: rgba(0,0,0,0.05);
 }
 
 /* Estilos para o conteúdo das abas */
-.tab-content {
+:where(#geminiAgendaModal) .tab-content {
     display: none;
     height: 100%;
     animation: fadeIn 0.3s ease;
@@ -190,20 +188,20 @@
 }
 
 /* Estilos específicos para cada aba */
-.calendar-controls {
+:where(#geminiAgendaModal) .calendar-controls {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
 }
 
-.calendar-grid {
+:where(#geminiAgendaModal) .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 8px;
 }
 
-.calendar-day-header {
+:where(#geminiAgendaModal) .calendar-day-header {
     font-weight: bold;
     text-align: center;
     color: #777;
@@ -212,7 +210,7 @@
     margin-bottom: 5px;
 }
 
-.calendar-day {
+:where(#geminiAgendaModal) .calendar-day {
     border: 1px solid #eee;
     min-height: 80px;
     padding: 6px;
@@ -222,17 +220,17 @@
     position: relative;
 }
 
-.calendar-day:hover {
+:where(#geminiAgendaModal) .calendar-day:hover {
     background: #f9f9f9;
     border-color: #ddd;
 }
 
-.calendar-day.today {
-    border-color: #1a73e8;
-    background: #f0f7ff;
+:where(#geminiAgendaModal) .calendar-day.today {
+    border-color: #2f5ea8;
+    background: #f4f7fb;
 }
 
-.day-number {
+:where(#geminiAgendaModal) .day-number {
     font-size: 12px;
     color: #555;
     font-weight: 600;
@@ -242,20 +240,20 @@
 }
 
 /* Estilos para CRM */
-.crm-controls {
+:where(#geminiAgendaModal) .crm-controls {
     margin-bottom: 20px;
     display: flex;
     gap: 10px;
     align-items: center;
 }
 
-.crm-table {
+:where(#geminiAgendaModal) .crm-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 14px;
 }
 
-.crm-table th {
+:where(#geminiAgendaModal) .crm-table th {
     text-align: left;
     padding: 12px;
     border-bottom: 2px solid #eee;
@@ -264,20 +262,20 @@
     background: #f8f9fa;
 }
 
-.crm-table td {
+:where(#geminiAgendaModal) .crm-table td {
     padding: 12px;
     border-bottom: 1px solid #eee;
     color: #333;
 }
 
-.status-badge {
+:where(#geminiAgendaModal) .status-badge {
     padding: 4px 10px;
     border-radius: 12px;
     font-size: 11px;
     font-weight: 600;
 }
 
-.action-btn {
+:where(#geminiAgendaModal) .action-btn {
     background: none;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -287,6 +285,6 @@
     font-size: 12px;
 }
 
-.action-btn:hover {
+:where(#geminiAgendaModal) .action-btn:hover {
     background: #f5f5f5;
 }

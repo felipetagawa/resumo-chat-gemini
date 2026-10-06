@@ -1,168 +1,168 @@
-.modal-overlay {
+.atendeai-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(15, 23, 42, 0.28);
     z-index: 1000001;
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: fadeIn 0.2s ease;
+    animation: fadeIn 0.16s ease;
 }
 
-.modal-form-container {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+:where(.atendeai-modal-overlay) .modal-form-container {
+    background: var(--ai-surface, #ffffff);
+    border-radius: var(--ai-radius-lg, 12px);
+    box-shadow: var(--ai-shadow-md, 0 8px 24px rgba(16, 24, 40, 0.12));
     max-width: 500px;
     width: 90%;
     max-height: 90vh;
     overflow-y: auto;
-    animation: slideUp 0.3s ease;
+    animation: slideUp 0.2s ease;
+    border: 1px solid var(--ai-border-strong, #d0d5dd);
+    font-family: var(--ai-font, "Segoe UI", system-ui, sans-serif);
 }
 
-.modal-form-header {
-    background: #f8f9fa;
-    padding: 16px 20px;
-    border-bottom: 1px solid #e0e0e0;
+:where(.atendeai-modal-overlay) .modal-form-header {
+    background: var(--ai-surface-muted, #f7f8fa);
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--ai-border, #e4e7ec);
     border-radius: 12px 12px 0 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.modal-form-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #3c4043;
+:where(.atendeai-modal-overlay) .modal-form-title {
+    font-size: 15px;
+    font-weight: 650;
+    color: var(--ai-text, #1f2937);
 }
 
-.modal-close-btn {
+:where(.atendeai-modal-overlay) .modal-close-btn {
     background: none;
     border: none;
-    font-size: 24px;
-    color: #5f6368;
+    font-size: 20px;
+    color: var(--ai-text-muted, #6b7280);
     cursor: pointer;
     padding: 0;
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    transition: background 0.2s;
+    border-radius: 6px;
+    transition: background 0.15s;
 }
 
-.modal-close-btn:hover {
-    background: #e0e0e0;
+:where(.atendeai-modal-overlay) .modal-close-btn:hover {
+    background: var(--ai-surface-hover, #eef1f5);
+    color: var(--ai-text, #1f2937);
 }
 
-.modal-form-body {
-    padding: 20px;
+:where(.atendeai-modal-overlay) .modal-form-body {
+    padding: 16px;
 }
 
-.form-group {
-    margin-bottom: 16px;
+:where(.atendeai-modal-overlay) .form-group {
+    margin-bottom: 14px;
 }
 
-.form-label {
+:where(.atendeai-modal-overlay) .form-label {
     display: block;
-    font-size: 14px;
-    font-weight: 500;
-    color: #444;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ai-text-secondary, #4b5563);
     margin-bottom: 6px;
 }
 
-.form-label.required::after {
+:where(.atendeai-modal-overlay) .form-label.required::after {
     content: ' *';
-    color: #d93025;
+    color: var(--ai-danger, #b42318);
 }
 
-.form-input,
-.form-textarea,
-.form-select {
+:where(.atendeai-modal-overlay) :is(.form-input, .form-textarea, .form-select) {
     width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #dadce0;
+    padding: 8px 10px;
+    border: 1px solid var(--ai-border-strong, #d0d5dd);
     border-radius: 6px;
-    font-size: 14px;
-    font-family: 'Segoe UI', sans-serif;
-    color: #3c4043;
-    transition: border-color 0.2s;
+    font-size: 13px;
+    font-family: var(--ai-font, "Segoe UI", system-ui, sans-serif);
+    color: var(--ai-text, #1f2937);
+    transition: border-color 0.15s, box-shadow 0.15s;
     box-sizing: border-box;
+    background: #fff;
 }
 
-.form-input:focus,
-.form-textarea:focus,
-.form-select:focus {
+:where(.atendeai-modal-overlay) :is(.form-input, .form-textarea, .form-select):focus {
     outline: none;
-    border-color: #1a73e8;
-    box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+    border-color: var(--ai-primary, #2f5ea8);
+    box-shadow: 0 0 0 3px rgba(47, 94, 168, 0.14);
 }
 
-.form-textarea {
+:where(.atendeai-modal-overlay) .form-textarea {
     min-height: 80px;
     resize: vertical;
 }
 
-.form-row {
+:where(.atendeai-modal-overlay) .form-row {
     display: flex;
     gap: 12px;
 }
 
-.form-row .form-group {
+:where(.atendeai-modal-overlay) .form-row .form-group {
     flex: 1;
 }
 
-.modal-form-footer {
-    padding: 16px 20px;
-    border-top: 1px solid #e0e0e0;
+:where(.atendeai-modal-overlay) .modal-form-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--ai-border, #e4e7ec);
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
-    background: #f8f9fa;
+    gap: 8px;
+    background: var(--ai-surface-muted, #f7f8fa);
     border-radius: 0 0 12px 12px;
 }
 
-.btn-primary,
-.btn-secondary,
-.btn-danger {
-    padding: 10px 20px;
-    border: none;
+:where(.atendeai-modal-overlay) :is(.btn-primary, .btn-secondary, .btn-danger) {
+    padding: 7px 14px;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
-.btn-primary {
-    background: #1a73e8;
+:where(.atendeai-modal-overlay) .btn-primary {
+    background: var(--ai-primary, #2f5ea8);
     color: white;
+    border: 1px solid var(--ai-primary, #2f5ea8);
 }
 
-.btn-primary:hover {
-    background: #1557b0;
-    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+:where(.atendeai-modal-overlay) .btn-primary:hover {
+    background: var(--ai-primary-hover, #264d8c);
+    box-shadow: none;
 }
 
-.btn-secondary {
-    background: #f1f3f4;
-    color: #3c4043;
+:where(.atendeai-modal-overlay) .btn-secondary {
+    background: #fff;
+    color: var(--ai-text, #1f2937);
+    border: 1px solid var(--ai-border-strong, #d0d5dd);
 }
 
-.btn-secondary:hover {
-    background: #e2e6ea;
+:where(.atendeai-modal-overlay) .btn-secondary:hover {
+    background: var(--ai-surface-hover, #eef1f5);
 }
 
-.btn-danger {
-    background: #d93025;
-    color: white;
+:where(.atendeai-modal-overlay) .btn-danger {
+    background: var(--ai-danger-soft, #fef3f2);
+    color: var(--ai-danger, #b42318);
+    border: 1px solid var(--ai-danger-border, #f0c7c3);
 }
 
-.btn-danger:hover {
-    background: #b32017;
-    box-shadow: 0 2px 8px rgba(217, 48, 37, 0.3);
+:where(.atendeai-modal-overlay) .btn-danger:hover {
+    background: #fce9e7;
+    box-shadow: none;
 }

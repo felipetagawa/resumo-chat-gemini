@@ -98,7 +98,7 @@ const UIBuilder = (() => {
 
     function criarModalFormulario(config) {
         const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
+        overlay.className = 'modal-overlay atendeai-modal-overlay';
 
         const modalContainer = document.createElement('div');
         modalContainer.className = 'modal-form-container';
