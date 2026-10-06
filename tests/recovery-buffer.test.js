@@ -249,6 +249,8 @@ function loadRecoveryModule({ realObservations = false } = {}) {
 
   const context = {
     window: {
+      innerWidth: 1280,
+      innerHeight: 800,
       addEventListener(type, fn) {
         windowListeners.push({ type, fn });
       }
@@ -357,6 +359,7 @@ function loadRecoveryModule({ realObservations = false } = {}) {
       return () => { resolve({ atendeai_chat_observations: store.observations }); observationLoad = null; };
     },
     document,
+    window: context.window,
     live,
     store,
     errors,
@@ -1311,4 +1314,284 @@ test('dock recolhe e restaura sem perder posicao ou tamanho; estado persiste', a
   assert.equal(next.dock.querySelector('.gemini-dock-toggle').getAttribute('aria-label'), 'Minimizar dock');
   assert.equal(next.store.atendeai_dock_preferences.minimized, false);
   assert.deepEqual(next.store.atendeai_dock_preferences.position, { x: 100, y: 100 });
+});
+
+const PANEL_POSITION_KEY = "atendeai_recovery_panel_position";
+
+function buttonByText(root, text) {
+  return collect(root).find((node) => node.tagName === "button" && node.textContent === text);
+}
+
+function renderedTranscript(panel) {
+  const root = panel.querySelector(".recovery-transcript");
+  return root.children.map((row) => {
+    const author = row.querySelector(".recovery-transcript-author");
+    const text = row.querySelector(".recovery-transcript-text");
+    if (author && text) return `${author.textContent}: ${text.textContent}`;
+    return row.textContent;
+  }).join("\n");
+}
+
+function attachPanelRect(panel, size = { width: 420, height: 320 }) {
+  panel.getBoundingClientRect = () => ({
+    left: Number.isFinite(parseFloat(panel.style.left)) ? parseFloat(panel.style.left) : 100,
+    top: Number.isFinite(parseFloat(panel.style.top)) ? parseFloat(panel.style.top) : 80,
+    width: size.width,
+    height: size.height
+  });
+}
+
+test("R1/R13: Ver conversa aparece e as iniciais nao viram identidade do buffer", async () => {
+  const h = loadRecoveryModule();
+  assert.equal(h.module.__test.initialsFromName("CASSIA TAIS FIGURA"), "CTF");
+  assert.equal(h.module.__test.initialsFromName("MARIA FERREIRA"), "MF");
+  assert.equal(h.module.__test.initialsFromName("Gabriel"), "GA");
+  const transcript = "CASSIA TAIS FIGURA: oi";
+  await h.module.__test.persistSnapshot({
+    sourceId: "data-chat-id:cassia",
+    displayName: "CASSIA TAIS FIGURA",
+    transcript,
+    summaryObservation: "obs",
+    privateNote: "nota"
+  }, h.now());
+  await h.module.__test.persistSnapshot({
+    sourceId: "data-chat-id:maria",
+    displayName: "MARIA FERREIRA",
+    transcript: "MARIA FERREIRA: oi",
+    summaryObservation: "",
+    privateNote: ""
+  }, h.now() - 1000);
+  await h.module.openPreservedBuffers();
+  const panel = h.document.getElementById("atendeai-recovery-report-fallback");
+  const views = collect(panel).filter((node) => node.tagName === "button" && node.textContent === "Ver conversa");
+  assert.equal(views.length, 2);
+  assert.equal(panel.querySelector(".recovery-buffer-avatar").textContent, "CTF");
+  assert.equal(Object.hasOwn(storedBuffers(h)[0], "initials"), false);
+  assert.equal(storedBuffers(h)[0].transcript, transcript);
+});
+
+test("R2/R3/R4/R13: detalhe usa o transcript armazenado, sem API, e voltar mantem o painel", async () => {
+  const h = loadRecoveryModule();
+  const transcript = [
+    "CASSIA TAIS FIGURA: Não estou conseguindo cadastrar corretamente os produtos.",
+    "FELIPE: Vou verificar para você.",
+    "veja o erro: timeout na porta 80",
+    "CASSIA TAIS FIGURA: Agora apareceu outra rejeição."
+  ].join("\n");
+  await h.module.__test.persistSnapshot({
+    sourceId: "attendance:whatsapp|cassia|06/10/26 08:14",
+    displayName: "CASSIA TAIS FIGURA",
+    transcript,
+    summaryObservation: "observacao A",
+    privateNote: "NOTA-PRIVADA-NAO-ENVIAR"
+  }, h.now());
+  await h.module.openPreservedBuffers();
+  const panel = h.document.getElementById("atendeai-recovery-report-fallback");
+  assert.equal(panel.getAttribute("data-mode"), "list");
+  const before = JSON.stringify(storedBuffers(h));
+  await Promise.all(buttonByText(panel, "Ver conversa").click());
+
+  assert.equal(h.document.getElementById("atendeai-recovery-report-fallback"), panel);
+  assert.equal(panel.getAttribute("data-mode"), "detail");
+  assert.equal(panel.querySelector(".recovery-detail-name").textContent, "CASSIA TAIS FIGURA");
+  assert.match(panel.querySelector(".recovery-detail-meta").textContent, /06\/10\/26 08:14 · 4 mensagens/);
+  assert.equal(renderedTranscript(panel), transcript);
+  assert.equal(panel.querySelector(".recovery-transcript-author").textContent, "CASSIA TAIS FIGURA");
+  assert.deepEqual(panel.querySelectorAll(".recovery-transcript-raw").map((node) => node.textContent), [
+    "FELIPE: Vou verificar para você.",
+    "veja o erro: timeout na porta 80"
+  ]);
+  assert.equal(h.sent.length, 0);
+  assert.equal(h.fetchCalls(), 0);
+  assert.equal(h.shown.length, 0);
+  assert.equal(h.complementCalls(), 0);
+  assert.equal(JSON.stringify(storedBuffers(h)), before);
+  assert.match(textOf(panel), /NOTA-PRIVADA-NAO-ENVIAR/);
+
+  const typed = panel.querySelector("textarea");
+  typed.value = "observacao editada no detalhe";
+  await Promise.all(collect(panel).find((node) => node.getAttribute("aria-label") === "Voltar").click());
+  assert.equal(h.document.getElementById("atendeai-recovery-report-fallback"), panel);
+  assert.equal(panel.getAttribute("data-mode"), "list");
+  assert.match(textOf(panel), /Conversas preservadas/);
+  assert.equal(panel.querySelector("textarea").value, "observacao editada no detalhe");
+  assert.equal(storedBuffers(h)[0].summaryObservation, "observacao editada no detalhe");
+  assert.equal(storedBuffers(h)[0].privateNote, "NOTA-PRIVADA-NAO-ENVIAR");
+  assert.equal(storedBuffers(h)[0].transcript, transcript);
+  assert.equal(h.sent.length, 0);
+});
+
+test("R5/R6/R7: observacao e relatorio do detalhe seguem o buffer e excluem privateNote", async () => {
+  const h = loadRecoveryModule();
+  const transcript = "Gabriel: preciso do relatorio deste atendimento";
+  await h.module.__test.persistSnapshot({
+    sourceId: "data-chat-id:gabriel",
+    displayName: "Gabriel",
+    transcript,
+    summaryObservation: "observacao A",
+    privateNote: "NOTA-PRIVADA-NAO-ENVIAR"
+  }, h.now());
+  h.live.summary = "observacao do chat aberto";
+  h.live.note = "nota do chat aberto";
+  await h.module.openPreservedBuffers();
+  const panel = h.document.getElementById("atendeai-recovery-report-fallback");
+  await Promise.all(buttonByText(panel, "Ver conversa").click());
+  const observation = panel.querySelector("textarea");
+  observation.value = "observacao A editada";
+  for (const fn of observation.listeners.input || []) fn();
+  await h.flushTimers();
+  assert.equal(storedBuffers(h)[0].summaryObservation, "observacao A editada");
+  assert.equal(storedBuffers(h)[0].bufferId, (await h.module.__test.readState()).buffers[0].bufferId);
+
+  await Promise.all(buttonByText(panel, "Gerar relatório").click());
+  assert.equal(h.sent.length, 1);
+  assert.deepEqual(h.sent[0], {
+    action: "gerarResumo",
+    texto: transcript,
+    promptComplement: "observacao A editada"
+  });
+  assert.equal(Object.hasOwn(h.sent[0], "privateNote"), false);
+  assert.doesNotMatch(JSON.stringify(h.sent[0]), /NOTA-PRIVADA-NAO-ENVIAR/);
+  assert.doesNotMatch(JSON.stringify(h.sent[0]), /observacao do chat aberto/);
+  assert.equal(storedBuffers(h)[0].privateNote, "NOTA-PRIVADA-NAO-ENVIAR");
+  assert.equal(storedBuffers(h)[0].transcript, transcript);
+});
+
+test("R8/R9/R10/R11: drag do header move, limita, ignora controles e restaura posicao", async () => {
+  const h = loadRecoveryModule();
+  h.window.innerWidth = 800;
+  h.window.innerHeight = 600;
+  await h.module.__test.persistSnapshot({
+    sourceId: "data-chat-id:gabriel",
+    displayName: "Gabriel",
+    transcript: "Gabriel: oi",
+    summaryObservation: "obs",
+    privateNote: "nota"
+  }, h.now());
+  await h.module.openPreservedBuffers();
+  const panel = h.document.getElementById("atendeai-recovery-report-fallback");
+  const header = panel.querySelector(".recovery-buffer-header");
+  attachPanelRect(panel);
+  const transcript = storedBuffers(h)[0].transcript;
+
+  dispatchNode(header, "pointerdown", { target: buttonByText(panel, "Ver conversa"), clientX: 110, clientY: 90 });
+  dispatchNode(header, "pointermove", { clientX: 400, clientY: 300 });
+  assert.equal(panel.style.left || "", "");
+  dispatchNode(header, "pointerdown", { target: panel.querySelector("textarea"), clientX: 110, clientY: 90 });
+  dispatchNode(header, "pointermove", { clientX: 400, clientY: 300 });
+  dispatchNode(header, "pointerdown", {
+    target: { tagName: "a", parentElement: header },
+    clientX: 110,
+    clientY: 90
+  });
+  dispatchNode(header, "pointermove", { clientX: 400, clientY: 300 });
+  assert.equal(panel.style.left || "", "");
+  assert.equal(h.store[PANEL_POSITION_KEY], undefined);
+
+  dispatchNode(header, "pointerdown", { clientX: 110, clientY: 90 });
+  assert.match(panel.className, /is-dragging/);
+  dispatchNode(header, "pointermove", { clientX: 160, clientY: 140 });
+  dispatchNode(header, "pointerup");
+  assert.equal(panel.style.left, "150px");
+  assert.equal(panel.style.top, "130px");
+  assert.doesNotMatch(panel.className, /is-dragging/);
+  assert.deepEqual(h.store[PANEL_POSITION_KEY], { x: 150, y: 130 });
+  assert.equal(storedBuffers(h)[0].transcript, transcript);
+  assert.equal(h.store.atendeai_dock_preferences, undefined);
+
+  dispatchNode(header, "pointerdown", { clientX: 160, clientY: 140 });
+  dispatchNode(header, "pointermove", { clientX: -1000, clientY: 5000 });
+  dispatchNode(header, "pointerup");
+  assert.equal(panel.style.left, "8px");
+  assert.equal(panel.style.top, "272px");
+
+  h.window.innerWidth = 400;
+  h.window.innerHeight = 300;
+  const resize = h.windowListeners.find((entry) => entry.type === "resize");
+  resize.fn();
+  assert.equal(panel.style.left, "8px");
+  assert.equal(panel.style.top, "8px");
+  assert.deepEqual(h.store[PANEL_POSITION_KEY], { x: 8, y: 8 });
+
+  const restored = loadRecoveryModule();
+  restored.window.innerWidth = 800;
+  restored.window.innerHeight = 600;
+  restored.store[PANEL_POSITION_KEY] = { x: 9000, y: -500 };
+  await restored.module.__test.persistSnapshot({
+    sourceId: "data-chat-id:gabriel",
+    displayName: "Gabriel",
+    transcript: "Gabriel: oi",
+    summaryObservation: "",
+    privateNote: ""
+  }, restored.now());
+  await restored.module.openPreservedBuffers();
+  const next = restored.document.getElementById("atendeai-recovery-report-fallback");
+  assert.equal(next.style.left, "372px");
+  assert.equal(next.style.top, "8px");
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(restored.module.__test.clampPanelPosition({ x: 9000, y: -40 }, { width: 420, height: 320 }))),
+    { x: 372, y: 8 }
+  );
+});
+
+test("R12: Esc, X e clique fora fecham o detalhe; voltar nao fecha", async () => {
+  async function openDetail(action) {
+    const h = loadRecoveryModule();
+    h.module.init();
+    await h.module.__test.persistSnapshot({
+      sourceId: "data-chat-id:gabriel",
+      displayName: "Gabriel",
+      transcript: "Gabriel: oi\nGabriel: segunda",
+      summaryObservation: "",
+      privateNote: ""
+    }, h.now());
+    await h.module.openPreservedBuffers();
+    const panel = h.document.getElementById("atendeai-recovery-report-fallback");
+    await Promise.all(buttonByText(panel, "Ver conversa").click());
+    assert.equal(panel.getAttribute("data-mode"), "detail");
+    if (action === "back") {
+      await Promise.all(collect(panel).find((node) => node.getAttribute("aria-label") === "Voltar").click());
+      assert.equal(h.document.getElementById("atendeai-recovery-report-fallback"), panel);
+      assert.equal(panel.getAttribute("data-mode"), "list");
+      return;
+    }
+    if (action === "overlay") {
+      await Promise.all(h.document.getElementById("atendeai-recovery-overlay").click());
+    } else if (action === "Escape") {
+      for (const entry of h.document.listeners.filter((listener) => listener.type === "keydown")) {
+        entry.fn({ key: "Escape" });
+      }
+    } else if (action === "X") {
+      await Promise.all(collect(panel).find((node) => node.getAttribute("aria-label") === "Fechar").click());
+    } else {
+      for (const entry of h.document.listeners.filter((listener) => listener.type === "click")) {
+        entry.fn({ target: h.document.body });
+      }
+    }
+    assert.equal(h.document.getElementById("atendeai-recovery-report-fallback"), null);
+    assert.equal(h.document.getElementById("atendeai-recovery-overlay"), null);
+  }
+
+  for (const action of ["back", "overlay", "Escape", "X", "outside"]) {
+    await openDetail(action);
+  }
+});
+
+test("transcript uniforme separa autores e linha ambigua permanece fiel", () => {
+  const h = loadRecoveryModule();
+  const transcript = [
+    "CLIENTE: Não estou conseguindo cadastrar corretamente os produtos.",
+    "FELIPE: Vou verificar para você.",
+    "CLIENTE: Agora apareceu outra rejeição."
+  ].join("\n");
+  const parsed = h.module.__test.parseTranscript(transcript, "CLIENTE");
+  assert.equal(parsed.map((entry) => entry.author ? `${entry.author}: ${entry.text}` : entry.raw).join("\n"), transcript);
+  assert.equal(parsed[1].author, "FELIPE");
+  const ambiguous = h.module.__test.parseTranscript("Erro: falhou", "Gabriel");
+  assert.equal(JSON.stringify(ambiguous), JSON.stringify([{ raw: "Erro: falhou" }]));
+  const mixed = h.module.__test.parseTranscript("Gabriel: oi\nveja o erro: timeout", "Gabriel");
+  assert.equal(mixed[0].author, "Gabriel");
+  assert.equal(mixed[0].text, "oi");
+  assert.equal(mixed[1].raw, "veja o erro: timeout");
+  assert.equal(mixed[1].author, undefined);
 });

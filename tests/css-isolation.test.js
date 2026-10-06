@@ -138,3 +138,15 @@ test("injected design-system selectors stay under exclusive AtendeAI roots", () 
   }
   assert.deepEqual(leaks, []);
 });
+
+test("injected stylesheets do not style the host document", () => {
+  const forbidden = /^(html|body|:root|\*)(?:$|[^-\w])/;
+  const leaks = [];
+  for (const file of injectedCss) {
+    const css = fs.readFileSync(path.join(ROOT, file), "utf8");
+    for (const selector of extractSelectors(css)) {
+      if (forbidden.test(selector)) leaks.push(`${file}: ${selector}`);
+    }
+  }
+  assert.deepEqual(leaks, []);
+});

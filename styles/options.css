@@ -1,5 +1,5 @@
 :root {
-  --ai-font: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --ai-font: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --ai-bg: #f4f6f8;
   --ai-surface: #ffffff;
   --ai-surface-muted: #f7f8fa;
@@ -567,6 +567,23 @@ input[type="number"]::-webkit-outer-spin-button {
   color: var(--ai-text);
 }
 
+.atendeai-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--ai-primary-soft);
+  color: var(--ai-primary);
+  border: 1px solid var(--ai-primary-border);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  flex: 0 0 18px;
+  letter-spacing: 0;
+}
+
 .nav-brand .sys-sub {
   font-size: 12px;
   font-weight: 400;
@@ -704,6 +721,9 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .news-card h2 {
   margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .changelog-static,

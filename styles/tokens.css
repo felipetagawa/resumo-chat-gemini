@@ -14,7 +14,7 @@
 .atendeai-modal-overlay,
 .atendeai-observations-drawer,
 .atendeai-observations-overlay {
-  --ai-font: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --ai-font: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --ai-font-size: 13px;
   --ai-font-size-sm: 12px;
   --ai-font-size-xs: 11px;
@@ -70,9 +70,10 @@
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, #chamadoManualPopup, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(.ai-btn, .btn-primary, .btn-secondary, .btn-danger),
 .recovery-buffer-generate,
 .recovery-buffer-delete,
+.recovery-buffer-view,
 .smart-reply-preview button {
   font-family: var(--ai-font);
-  font-size: var(--ai-font-size-sm);
+  font-size: 13px;
   font-weight: var(--ai-weight-medium);
   letter-spacing: 0.01em;
   line-height: 1.2;
@@ -91,6 +92,8 @@
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, #chamadoManualPopup, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(.ai-btn, .btn-primary, .btn-secondary, .btn-danger):focus-visible,
 .recovery-buffer-generate:focus-visible,
 .recovery-buffer-delete:focus-visible,
+.recovery-buffer-view:focus-visible,
+.recovery-buffer-back:focus-visible,
 .smart-reply-preview button:focus-visible,
 .smart-reply-preview select:focus-visible,
 .gemini-floating-btn:focus-visible,
@@ -109,6 +112,7 @@
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, #chamadoManualPopup, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(.ai-btn, .btn-primary, .btn-secondary, .btn-danger):disabled,
 .recovery-buffer-generate:disabled,
 .recovery-buffer-delete:disabled,
+.recovery-buffer-view:disabled,
 .smart-reply-preview button:disabled,
 .gemini-floating-btn:disabled {
   opacity: 0.48;
@@ -144,7 +148,8 @@
 
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-secondary, .btn-secondary),
 .smart-reply-regenerate,
-.smart-reply-choice {
+.smart-reply-choice,
+.recovery-buffer-view {
   background: var(--ai-surface);
   color: var(--ai-text);
   border: 1px solid var(--ai-border-strong);
@@ -152,7 +157,8 @@
 
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-secondary, .btn-secondary):hover:not(:disabled),
 .smart-reply-regenerate:hover:not(:disabled),
-.smart-reply-choice:hover:not(:disabled) {
+.smart-reply-choice:hover:not(:disabled),
+.recovery-buffer-view:hover:not(:disabled) {
   background: var(--ai-surface-hover);
   border-color: #b8c0cc;
 }
@@ -164,6 +170,7 @@
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) .ai-btn-ghost,
 .smart-reply-close,
 .recovery-buffer-close,
+.recovery-buffer-back,
 .smart-reply-choice-ghost {
   background: transparent;
   color: var(--ai-text-secondary);
@@ -173,6 +180,7 @@
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) .ai-btn-ghost:hover:not(:disabled),
 .smart-reply-close:hover:not(:disabled),
 .recovery-buffer-close:hover:not(:disabled),
+.recovery-buffer-back:hover:not(:disabled),
 .smart-reply-choice-ghost:hover:not(:disabled) {
   background: var(--ai-surface-hover);
   color: var(--ai-text);
