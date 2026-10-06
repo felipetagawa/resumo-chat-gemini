@@ -1341,6 +1341,43 @@ function attachPanelRect(panel, size = { width: 420, height: 320 }) {
   });
 }
 
+function attachModeAwareRect(panel, view, heights = { list: 320, detail: 480 }) {
+  panel.getBoundingClientRect = () => {
+    const detail = panel.getAttribute("data-mode") === "detail";
+    const preferredWidth = detail ? 540 : 420;
+    const left = parseFloat(panel.style.left);
+    const top = parseFloat(panel.style.top);
+    return {
+      left: Number.isFinite(left) ? left : 0,
+      top: Number.isFinite(top) ? top : 0,
+      width: Math.min(preferredWidth, view.innerWidth - 32),
+      height: detail ? heights.detail : heights.list
+    };
+  };
+}
+
+function measurePanelOnCreate(document, view, heights) {
+  const original = document.createElement;
+  document.createElement = (tag) => {
+    const node = original(tag);
+    let className = node.className || "";
+    Object.defineProperty(node, "className", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return className;
+      },
+      set(value) {
+        className = String(value || "");
+        if (className.split(/\s+/).includes("recovery-buffer-panel")) {
+          attachModeAwareRect(node, view, heights);
+        }
+      }
+    });
+    return node;
+  };
+}
+
 test("R1/R13: Ver conversa aparece e as iniciais nao viram identidade do buffer", async () => {
   const h = loadRecoveryModule();
   assert.equal(h.module.__test.initialsFromName("CASSIA TAIS FIGURA"), "CTF");
@@ -1575,6 +1612,82 @@ test("R12: Esc, X e clique fora fecham o detalhe; voltar nao fecha", async () =>
   for (const action of ["back", "overlay", "Escape", "X", "outside"]) {
     await openDetail(action);
   }
+});
+
+test("LIST no limite direito abre o detalhe dentro do viewport e voltar preserva a posicao", async () => {
+  const h = loadRecoveryModule();
+  h.window.innerWidth = 1280;
+  h.window.innerHeight = 800;
+  await h.module.__test.persistSnapshot({
+    sourceId: "data-chat-id:gabriel",
+    displayName: "Gabriel",
+    transcript: "Gabriel: oi\nGabriel: segunda",
+    summaryObservation: "obs",
+    privateNote: "nota"
+  }, h.now());
+  h.store[PANEL_POSITION_KEY] = { x: 852, y: 472 };
+  measurePanelOnCreate(h.document, h.window);
+  await h.module.openPreservedBuffers();
+  const panel = h.document.getElementById("atendeai-recovery-report-fallback");
+  assert.equal(panel.getAttribute("data-mode"), "list");
+  assert.equal(panel.style.left, "852px");
+  assert.equal(panel.style.top, "472px");
+
+  await Promise.all(buttonByText(panel, "Ver conversa").click());
+  assert.equal(panel.getAttribute("data-mode"), "detail");
+  assert.equal(panel.getBoundingClientRect().width, 540);
+  assert.equal(panel.getBoundingClientRect().height, 480);
+  assert.equal(panel.style.left, "732px");
+  assert.equal(panel.style.top, "312px");
+  assert.equal(parseFloat(panel.style.left) + 540, h.window.innerWidth - 8);
+  assert.equal(parseFloat(panel.style.top) + 480, h.window.innerHeight - 8);
+  assert.deepEqual(h.store[PANEL_POSITION_KEY], { x: 732, y: 312 });
+
+  await Promise.all(collect(panel).find((node) => node.getAttribute("aria-label") === "Voltar").click());
+  assert.equal(panel.getAttribute("data-mode"), "list");
+  assert.equal(panel.getBoundingClientRect().width, 420);
+  assert.equal(panel.style.left, "732px");
+  assert.equal(panel.style.top, "312px");
+  assert.ok(parseFloat(panel.style.left) + 420 <= h.window.innerWidth - 8);
+  assert.ok(parseFloat(panel.style.top) + 320 <= h.window.innerHeight - 8);
+  assert.deepEqual(h.store[PANEL_POSITION_KEY], { x: 732, y: 312 });
+});
+
+test("viewport estreito mede o detalhe com calc(100vw - 32px)", async () => {
+  const h = loadRecoveryModule();
+  h.window.innerWidth = 480;
+  h.window.innerHeight = 700;
+  await h.module.__test.persistSnapshot({
+    sourceId: "data-chat-id:gabriel",
+    displayName: "Gabriel",
+    transcript: "Gabriel: oi",
+    summaryObservation: "",
+    privateNote: ""
+  }, h.now());
+  h.store[PANEL_POSITION_KEY] = { x: 52, y: 40 };
+  measurePanelOnCreate(h.document, h.window, { list: 320, detail: 320 });
+  await h.module.openPreservedBuffers();
+  const panel = h.document.getElementById("atendeai-recovery-report-fallback");
+  assert.equal(panel.getAttribute("data-mode"), "list");
+  assert.equal(panel.style.left, "52px");
+  assert.equal(panel.getBoundingClientRect().width, 420);
+
+  await Promise.all(buttonByText(panel, "Ver conversa").click());
+  const detailWidth = h.window.innerWidth - 32;
+  assert.equal(panel.getAttribute("data-mode"), "detail");
+  assert.equal(panel.getBoundingClientRect().width, detailWidth);
+  assert.equal(panel.style.left, "24px");
+  assert.equal(panel.style.top, "40px");
+  assert.equal(parseFloat(panel.style.left) + detailWidth, h.window.innerWidth - 8);
+  assert.deepEqual(h.store[PANEL_POSITION_KEY], { x: 24, y: 40 });
+
+  await Promise.all(collect(panel).find((node) => node.getAttribute("aria-label") === "Voltar").click());
+  assert.equal(panel.getAttribute("data-mode"), "list");
+  assert.equal(panel.getBoundingClientRect().width, 420);
+  assert.equal(panel.style.left, "24px");
+  assert.equal(panel.style.top, "40px");
+  assert.ok(parseFloat(panel.style.left) + 420 <= h.window.innerWidth - 8);
+  assert.deepEqual(h.store[PANEL_POSITION_KEY], { x: 24, y: 40 });
 });
 
 test("transcript uniforme separa autores e linha ambigua permanece fiel", () => {

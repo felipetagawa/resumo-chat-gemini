@@ -794,6 +794,14 @@ const RecoveryBufferModule = (() => {
     void persistPanelPosition(next);
   }
 
+  function reclampPanelAfterMode(panel) {
+    if (!panel) return;
+    if (!Number.isFinite(parseFloat(panel.style.left)) || !Number.isFinite(parseFloat(panel.style.top))) return;
+    const origin = currentPanelOrigin(panel);
+    const next = applyPanelPosition(panel, origin);
+    if (next.x !== origin.x || next.y !== origin.y) void persistPanelPosition(next);
+  }
+
   function ensureViewportClamp() {
     if (viewportClampBound) return;
     viewportClampBound = true;
@@ -1001,15 +1009,16 @@ const RecoveryBufferModule = (() => {
       body.appendChild(createElement("div", "recovery-buffer-empty", shell.readFailed
         ? "Não foi possível ler as conversas preservadas."
         : "Nenhuma conversa preservada."));
-      return;
+    } else {
+      const list = createElement("div", "recovery-buffer-list");
+      buffers.forEach((buffer, index) => {
+        list.appendChild(renderBufferItem(buffer, shell.now, shell.setStatus, index, (item, input) => {
+          return openConversation(item, input, shell.setStatus);
+        }));
+      });
+      body.appendChild(list);
     }
-    const list = createElement("div", "recovery-buffer-list");
-    buffers.forEach((buffer, index) => {
-      list.appendChild(renderBufferItem(buffer, shell.now, shell.setStatus, index, (item, input) => {
-        return openConversation(item, input, shell.setStatus);
-      }));
-    });
-    body.appendChild(list);
+    reclampPanelAfterMode(panel);
   }
 
   function renderDetail(buffer) {
@@ -1047,6 +1056,7 @@ const RecoveryBufferModule = (() => {
     actions.appendChild(generateButton);
     footer.appendChild(actions);
     body.appendChild(footer);
+    reclampPanelAfterMode(panel);
   }
 
   function refreshList() {
