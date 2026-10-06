@@ -81,3 +81,143 @@ test("retorna vazio quando texto não possui seção de problema", () => {
     ""
   );
 });
+
+const ieCandidates = [
+  { id: "incorreta", label: "IE incorreta" },
+  { id: "ausente", label: "IE ausente" },
+  { id: "invalida", label: "IE inválida" },
+  { id: "nao-informada", label: "REJEIÇÃO 232: IE DO DESTINATÁRIO NÃO INFORMADA" },
+  { id: "nao-habilitada", label: "IE não habilitada" }
+];
+
+test('R1. "IE não informada" prioriza label com "não informada" sobre "IE incorreta"', () => {
+  const result = api.prefilterCandidates(
+    ieCandidates,
+    "IE do destinatário não foi informada",
+    5
+  );
+  assert.equal(result[0].id, "nao-informada");
+});
+
+test('R2. "IE incorreta" prioriza "IE incorreta"', () => {
+  const result = api.prefilterCandidates(ieCandidates, "IE incorreta", 5);
+  assert.equal(result[0].id, "incorreta");
+});
+
+test('R3. token genérico "IE" tem peso inferior a termo discriminativo', () => {
+  const ranked = api.rankCandidates(ieCandidates, "IE ausente");
+  const genericIe = ranked.find((item) => item.candidate.id === "invalida");
+  const discriminative = ranked.find((item) => item.candidate.id === "ausente");
+  assert.ok(discriminative.lexicalScore > genericIe.lexicalScore);
+  assert.equal(ranked[0].candidate.id, "ausente");
+});
+
+test("R4. bigram discriminativo pesa mais que unigram genérico", () => {
+  const ranked = api.rankCandidates(ieCandidates, "IE não informada");
+  const byId = Object.fromEntries(ranked.map((item) => [item.candidate.id, item]));
+  assert.ok(byId["nao-informada"].lexicalScore > byId.incorreta.lexicalScore);
+  assert.ok(
+    (byId["nao-informada"].bigramScore || 0) > (byId.incorreta.tokenScore || 0)
+  );
+});
+
+test("R5. rejeição 232 mantém prioridade máxima", () => {
+  const candidates = [
+    { id: "noise-1", label: "IE do destinatário não informada no cadastro auxiliar" },
+    { id: "232", label: "REJEIÇÃO 232: IE DO DESTINATÁRIO NÃO INFORMADA" },
+    { id: "noise-2", label: "IE destinatário não informada em outro fluxo" }
+  ];
+  const result = api.prefilterCandidates(
+    candidates,
+    "Cliente recebeu rejeição 232 e a IE do destinatário não foi informada",
+    3
+  );
+  assert.equal(result[0].id, "232");
+});
+
+test("R6. memória confirmada melhora ranking em empate/ambiguidade", () => {
+  const memory = {
+    version: 1,
+    docs: {
+      ausente: {
+        updatedAt: Date.now(),
+        confirmations: 6,
+        positiveFeatures: { ausente: 5, ie: 2 },
+        negativeFeatures: {}
+      }
+    }
+  };
+  const tied = [
+    { id: "incorreta", label: "IE do destinatário" },
+    { id: "ausente", label: "IE do destinatário" }
+  ];
+  const withoutMemory = api.prefilterCandidates(tied, "problema na IE do destinatário", 2);
+  const withMemory = api.prefilterCandidates(tied, "problema na IE do destinatário", {
+    limit: 2,
+    memory
+  });
+  assert.equal(withoutMemory[0].id, "incorreta");
+  assert.equal(withMemory[0].id, "ausente");
+});
+
+test("R7. memória fraca não sobrepõe código explícito", () => {
+  const memory = {
+    version: 1,
+    docs: {
+      ausente: {
+        updatedAt: Date.now(),
+        confirmations: 2,
+        positiveFeatures: { ie: 2, ausente: 2 },
+        negativeFeatures: {}
+      }
+    }
+  };
+  const candidates = [
+    { id: "ausente", label: "IE ausente" },
+    { id: "232", label: "REJEIÇÃO 232: IE DO DESTINATÁRIO NÃO INFORMADA" }
+  ];
+  const result = api.prefilterCandidates(
+    candidates,
+    "Cliente recebeu rejeição 232",
+    { limit: 2, memory }
+  );
+  assert.equal(result[0].id, "232");
+});
+
+test("R8. sem evidência forte mantém fallback amplo de candidatos", () => {
+  const candidates = Array.from({ length: 808 }, (_, i) => ({
+    id: String(i + 1),
+    label: `Documentação fiscal ${i + 1}`
+  }));
+  const result = api.prefilterCandidates(candidates, "erro fiscal");
+  assert.equal(result.length, 200);
+});
+
+test("R9. evidência forte reduz candidatos para top 40", () => {
+  const candidates = [
+    { id: "232", label: "REJEIÇÃO 232: IE DO DESTINATÁRIO NÃO INFORMADA" },
+    ...Array.from({ length: 80 }, (_, i) => ({
+      id: `other-${i}`,
+      label: `Documentação fiscal ${i + 1}`
+    }))
+  ];
+  const result = api.prefilterCandidates(
+    candidates,
+    "Cliente recebeu rejeição 232 e a IE do destinatário não foi informada"
+  );
+  assert.equal(result.length, 40);
+  assert.equal(result[0].id, "232");
+});
+
+test("R10. candidato de código explícito nunca é removido pelo corte", () => {
+  const ranked = Array.from({ length: 45 }, (_, i) => ({
+    candidate: { id: String(i), label: `Doc ${i}` },
+    score: 45 - i,
+    lexicalScore: 45 - i,
+    codeHits: i === 44 ? 1 : 0,
+    index: i
+  }));
+  const result = api.takeCandidatesForJev(ranked, { strong: true });
+  assert.ok(result.some((candidate) => candidate.id === "44"));
+  assert.ok(result.length <= 41);
+});

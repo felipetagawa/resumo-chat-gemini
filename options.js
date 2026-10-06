@@ -58,6 +58,10 @@ document.addEventListener("DOMContentLoaded", () => {
     themeLight: document.getElementById("themeLight"),
     themeSystem: document.getElementById("themeSystem"),
     supportFocusBadgesEnabled: document.getElementById("supportFocusBadgesEnabled"),
+    documentationAutofillEnabled: document.getElementById("documentationAutofillEnabled"),
+    documentationLearningEnabled: document.getElementById("documentationLearningEnabled"),
+    documentationLearningCount: document.getElementById("documentationLearningCount"),
+    clearDocumentationLearning: document.getElementById("clearDocumentationLearning"),
     leaderPasswordWrap: document.getElementById("leaderPasswordWrap"),
     leaderPasswordInput: document.getElementById("leaderPasswordInput"),
     leaderFilterName: document.getElementById("leaderFilterName"),
@@ -1734,6 +1738,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const THEME_KEY = "atendeai_theme";
   const BADGES_KEY = "atendeai_support_focus_badges_enabled";
+  const DOC_AUTOFILL_KEY = "atendeai_documentation_autofill_enabled";
+  const DOC_LEARNING_ENABLED_KEY = "atendeai_documentation_learning_enabled";
+  const DOC_LEARNING_KEY = "atendeai_documentation_learning_v1";
 
   async function initAppearanceSettings() {
     const radios = [el.themeDark, el.themeLight, el.themeSystem].filter(Boolean);
@@ -1758,6 +1765,35 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function renderDocumentationLearningCount(memory) {
+    if (!el.documentationLearningCount) return;
+    const total = Object.keys(memory?.docs || {}).length;
+    el.documentationLearningCount.textContent = `Aprendizado local\n${total} documentações aprendidas`;
+  }
+
+  async function initDocumentationSettings() {
+    if (!el.documentationAutofillEnabled || !el.documentationLearningEnabled) return;
+
+    const data = await storageGet([DOC_AUTOFILL_KEY, DOC_LEARNING_ENABLED_KEY, DOC_LEARNING_KEY]);
+    el.documentationAutofillEnabled.checked = data[DOC_AUTOFILL_KEY] !== false;
+    el.documentationLearningEnabled.checked = data[DOC_LEARNING_ENABLED_KEY] !== false;
+    renderDocumentationLearningCount(data[DOC_LEARNING_KEY]);
+
+    el.documentationAutofillEnabled.addEventListener("change", async () => {
+      await storageSet({ [DOC_AUTOFILL_KEY]: el.documentationAutofillEnabled.checked });
+    });
+
+    el.documentationLearningEnabled.addEventListener("change", async () => {
+      await storageSet({ [DOC_LEARNING_ENABLED_KEY]: el.documentationLearningEnabled.checked });
+    });
+
+    el.clearDocumentationLearning?.addEventListener("click", async () => {
+      if (!confirm("Remover o aprendizado local de documentações?")) return;
+      await storageRemove(DOC_LEARNING_KEY);
+      renderDocumentationLearningCount({ docs: {} });
+    });
+  }
+
   async function initApp() {
     updateVersionDisplay();
 
@@ -1771,6 +1807,7 @@ document.addEventListener("DOMContentLoaded", () => {
     applyPreAtendimentoMessagesUI();
     await initAppearanceSettings();
     await initSupportFocusBadgesSetting();
+    await initDocumentationSettings();
 
     const name = await loadUserName();
     setNameUI(name);
