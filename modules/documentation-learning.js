@@ -70,6 +70,30 @@ const DocumentationLearningModule = (() => {
     return new RegExp(`(^|\\s)${code}(\\s|$)`).test(text);
   }
 
+  function tokenize(value) {
+    const normalized = normalizeText(value);
+    return normalized ? normalized.split(" ") : [];
+  }
+
+  function containsTerm(haystack, term) {
+    const hayTokens = tokenize(haystack);
+    const termTokens = tokenize(term);
+    if (!termTokens.length || hayTokens.length < termTokens.length) return false;
+
+    for (let i = 0; i <= hayTokens.length - termTokens.length; i++) {
+      let matched = true;
+      for (let j = 0; j < termTokens.length; j++) {
+        if (hayTokens[i + j] !== termTokens[j]) {
+          matched = false;
+          break;
+        }
+      }
+      if (matched) return true;
+    }
+
+    return false;
+  }
+
   function extractSafeFeatures(context, label) {
     const features = {};
     const normalizedContext = normalizeText(context);
@@ -89,12 +113,12 @@ const DocumentationLearningModule = (() => {
 
     for (const token of labelTokens) {
       if (/^\d+$/.test(token)) continue;
-      if (normalizedContext.includes(token)) features[token] = 1;
+      if (containsTerm(normalizedContext, token)) features[token] = 1;
     }
 
     for (let i = 0; i < labelTokens.length - 1; i++) {
       const bigram = `${labelTokens[i]} ${labelTokens[i + 1]}`;
-      if (normalizedContext.includes(bigram)) features[bigram] = 1;
+      if (containsTerm(normalizedContext, bigram)) features[bigram] = 1;
     }
 
     return features;
@@ -235,10 +259,15 @@ const DocumentationLearningModule = (() => {
     return Object.keys(memory.docs || {}).length;
   }
 
+  function hasFeatureMatch(features, haystack) {
+    return Object.keys(features || {}).some((feature) => containsTerm(haystack, feature));
+  }
+
   function featureBoost(features, haystack, weight) {
     let boost = 0;
     for (const [feature, count] of Object.entries(features || {})) {
-      if (haystack.includes(feature)) boost += Math.min(Number(count) || 0, 8) * weight;
+      if (!containsTerm(haystack, feature)) continue;
+      boost += Math.min(Number(count) || 0, 8) * weight;
     }
     return boost;
   }
@@ -246,7 +275,14 @@ const DocumentationLearningModule = (() => {
   function memoryBoostFor(doc, normalizedContext) {
     if (!doc) return 0;
     const haystack = String(normalizedContext || "");
-    const boost = Math.min(Number(doc.confirmations) || 0, 8) * 4
+    const matchedPositive = hasFeatureMatch(doc.positiveFeatures, haystack);
+    const matchedNegative = hasFeatureMatch(doc.negativeFeatures, haystack);
+    if (!matchedPositive && !matchedNegative) return 0;
+
+    const confirmationMod = matchedPositive
+      ? Math.min(Number(doc.confirmations) || 0, 8)
+      : 0;
+    const boost = confirmationMod
       + featureBoost(doc.positiveFeatures, haystack, 2)
       + featureBoost(doc.negativeFeatures, haystack, -1);
     return Math.max(-15, Math.min(45, boost));
@@ -267,6 +303,7 @@ const DocumentationLearningModule = (() => {
     recordCorrection,
     shouldLearnFromSelection,
     extractSafeFeatures,
+    containsTerm,
     clearLearning,
     countDocs,
     memoryBoostFor

@@ -8,9 +8,20 @@
   const STATUS_ATTR = "data-atendeai-documentation-bridge";
   const SELECT_ID_ATTR = "data-atendeai-documentation-select-id";
   const SELECT_LABEL_ATTR = "data-atendeai-documentation-select-label";
+  const SELECT_CONFIRM_TIMEOUT_MS = 450;
+  const SELECT_CONFIRM_INTERVAL_MS = 50;
+
+  let selectConfirmTimer = null;
 
   function setStatus(status) {
     document.documentElement?.setAttribute(STATUS_ATTR, status);
+  }
+
+  function clearSelectConfirmTimer() {
+    if (selectConfirmTimer != null) {
+      clearInterval(selectConfirmTimer);
+      selectConfirmTimer = null;
+    }
   }
 
   function normalize(value) {
@@ -111,6 +122,26 @@
     return Boolean(hiddenValue) && String(hiddenValue) === String(id);
   }
 
+  function confirmSelectionWhenReady(widget, id, label) {
+    if (confirmSelection(widget, id, label)) {
+      setStatus("selected");
+      return;
+    }
+
+    const startedAt = Date.now();
+    selectConfirmTimer = setInterval(() => {
+      if (confirmSelection(widget, id, label)) {
+        clearSelectConfirmTimer();
+        setStatus("selected");
+        return;
+      }
+      if (Date.now() - startedAt >= SELECT_CONFIRM_TIMEOUT_MS) {
+        clearSelectConfirmTimer();
+        setStatus("select-failed");
+      }
+    }, SELECT_CONFIRM_INTERVAL_MS);
+  }
+
   function readSelectPayload(event) {
     const detail = event?.detail || {};
     const root = document.documentElement;
@@ -122,6 +153,8 @@
 
   function selectDocumentation(id, label) {
     try {
+      clearSelectConfirmTimer();
+
       const widget = findWidget();
       if (!widget) {
         setStatus("widget-not-found");
@@ -146,12 +179,9 @@
         return;
       }
 
-      if (confirmSelection(widget, id, label)) {
-        setStatus("selected");
-      } else {
-        setStatus("select-failed");
-      }
+      confirmSelectionWhenReady(widget, id, label);
     } catch (error) {
+      clearSelectConfirmTimer();
       console.warn("AtendeAI: falha ao selecionar documentação PrimeFaces.", error);
       setStatus("select-failed");
     }

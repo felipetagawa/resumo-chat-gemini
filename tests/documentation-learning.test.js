@@ -263,3 +263,44 @@ test("L13. Limpar aprendizado remove apenas learning storage", async () => {
   assert.equal(store[LEARNING_ENABLED_KEY], true);
   assert.equal(store[THEME_KEY], "dark");
 });
+
+test('M1. "cliente" NÃO faz match com feature "ie"', () => {
+  const { module } = loadLearning();
+  assert.equal(module.containsTerm("cliente com erro", "ie"), false);
+  const features = module.extractSafeFeatures("cliente com erro", "IE ausente");
+  assert.equal(features.ie, undefined);
+});
+
+test('M2. "problema na IE" faz match com feature "ie"', () => {
+  const { module } = loadLearning();
+  assert.equal(module.containsTerm("problema na ie", "ie"), true);
+  assert.equal(module.containsTerm("problema na IE", "ie"), true);
+});
+
+test('M3. bigram "nao informada" exige sequência/token boundary', () => {
+  const { module } = loadLearning();
+  assert.equal(module.containsTerm("ie do destinatario nao informada", "nao informada"), true);
+  assert.equal(module.containsTerm("informada incorretamente", "nao informada"), false);
+});
+
+test("M4. 20 confirmações sem feature matching => memoryBoost 0", () => {
+  const { module } = loadLearning();
+  const doc = {
+    updatedAt: Date.now(),
+    confirmations: 20,
+    positiveFeatures: { ie: 8, ausente: 8 },
+    negativeFeatures: {}
+  };
+  assert.equal(module.memoryBoostFor(doc, "como ajustar estoque manualmente"), 0);
+});
+
+test("M5. confirmações + feature matching => boost contextual > 0", () => {
+  const { module } = loadLearning();
+  const doc = {
+    updatedAt: Date.now(),
+    confirmations: 20,
+    positiveFeatures: { ie: 8, ausente: 8 },
+    negativeFeatures: {}
+  };
+  assert.ok(module.memoryBoostFor(doc, "IE ausente no destinatário") > 0);
+});

@@ -1,6 +1,7 @@
 const DocumentationSuggestionModule = (() => {
   const DOCUMENTATION_INPUT_ID = "frmAtendimento:tbvAtendimento:documentacao_input";
   const DOCUMENTATION_PANEL_ID = "frmAtendimento:tbvAtendimento:documentacao_panel";
+  const DOCUMENTATION_HIDDEN_ID = "frmAtendimento:tbvAtendimento:documentacao_hinput";
   const UI_ID = "atendeai-documentation-suggestion";
   const MAX_JEV_CANDIDATES = 200;
   const STRONG_JEV_CANDIDATES = 40;
@@ -9,6 +10,8 @@ const DocumentationSuggestionModule = (() => {
   const LOAD_TIMEOUT_MS = 3500;
   const MIN_LOAD_MS = 500;
   const STABLE_WINDOW_MS = 700;
+  const SELECT_CONFIRM_TIMEOUT_MS = 500;
+  const SELECT_CONFIRM_POLL_MS = 25;
   const AUTOFILL_KEY = "atendeai_documentation_autofill_enabled";
   const LEARNING_ENABLED_KEY = "atendeai_documentation_learning_enabled";
 
@@ -164,6 +167,32 @@ const DocumentationSuggestionModule = (() => {
     return new RegExp(`(^|\\s)${code}(\\s|$)`).test(text);
   }
 
+  function containsTerm(haystack, term) {
+    const learning = window.DocumentationLearningModule;
+    if (learning?.containsTerm) return learning.containsTerm(haystack, term);
+
+    const hayTokens = normalizeText(haystack).split(" ").filter(Boolean);
+    const termTokens = normalizeText(term).split(" ").filter(Boolean);
+    if (!termTokens.length || hayTokens.length < termTokens.length) return false;
+
+    for (let i = 0; i <= hayTokens.length - termTokens.length; i++) {
+      let matched = true;
+      for (let j = 0; j < termTokens.length; j++) {
+        if (hayTokens[i + j] !== termTokens[j]) {
+          matched = false;
+          break;
+        }
+      }
+      if (matched) return true;
+    }
+
+    return false;
+  }
+
+  function hasFeatureMatch(features, haystack) {
+    return Object.keys(features || {}).some((feature) => containsTerm(haystack, feature));
+  }
+
   function labelTerms(label) {
     const tokens = rankingTokens(label);
     const terms = new Set(tokens);
@@ -187,7 +216,8 @@ const DocumentationSuggestionModule = (() => {
   function featureBoost(features, haystack, weight) {
     let boost = 0;
     for (const [feature, count] of Object.entries(features || {})) {
-      if (haystack.includes(feature)) boost += Math.min(Number(count) || 0, 8) * weight;
+      if (!containsTerm(haystack, feature)) continue;
+      boost += Math.min(Number(count) || 0, 8) * weight;
     }
     return boost;
   }
@@ -196,9 +226,17 @@ const DocumentationSuggestionModule = (() => {
     const learning = window.DocumentationLearningModule;
     if (learning?.memoryBoostFor) return learning.memoryBoostFor(doc, normalizedContext);
     if (!doc) return 0;
-    const boost = Math.min(Number(doc.confirmations) || 0, 8) * 4
-      + featureBoost(doc.positiveFeatures, normalizedContext, 2)
-      + featureBoost(doc.negativeFeatures, normalizedContext, -1);
+    const haystack = String(normalizedContext || "");
+    const matchedPositive = hasFeatureMatch(doc.positiveFeatures, haystack);
+    const matchedNegative = hasFeatureMatch(doc.negativeFeatures, haystack);
+    if (!matchedPositive && !matchedNegative) return 0;
+
+    const confirmationMod = matchedPositive
+      ? Math.min(Number(doc.confirmations) || 0, 8)
+      : 0;
+    const boost = confirmationMod
+      + featureBoost(doc.positiveFeatures, haystack, 2)
+      + featureBoost(doc.negativeFeatures, haystack, -1);
     return Math.max(-15, Math.min(MAX_MEMORY_BOOST, boost));
   }
 
@@ -278,7 +316,11 @@ const DocumentationSuggestionModule = (() => {
    * Explicit-code matches are never dropped by the cut.
    */
   function hasStrongRankingEvidence(ranked, codes) {
-    if (Array.isArray(codes) && codes.length > 0) return true;
+    const hasMatchingExplicitCode = Array.isArray(codes)
+      && codes.length > 0
+      && Array.isArray(ranked)
+      && ranked.some((item) => (item.codeHits || 0) > 0);
+    if (hasMatchingExplicitCode) return true;
     const top = ranked[0];
     if (!top) return false;
     if (top.lexicalScore >= STRONG_LEXICAL_THRESHOLD) return true;
@@ -412,6 +454,29 @@ const DocumentationSuggestionModule = (() => {
     return readBridgeStatus();
   }
 
+  function isTerminalSelectStatus(status) {
+    return status === "selected"
+      || status === "select-failed"
+      || status === "candidate-not-found"
+      || status === "widget-not-found";
+  }
+
+  async function waitForBridgeSelectStatus() {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < SELECT_CONFIRM_TIMEOUT_MS) {
+      const status = readBridgeStatus();
+      if (isTerminalSelectStatus(status)) return status;
+      await delay(SELECT_CONFIRM_POLL_MS);
+    }
+    return readBridgeStatus();
+  }
+
+  async function dispatchSelectAndWait(id, label) {
+    const status = dispatchSelect(id, label);
+    if (status !== "selecting") return status;
+    return waitForBridgeSelectStatus();
+  }
+
   function panelHasCandidate(id) {
     const panel = document.getElementById(DOCUMENTATION_PANEL_ID);
     if (!panel) return false;
@@ -420,15 +485,32 @@ const DocumentationSuggestionModule = (() => {
     );
   }
 
+  function selectionMatches(id, label) {
+    const input = document.getElementById(DOCUMENTATION_INPUT_ID);
+    if (normalizeText(input?.value) !== normalizeText(label)) return false;
+    const hidden = document.getElementById(DOCUMENTATION_HIDDEN_ID);
+    const hiddenValue = String(hidden?.value || "").trim();
+    return Boolean(hiddenValue) && hiddenValue === String(id);
+  }
+
+  async function waitForSelectionConfirmed(id, label) {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < SELECT_CONFIRM_TIMEOUT_MS) {
+      if (selectionMatches(id, label)) return true;
+      await delay(SELECT_CONFIRM_POLL_MS);
+    }
+    return selectionMatches(id, label);
+  }
+
   async function selectDocumentation(id, label) {
-    let status = dispatchSelect(id, label);
+    let status = await dispatchSelectAndWait(id, label);
     if (status === "selected") return true;
 
     if (status === "candidate-not-found" || !panelHasCandidate(id)) {
       try {
         cache.delete(location.pathname);
         await loadCandidatesSilently();
-        status = dispatchSelect(id, label);
+        status = await dispatchSelectAndWait(id, label);
       } catch (_) {
         return false;
       }
@@ -471,6 +553,7 @@ const DocumentationSuggestionModule = (() => {
     if (!panel || !learning) return;
 
     let lastSelectedId = lastConfirmedId;
+    let pendingSeq = 0;
     const labels = labelsById instanceof Map ? labelsById : new Map();
 
     const onClick = (event) => {
@@ -483,22 +566,30 @@ const DocumentationSuggestionModule = (() => {
       if (!id) return;
       if (label) labels.set(id, label);
 
-      if (lastSelectedId && id !== lastSelectedId) {
-        learning.recordCorrection({
-          previousId: lastSelectedId,
-          previousLabel: labels.get(lastSelectedId) || "",
-          selectedId: id,
-          selectedLabel: label,
-          context
-        });
-        lastSelectedId = id;
-        return;
-      }
+      const previousId = lastSelectedId;
+      const seq = ++pendingSeq;
+      void (async () => {
+        const confirmed = await waitForSelectionConfirmed(id, label);
+        if (seq !== pendingSeq) return;
+        if (!confirmed) return;
 
-      if (suggestionIds.includes(id) && id !== lastSelectedId) {
-        learning.recordPositive({ docId: id, label, context });
-        lastSelectedId = id;
-      }
+        if (previousId && id !== previousId) {
+          await learning.recordCorrection({
+            previousId,
+            previousLabel: labels.get(previousId) || "",
+            selectedId: id,
+            selectedLabel: label,
+            context
+          });
+          lastSelectedId = id;
+          return;
+        }
+
+        if (suggestionIds.includes(id) && id !== previousId) {
+          await learning.recordPositive({ docId: id, label, context });
+          lastSelectedId = id;
+        }
+      })();
     };
 
     panel.addEventListener("click", onClick, true);
@@ -793,6 +884,9 @@ const DocumentationSuggestionModule = (() => {
       shouldAutofill,
       shouldLearnFromSelection,
       rememberAutofillOutcome,
+      selectDocumentation,
+      watchTrustedManualSelection,
+      containsTerm,
       MAX_JEV_CANDIDATES,
       STRONG_JEV_CANDIDATES
     }

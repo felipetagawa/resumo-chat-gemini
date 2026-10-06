@@ -221,3 +221,35 @@ test("R10. candidato de código explícito nunca é removido pelo corte", () => 
   assert.ok(result.some((candidate) => candidate.id === "44"));
   assert.ok(result.length <= 41);
 });
+
+test("M6. código explícito sem candidato correspondente => WEAK / até 200", () => {
+  const context = "erro 1234 ao cadastrar produto";
+  const candidates = Array.from({ length: 250 }, (_, i) => ({
+    id: String(i + 1),
+    label: "Ajuste de estoque manual"
+  }));
+  const ranked = api.rankCandidates(candidates, context);
+  const codes = [...api.extractExplicitCodes(context)];
+  assert.deepEqual(codes, ["1234"]);
+  assert.equal(api.hasStrongRankingEvidence(ranked, codes), false);
+  const result = api.prefilterCandidates(candidates, context);
+  assert.equal(result.length, 200);
+});
+
+test("M7. código explícito com candidato correspondente => STRONG / top 40", () => {
+  const context = "rejeição 232";
+  const candidates = [
+    { id: "232", label: "REJEIÇÃO 232: IE DO DESTINATÁRIO NÃO INFORMADA" },
+    ...Array.from({ length: 80 }, (_, i) => ({
+      id: `other-${i}`,
+      label: `Documentação fiscal ${i + 1}`
+    }))
+  ];
+  const ranked = api.rankCandidates(candidates, context);
+  const codes = api.extractExplicitCodes(context);
+  assert.equal(api.hasStrongRankingEvidence(ranked, codes), true);
+  const result = api.prefilterCandidates(candidates, context);
+  assert.equal(result.length, 40);
+  assert.equal(result[0].id, "232");
+  assert.ok(result.some((candidate) => candidate.id === "232"));
+});
