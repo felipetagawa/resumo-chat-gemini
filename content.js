@@ -39,6 +39,7 @@ function inicializarModulos() {
   PreControlModule.init();
   ObservationsModule.init();
   RecoveryBufferModule.init();
+  void globalThis.ThemeModule?.init?.();
 
   modulosInicializados = true;
 }
@@ -865,6 +866,8 @@ function criarBotoesFlutuantes(visibility, userSector) {
   container.appendChild(botaoConfiguracoes); // Sempre mostra Configurações
 
   document.body.appendChild(container);
+  globalThis.ThemeModule?.apply?.(container);
+  void globalThis.ThemeModule?.init?.()?.then?.(() => globalThis.ThemeModule.apply(container));
   void SupportFocusModule.mount(container);
   void initializeExtensionDock(container);
 }

@@ -35,8 +35,8 @@
   margin-left: 8px;
   border: 1px solid var(--ai-border-strong, #d0d5dd);
   border-radius: 6px;
-  background: #f8fafc;
-  color: #475569;
+  background: var(--ai-surface-muted, #f7f8fa);
+  color: var(--ai-text-secondary, #4b5563);
   cursor: pointer;
   font-family: "Segoe UI", system-ui, sans-serif;
   font-size: 13px;
@@ -46,27 +46,27 @@
 }
 
 .atendeai-observations-button:hover {
-  background: #eef1f5;
-  border-color: #b8c0cc;
-  color: #1e293b;
+  background: var(--ai-surface-hover, #eef1f5);
+  border-color: var(--ai-border-hover, #b8c0cc);
+  color: var(--ai-text, #1f2937);
 }
 
 .atendeai-observations-button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(47, 94, 168, 0.45);
+  box-shadow: var(--ai-focus, 0 0 0 2px #fff, 0 0 0 4px rgba(47, 94, 168, 0.45));
 }
 
 .atendeai-observations-button.has-observation {
-  background: #f8fafc;
-  border-color: #c5d4e8;
-  color: #2f5ea8;
+  background: var(--ai-surface-muted, #f7f8fa);
+  border-color: var(--ai-primary-border, #c5d4e8);
+  color: var(--ai-primary, #2f5ea8);
   box-shadow: none;
 }
 
 .atendeai-observations-button.uses-ia {
-  background: #eef3f9;
-  border-color: #c5d4e8;
-  color: #264d8c;
+  background: var(--ai-primary-soft, #eef3f9);
+  border-color: var(--ai-primary-border, #c5d4e8);
+  color: var(--ai-primary-hover, #264d8c);
   box-shadow: none;
 }
 
@@ -88,7 +88,7 @@
   display: none;
   padding: 2px 6px;
   border-radius: 999px;
-  background: #2f5ea8;
+  background: var(--ai-primary, #2f5ea8);
   color: #ffffff;
   font-size: 10px;
   font-weight: 650;
@@ -101,16 +101,16 @@
 }
 
 #btnObservacoes.has-observation {
-  background: #fffaf5;
+  background: var(--ai-warning-soft, #fffaf5);
   border-color: #f0d0b4;
-  color: #9a3412;
+  color: var(--ai-warning, #9a3412);
   box-shadow: none;
 }
 
 #btnObservacoes.uses-ia {
-  background: #eef3f9;
-  border-color: #c5d4e8;
-  color: #264d8c;
+  background: var(--ai-primary-soft, #eef3f9);
+  border-color: var(--ai-primary-border, #c5d4e8);
+  color: var(--ai-primary-hover, #264d8c);
   box-shadow: none;
 }
 
@@ -118,7 +118,7 @@
   position: fixed;
   inset: 0;
   z-index: 999998;
-  background: rgba(15, 23, 42, 0.18);
+  background: var(--ai-overlay, rgba(15, 23, 42, 0.18));
 }
 
 .atendeai-observations-drawer {
@@ -128,12 +128,12 @@
   bottom: 0;
   z-index: 999999;
   width: min(420px, 92vw);
-  background: #ffffff;
+  background: var(--ai-surface, #ffffff);
   box-shadow: -14px 0 34px rgba(15, 23, 42, 0.2);
   display: flex;
   flex-direction: column;
-  font-family: "Segoe UI", system-ui, sans-serif;
-  color: #1f2937;
+  font-family: var(--ai-font, "Segoe UI", system-ui, sans-serif);
+  color: var(--ai-text, #1f2937);
   animation: atendeaiDrawerIn 0.18s ease-out;
 }
 
@@ -148,13 +148,13 @@
   justify-content: space-between;
   gap: 12px;
   padding: 18px 18px 14px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--ai-border, #e4e7ec);
 }
 
 .atendeai-observations-title {
   font-size: 16px;
   font-weight: 650;
-  color: #1f2937;
+  color: var(--ai-text, #1f2937);
 }
 
 .atendeai-observations-client {
@@ -163,7 +163,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #6b7280;
+  color: var(--ai-text-muted, #6b7280);
   font-size: 12px;
   font-weight: 600;
 }
@@ -171,22 +171,22 @@
 .atendeai-observations-close {
   width: 32px;
   height: 32px;
-  border: 1px solid #e4e7ec;
+  border: 1px solid var(--ai-border, #e4e7ec);
   border-radius: 6px;
-  background: #f8fafc;
-  color: #334155;
+  background: var(--ai-surface-muted, #f7f8fa);
+  color: var(--ai-text-secondary, #4b5563);
   cursor: pointer;
   font-size: 20px;
   line-height: 1;
 }
 
 .atendeai-observations-close:hover {
-  background: #eef1f5;
+  background: var(--ai-surface-hover, #eef1f5);
 }
 
 .atendeai-observations-close:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(47, 94, 168, 0.45);
+  box-shadow: var(--ai-focus, 0 0 0 2px #fff, 0 0 0 4px rgba(47, 94, 168, 0.45));
 }
 
 .atendeai-observations-body {
@@ -199,7 +199,7 @@
 .atendeai-observations-section-title {
   display: block;
   margin: 0 0 8px;
-  color: #374151;
+  color: var(--ai-text-secondary, #4b5563);
   font-size: 13px;
   font-weight: 650;
 }
@@ -211,19 +211,19 @@
 .atendeai-observations-drawer textarea {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--ai-border-strong, #d0d5dd);
   border-radius: 8px;
   padding: 10px 11px;
-  color: #0f172a;
-  background: #ffffff;
-  font: 13px/1.45 "Segoe UI", system-ui, sans-serif;
+  color: var(--ai-text, #1f2937);
+  background: var(--ai-surface, #ffffff);
+  font: 13px/1.45 var(--ai-font, "Segoe UI", system-ui, sans-serif);
   resize: vertical;
 }
 
 .atendeai-observations-drawer textarea:focus {
   outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  border-color: var(--ai-primary, #2f5ea8);
+  box-shadow: 0 0 0 3px rgba(47, 94, 168, 0.18);
 }
 
 .atendeai-observations-toggle {
@@ -232,10 +232,10 @@
   gap: 8px;
   margin: 0 0 9px;
   padding: 10px 11px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--ai-border, #e4e7ec);
   border-radius: 8px;
-  background: #f8fafc;
-  color: #334155;
+  background: var(--ai-surface-muted, #f7f8fa);
+  color: var(--ai-text-secondary, #4b5563);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -244,7 +244,7 @@
 .atendeai-observations-toggle input {
   width: 16px;
   height: 16px;
-  accent-color: #4f46e5;
+  accent-color: var(--ai-primary, #2f5ea8);
 }
 
 .atendeai-observations-footer-row {
@@ -252,19 +252,19 @@
   justify-content: space-between;
   gap: 12px;
   margin-top: 10px;
-  color: #64748b;
+  color: var(--ai-text-muted, #6b7280);
   font-size: 12px;
   font-weight: 600;
 }
 
 #atendeai-observations-save-status[data-tone="pending"] {
-  color: #b45309;
+  color: var(--ai-warning, #9a3412);
 }
 
 #atendeai-observations-save-status[data-tone="success"] {
-  color: #15803d;
+  color: var(--ai-success, #17663a);
 }
 
 #atendeai-observations-save-status[data-tone="error"] {
-  color: #b91c1c;
+  color: var(--ai-danger, #b42318);
 }

@@ -349,9 +349,23 @@
             <span class="changelog-dot current" aria-hidden="true"></span>
             <div>
               <div class="changelog-meta">
-                <strong class="app-version">v1.4.7</strong>
-                <span>Melhorias</span>
+                <strong class="app-version">v1.5.1</strong>
+                <span>AtendeAI 1.5.1</span>
                 <span class="changelog-badge">Atual</span>
+              </div>
+              <div class="changelog-body">
+                Novo estado e próximo passo por atendimento; indicadores na lista do SZ;
+                Sugerir resposta como ação principal; dark mode do AtendeAI;
+                correção do travamento do Smart Reply.
+              </div>
+            </div>
+          </div>
+          <div class="changelog-item">
+            <span class="changelog-dot" aria-hidden="true"></span>
+            <div>
+              <div class="changelog-meta">
+                <strong>v1.4.7</strong>
+                <span>Melhorias</span>
               </div>
               <div class="changelog-body">Melhorias na paginação e exportação do painel Líder; ajustes na leitura de Upsell.</div>
             </div>
@@ -387,6 +401,34 @@
         </div>
         <div class="hint">Obrigatório na primeira configuração. Depois, altere clicando no seu nome acima.</div>
         <div id="nameStatus"></div>
+      </div>
+
+      <div class="card">
+        <div class="visibility-title">Aparência</div>
+        <p class="hint" style="margin-bottom:12px;">Tema das superfícies AtendeAI. O SZ permanece nativo.</p>
+        <div class="appearance-options" role="radiogroup" aria-label="Aparência">
+          <label>
+            <input type="radio" name="atendeai_theme" id="themeDark" value="dark" checked>
+            Escuro
+          </label>
+          <label>
+            <input type="radio" name="atendeai_theme" id="themeLight" value="light">
+            Claro
+          </label>
+          <label>
+            <input type="radio" name="atendeai_theme" id="themeSystem" value="system">
+            Sistema
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="visibility-title">Organização do atendimento</div>
+        <p class="hint" style="margin-bottom:12px;">Indicadores locais na lista esquerda do SZ. Não reordenam os cards.</p>
+        <label class="setting-check">
+          <input type="checkbox" id="supportFocusBadgesEnabled" checked>
+          Mostrar indicadores na lista de atendimentos do SZ
+        </label>
       </div>
 
       <div class="card">

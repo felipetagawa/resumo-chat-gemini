@@ -17,7 +17,15 @@
   white-space: nowrap;
 }
 .atendeai-focus-status { margin-top: 3px; color: var(--ai-text-secondary); }
-.atendeai-focus-next {
+.atendeai-focus-kicker {
+  margin-top: 6px;
+  font-size: var(--ai-font-size-xs);
+  font-weight: var(--ai-weight-medium);
+  letter-spacing: 0.02em;
+  color: var(--ai-text-muted);
+}
+.atendeai-focus-next,
+.atendeai-focus-next-empty {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;

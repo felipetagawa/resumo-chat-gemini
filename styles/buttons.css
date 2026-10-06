@@ -26,12 +26,12 @@
 .gemini-floating-btn:hover:not(:disabled) {
     background: var(--ai-surface-hover);
     color: var(--ai-text);
-    border-color: #b7c2d1;
+    border-color: var(--ai-border-hover);
     box-shadow: var(--ai-shadow-sm);
 }
 
 .gemini-floating-btn:active:not(:disabled) {
-    background: #e7ebf0;
+    background: var(--ai-surface-active);
 }
 
 .gemini-floating-btn .icon {
@@ -129,7 +129,7 @@
 
 .gemini-dock-handle:active {
     cursor: grabbing;
-    background: #e7ebf0;
+    background: var(--ai-surface-active);
 }
 
 .gemini-dock-size,
@@ -154,7 +154,7 @@
 
 .gemini-dock-size:active,
 .gemini-dock-toggle:active {
-    background: #e7ebf0;
+    background: var(--ai-surface-active);
 }
 
 #containerBotoesGemini[data-minimized="true"] > :not(.gemini-dock-toolbar) {
