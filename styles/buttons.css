@@ -65,7 +65,7 @@
     padding: 6px 8px 8px 18px;
     line-height: 1.5;
     border: none;
-    background: none;
+    background: #fff;
     color: #174ea6;
     font-family: Aptos, Inter, Manrope, "Segoe UI", system-ui, sans-serif;
     font-size: 12px;
@@ -79,11 +79,27 @@
 }
 
 .gemini-report-group {
+    width: 190px;
+    box-sizing: border-box;
     margin-bottom: 8px;
+    background: #fff;
+    border: 1px solid #c7d7ea;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.13);
+    overflow: hidden;
 }
 
 .gemini-report-group .gemini-floating-btn {
     margin-bottom: 0;
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid #e3eaf3;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.gemini-report-group .gemini-preserved-link {
+    width: 100%;
 }
 
 #containerBotoesGemini {
@@ -95,13 +111,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 4px 6px;
+    padding: 3px 5px;
     margin-bottom: 6px;
     border-radius: 6px;
     background: #fff;
     border: 1px solid #c7d7ea;
     box-sizing: border-box;
     width: 190px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.13);
 }
 
 .gemini-dock-handle {
@@ -111,21 +128,49 @@
     border: 0;
     background: none;
     color: #667085;
-    font-size: 20px;
-    padding: 0 8px;
+    font-size: 16px;
+    padding: 1px 4px;
 }
 
 .gemini-dock-handle:active {
     cursor: grabbing;
 }
 
-.gemini-dock-toolbar select {
+.gemini-dock-size,
+.gemini-dock-toggle {
     font: 12px "Segoe UI", sans-serif;
     color: #344054;
-    border: 1px solid #c7d7ea;
+    border: none;
     border-radius: 4px;
     background: #fff;
-    padding: 3px;
+    padding: 3px 5px;
+    cursor: pointer;
+}
+
+.gemini-dock-size:hover,
+.gemini-dock-toggle:hover {
+    background: #e8f0fe;
+}
+
+.gemini-dock-size:focus-visible,
+.gemini-dock-toggle:focus-visible,
+.gemini-dock-handle:focus-visible {
+    outline: 2px solid #174ea6;
+    outline-offset: 1px;
+}
+
+#containerBotoesGemini[data-minimized="true"] > :not(.gemini-dock-toolbar) {
+    display: none !important;
+}
+
+#containerBotoesGemini[data-minimized="true"] .gemini-dock-toolbar {
+    width: auto;
+    margin-bottom: 0;
+    gap: 4px;
+}
+
+.gemini-dock-size[hidden] {
+    display: none;
 }
 
 .gemini-preserved-link:hover {

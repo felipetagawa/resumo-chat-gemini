@@ -472,6 +472,7 @@ async function initializeExtensionDock(container) {
   });
   if (document.getElementById("containerBotoesGemini") !== container) return;
   let size = Object.hasOwn(scales, saved.size) ? saved.size : "normal";
+  let minimized = saved.minimized === true;
   let position = saved.position;
   let drag = null;
 
@@ -483,17 +484,15 @@ async function initializeExtensionDock(container) {
   handle.textContent = "⠿";
   handle.setAttribute("aria-label", "Arrastar dock");
   handle.title = "Arrastar dock";
-  const select = document.createElement("select");
-  select.setAttribute("aria-label", "Tamanho do dock");
-  for (const [value, label] of [["compact", "Compacto"], ["normal", "Normal"], ["large", "Grande"]]) {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    select.appendChild(option);
-  }
-  select.value = size;
+  const sizeButton = document.createElement("button");
+  sizeButton.type = "button";
+  sizeButton.className = "gemini-dock-size";
+  const toggleButton = document.createElement("button");
+  toggleButton.type = "button";
+  toggleButton.className = "gemini-dock-toggle";
   toolbar.appendChild(handle);
-  toolbar.appendChild(select);
+  toolbar.appendChild(sizeButton);
+  toolbar.appendChild(toggleButton);
   container.prepend(toolbar);
 
   function clampPosition(next) {
@@ -512,12 +511,21 @@ async function initializeExtensionDock(container) {
   }
 
   function persist() {
-    chrome.storage.local.set({ [key]: { position, size } }, () => {
+    chrome.storage.local.set({ [key]: { position, size, minimized } }, () => {
       if (chrome.runtime.lastError) console.error("Não foi possível salvar a posição do dock.");
     });
   }
 
   function applySize() {
+    container.setAttribute("data-minimized", String(minimized));
+    sizeButton.textContent = `${Math.round(scales[size] * 100)}%`;
+    sizeButton.setAttribute("aria-label", `Tamanho do dock: ${sizeButton.textContent}. Clique para alternar.`);
+    sizeButton.title = "Alternar tamanho: 85%, 100%, 115%";
+    sizeButton.hidden = minimized;
+    toggleButton.textContent = minimized ? "▣" : "−";
+    toggleButton.setAttribute("aria-label", minimized ? "Restaurar dock" : "Minimizar dock");
+    toggleButton.setAttribute("aria-expanded", String(!minimized));
+    toggleButton.title = minimized ? "Restaurar dock" : "Minimizar dock";
     container.style.zoom = String(scales[size]);
     container.style.maxWidth = `${Math.max(1, window.innerWidth - 16) / scales[size]}px`;
     container.style.maxHeight = `${Math.max(1, window.innerHeight - 16) / scales[size]}px`;
@@ -526,8 +534,14 @@ async function initializeExtensionDock(container) {
     clampPosition(position);
   }
 
-  select.addEventListener("change", () => {
-    size = Object.hasOwn(scales, select.value) ? select.value : "normal";
+  sizeButton.addEventListener("click", () => {
+    const sizes = ["compact", "normal", "large"];
+    size = sizes[(sizes.indexOf(size) + 1) % sizes.length];
+    applySize();
+    persist();
+  });
+  toggleButton.addEventListener("click", () => {
+    minimized = !minimized;
     applySize();
     persist();
   });

@@ -1199,17 +1199,17 @@ test('dock limita drag, posicao carregada e resize aos limites do viewport', asy
 test('tres tamanhos do dock persistem e posicao continua acessivel', async () => {
   const h = loadDock();
   await h.ready;
-  const select = h.dock.querySelector('select');
-  assert.deepEqual(select.children.map(n => n.textContent), ['Compacto', 'Normal', 'Grande']);
+  const control = h.dock.querySelector('.gemini-dock-size');
+  assert.equal(h.dock.querySelector('select'), null);
+  assert.equal(control.textContent, '100%');
   for (const [size, scale] of [['compact', '0.85'], ['normal', '1'], ['large', '1.15']]) {
-    select.value = size;
-    dispatchNode(select, 'change');
+    for (let i = 0; i < 3 && control.textContent !== `${Math.round(Number(scale) * 100)}%`; i++) dispatchNode(control, 'click');
     assert.equal(h.dock.style.zoom, scale);
     assert.equal(h.store.atendeai_dock_preferences.size, size);
     const next = loadDock(h.store);
     await next.ready;
     assert.equal(next.dock.style.zoom, scale);
-    assert.equal(next.dock.querySelector('select').value, size);
+    assert.equal(next.dock.querySelector('.gemini-dock-size').textContent, `${Math.round(Number(scale) * 100)}%`);
   }
 });
 
@@ -1245,6 +1245,8 @@ test('Gerar Relatorio do chat atual envia no primeiro clique sem abrir preservad
   assert.deepEqual(shown, [['pronto', 'CASSIA']]);
   assert.equal(opened, 0);
   assert.equal(report.disabled, false);
+  await Promise.all(preserved.click());
+  assert.equal(opened, 1);
 });
 
 test('buffers sem sourceId nao sao migrados quando o card ganha assinatura', async () => {
@@ -1287,4 +1289,26 @@ test('clique em outro controle fora do painel fecha e clique interno preserva', 
   for (const entry of clicks) entry.fn({ target: h.document.body });
   assert.equal(h.document.getElementById('atendeai-recovery-report-fallback'), null);
   assert.equal(h.document.getElementById('atendeai-recovery-overlay'), null);
+});
+
+test('dock recolhe e restaura sem perder posicao ou tamanho; estado persiste', async () => {
+  const h = loadDock({ atendeai_dock_preferences: { position: { x: 100, y: 100 }, size: 'compact' } });
+  await h.ready;
+  const toggle = h.dock.querySelector('.gemini-dock-toggle');
+  assert.ok(toggle);
+  dispatchNode(toggle, 'click');
+  assert.equal(h.dock.getAttribute('data-minimized'), 'true');
+  assert.equal(toggle.getAttribute('aria-label'), 'Restaurar dock');
+  assert.equal(h.store.atendeai_dock_preferences.minimized, true);
+  assert.equal(h.store.atendeai_dock_preferences.size, 'compact');
+  assert.deepEqual(h.store.atendeai_dock_preferences.position, { x: 100, y: 100 });
+  const next = loadDock(h.store);
+  await next.ready;
+  assert.equal(next.dock.getAttribute('data-minimized'), 'true');
+  assert.equal(next.dock.style.zoom, '0.85');
+  dispatchNode(next.dock.querySelector('.gemini-dock-toggle'), 'click');
+  assert.equal(next.dock.getAttribute('data-minimized'), 'false');
+  assert.equal(next.dock.querySelector('.gemini-dock-toggle').getAttribute('aria-label'), 'Minimizar dock');
+  assert.equal(next.store.atendeai_dock_preferences.minimized, false);
+  assert.deepEqual(next.store.atendeai_dock_preferences.position, { x: 100, y: 100 });
 });
