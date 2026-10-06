@@ -56,7 +56,8 @@ function loadObservationsModule({ storageMap = {} } = {}) {
     openDrawer,
     getPromptComplementForCurrentChat,
     getCurrentChatMeta,
-    getCurrentObservationSnapshot
+    getCurrentObservationSnapshot,
+    onCurrentObservationsReady
   };`,
     `  return {
     init,
@@ -64,6 +65,7 @@ function loadObservationsModule({ storageMap = {} } = {}) {
     getPromptComplementForCurrentChat,
     getCurrentChatMeta,
     getCurrentObservationSnapshot,
+    onCurrentObservationsReady,
     __test: {
       persistCurrentInputs,
       loadCurrentValues,

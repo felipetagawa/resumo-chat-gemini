@@ -719,6 +719,9 @@ const RecoveryBufferModule = (() => {
       observer.observe(document.body, { childList: true, subtree: true, characterData: true });
     }
 
+    if (typeof ObservationsModule !== "undefined") {
+      ObservationsModule.onCurrentObservationsReady?.(() => { void scheduleCapture(); });
+    }
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", () => {
       void flushNow();

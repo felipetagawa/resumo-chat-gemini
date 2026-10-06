@@ -16,6 +16,9 @@ const ObservationsModule = (() => {
     promptComplement: ""
   };
   let saveTimer = null;
+  let pendingSave = null;
+  let valuesReady = true;
+  const readyListeners = new Set();
   let mutationObserver = null;
   let pollTimer = null;
   let lastIdentityHash = "";
@@ -186,54 +189,65 @@ const ObservationsModule = (() => {
     status.dataset.tone = tone;
   }
 
+  function captureCurrentInputs() {
+    if (!currentChatKey || !observationsAreReady()) return null;
+    const obsInput = document.getElementById(OBS_FIELD_ID);
+    const complementInput = document.getElementById(COMPLEMENT_FIELD_ID);
+    if (!obsInput || !complementInput) return null;
+    return {
+      chatKey: currentChatKey,
+      meta: { ...currentMeta },
+      observationText: String(obsInput.value || ""),
+      promptComplement: String(complementInput.value || "")
+    };
+  }
+
   function scheduleSave() {
+    const edit = captureCurrentInputs();
+    if (!edit) return;
+    pendingSave = edit;
+    currentValues = { observationText: edit.observationText, promptComplement: edit.promptComplement };
     setStatus("Salvando...", "pending");
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      persistCurrentInputs().catch((err) => {
+      pendingSave = null;
+      return persistCurrentInputs(edit).catch((err) => {
         console.error("Observations save error:", err);
-        setStatus("Erro ao salvar", "error");
+        if (edit.chatKey === currentChatKey) setStatus("Erro ao salvar", "error");
       });
     }, SAVE_DEBOUNCE_MS);
   }
 
-  async function persistCurrentInputs() {
-    if (!currentChatKey) {
-      setStatus("Selecione um chat", "error");
-      return;
+  async function persistCurrentInputs(edit = captureCurrentInputs()) {
+    if (!edit) return;
+    const { chatKey, meta, observationText, promptComplement } = edit;
+    if (chatKey === currentChatKey && valuesReady) {
+      currentValues = { observationText, promptComplement };
     }
-
-    const obsInput = document.getElementById(OBS_FIELD_ID);
-    const complementInput = document.getElementById(COMPLEMENT_FIELD_ID);
-    if (!obsInput || !complementInput) return;
-
-    const observationText = String(obsInput.value || "");
-    const promptComplement = String(complementInput.value || "");
-
-    currentValues = { observationText, promptComplement };
 
     const map = await readStorageMap();
     const isEmpty = !observationText.trim() && !promptComplement.trim();
-
     if (isEmpty) {
-      delete map[currentChatKey];
+      delete map[chatKey];
     } else {
-      map[currentChatKey] = {
+      map[chatKey] = {
         observationText,
         promptComplement,
         updatedAt: Date.now(),
-        contactName: currentMeta.contactName || "",
-        phone: currentMeta.phone || "",
-        protocol: currentMeta.protocol || ""
+        contactName: meta.contactName || "",
+        phone: meta.phone || "",
+        protocol: meta.protocol || ""
       };
     }
-
     await writeStorageMap(map);
-    setStatus("Salvo", "success");
-    updateButtonState();
+    if (chatKey === currentChatKey && valuesReady) {
+      setStatus("Salvo", "success");
+      updateButtonState();
+    }
   }
 
   async function loadCurrentValues() {
+    const chatKey = currentChatKey;
     if (!currentChatKey) {
       currentValues = { observationText: "", promptComplement: "" };
       applyValuesToInputs();
@@ -242,7 +256,7 @@ const ObservationsModule = (() => {
     }
 
     const map = await readStorageMap();
-    const item = map[currentChatKey] || {};
+    const item = map[chatKey] || {};
     currentValues = {
       observationText: String(item.observationText || ""),
       promptComplement: String(item.promptComplement || "")
@@ -270,10 +284,25 @@ const ObservationsModule = (() => {
       const identityHash = `${chatKey}|${meta.contactName}|${meta.phone}|${meta.protocol}`;
       if (identityHash === lastIdentityHash) return;
 
+      // Invalidate before any await: no field from the previous chat is readable.
+      valuesReady = false;
+      currentValues = { observationText: "", promptComplement: "" };
+      applyValuesToInputs();
+      updateButtonState();
+      const edit = pendingSave;
+      pendingSave = null;
+      clearTimeout(saveTimer);
       currentMeta = meta;
       currentChatKey = chatKey;
       lastIdentityHash = identityHash;
+      if (edit) {
+        await persistCurrentInputs(edit).catch((err) => console.error("Observations switch save error:", err));
+      }
       await loadCurrentValues();
+      valuesReady = true;
+      // Internal callback contract: re-evaluate captures after the async load,
+      // without sharing Observations storage or adding polling.
+      readyListeners.forEach((listener) => listener());
     } finally {
       syncInProgress = false;
     }
@@ -286,7 +315,9 @@ const ObservationsModule = (() => {
 
   function closeDrawer() {
     clearTimeout(saveTimer);
-    persistCurrentInputs()
+    const edit = pendingSave || captureCurrentInputs();
+    pendingSave = null;
+    persistCurrentInputs(edit)
       .catch((err) => console.error("Observations close save error:", err))
       .finally(removeDrawerElements);
   }
@@ -367,7 +398,14 @@ const ObservationsModule = (() => {
     }, 1200);
   }
 
+  function observationsAreReady() {
+    const meta = detectChatMeta();
+    const identityHash = `${buildChatKey(meta)}|${meta.contactName}|${meta.phone}|${meta.protocol}`;
+    return valuesReady && (!lastIdentityHash || identityHash === lastIdentityHash);
+  }
+
   function getPromptComplementForCurrentChat() {
+    if (!observationsAreReady()) return "";
     const complementInput = document.getElementById(COMPLEMENT_FIELD_ID);
 
     const promptComplement = complementInput
@@ -385,10 +423,16 @@ const ObservationsModule = (() => {
   }
 
   function getCurrentObservationSnapshot() {
+    if (!observationsAreReady()) return { summaryObservation: "", privateNote: "" };
     return {
       summaryObservation: readFieldValue(COMPLEMENT_FIELD_ID, currentValues.promptComplement),
       privateNote: readFieldValue(OBS_FIELD_ID, currentValues.observationText)
     };
+  }
+
+  function onCurrentObservationsReady(listener) {
+    readyListeners.add(listener);
+    return () => readyListeners.delete(listener);
   }
 
   function getCurrentChatMeta() {
@@ -406,7 +450,8 @@ const ObservationsModule = (() => {
     openDrawer,
     getPromptComplementForCurrentChat,
     getCurrentChatMeta,
-    getCurrentObservationSnapshot
+    getCurrentObservationSnapshot,
+    onCurrentObservationsReady
   };
 })();
 

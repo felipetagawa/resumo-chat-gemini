@@ -167,7 +167,7 @@ function lines(count, prefix) {
   return Array.from({ length: count }, (_, index) => `${prefix}: mensagem ${index + 1}`).join("\n");
 }
 
-function loadRecoveryModule() {
+function loadRecoveryModule({ realObservations = false } = {}) {
   const source = fs.readFileSync(path.join(extensionRoot, "modules/recovery-buffer.js"), "utf8")
     .replace(/\r\n/g, "\n");
   const document = createDocument();
@@ -316,10 +316,31 @@ function loadRecoveryModule() {
   };
 
   vm.createContext(context);
+  let observationLoad = null;
+  if (realObservations) {
+    context.StorageHelper = {
+      get() {
+        if (observationLoad) return observationLoad;
+        return Promise.resolve({ atendeai_chat_observations: store.observations || {} });
+      },
+      async set(data) { store.observations = data.atendeai_chat_observations; }
+    };
+    const observationSource = fs.readFileSync(path.join(extensionRoot, "modules/observations.js"), "utf8")
+      .replace("    init,", "    syncChatContext, scheduleSave, init,");
+    vm.runInContext(observationSource, context);
+    context.ObservationsModule = context.window.ObservationsModule;
+    context.window.ChatCaptureModule = context.ChatCaptureModule;
+  }
   vm.runInContext(source, context, { filename: "recovery-buffer.js" });
 
   return {
     module: context.window.RecoveryBufferModule,
+    observations: context.window.ObservationsModule,
+    deferObservationLoad() {
+      let resolve;
+      observationLoad = new Promise((done) => { resolve = done; });
+      return () => { resolve({ atendeai_chat_observations: store.observations }); observationLoad = null; };
+    },
     document,
     live,
     store,
@@ -345,6 +366,7 @@ function loadRecoveryModule() {
     async flushTimers() {
       const due = timers.splice(0, timers.length);
       for (const timer of due) await timer.fn();
+      await new Promise(setImmediate);
     }
   };
 }
@@ -883,4 +905,93 @@ test("content e manifest ligam o fallback sem permissao nova", () => {
   assert.deepEqual(manifest.permissions, ["storage"]);
   assert.ok(scripts.indexOf("modules/recovery-buffer.js") > scripts.indexOf("modules/observations.js"));
   assert.ok(scripts.indexOf("modules/recovery-buffer.js") < scripts.indexOf("content.js"));
+});
+
+
+test("R1/R3: load de B nao mistura observacoes de A e notifica o buffer ao concluir", async () => {
+  const h = loadRecoveryModule({ realObservations: true });
+  h.store.observations = {
+    "contact:gabriel": { promptComplement: "OBS-A", observationText: "PRIVATE-A" },
+    "contact:maria": { promptComplement: "OBS-B", observationText: "PRIVATE-B" }
+  };
+  h.live.name = "Gabriel";
+  h.live.transcript = "Gabriel: oi";
+  await h.observations.syncChatContext();
+  h.module.init();
+  await h.flushTimers();
+  assert.equal(storedBuffers(h)[0].summaryObservation, "OBS-A");
+  assert.equal(storedBuffers(h)[0].privateNote, "PRIVATE-A");
+
+  h.live.name = "Maria";
+  h.live.transcript = "Maria: oi";
+  // Capture even before Observations' own observer has processed the DOM switch.
+  await h.module.__test.scheduleCapture();
+  await h.flushTimers();
+  assert.equal(storedBuffers(h).find((b) => b.displayName === "Maria").summaryObservation, "");
+  const finishLoad = h.deferObservationLoad();
+  const loading = h.observations.syncChatContext();
+  await h.module.__test.scheduleCapture();
+  await h.flushTimers();
+  const pendingB = storedBuffers(h).find((b) => b.displayName === "Maria");
+  assert.equal(pendingB.summaryObservation, "");
+  assert.equal(pendingB.privateNote, "");
+
+  finishLoad();
+  await loading;
+  await h.flushTimers();
+  const loadedB = storedBuffers(h).find((b) => b.displayName === "Maria");
+  assert.equal(loadedB.summaryObservation, "OBS-B");
+  assert.equal(loadedB.privateNote, "PRIVATE-B");
+  assert.deepEqual(JSON.parse(JSON.stringify(h.module.buildReportRequest(loadedB))), {
+    action: "gerarResumo", texto: "Maria: oi", promptComplement: "OBS-B"
+  });
+  assert.equal(h.sent.length, 0);
+});
+
+test("R2: debounce pendente salva valores e meta de A mesmo depois da troca para B", async () => {
+  const h = loadRecoveryModule({ realObservations: true });
+  h.store.observations = {};
+  h.live.name = "Gabriel";
+  await h.observations.syncChatContext();
+  const note = el("textarea", { id: "atendeai-observation-text" });
+  const summary = el("textarea", { id: "atendeai-prompt-complement" });
+  h.document.body.appendChild(note);
+  h.document.body.appendChild(summary);
+  note.value = "PRIVATE-A editada";
+  summary.value = "OBS-A editada";
+  h.observations.scheduleSave();
+  h.live.name = "Maria";
+  await h.observations.syncChatContext();
+  await h.flushTimers();
+  assert.ok(h.store.observations["contact:gabriel"], "a edicao deve ser salva em Gabriel");
+  assert.equal(h.store.observations["contact:gabriel"].promptComplement, "OBS-A editada");
+  assert.equal(h.store.observations["contact:gabriel"].observationText, "PRIVATE-A editada");
+  assert.equal(h.store.observations["contact:gabriel"].contactName, "Gabriel");
+  assert.equal(h.store.observations["contact:maria"], undefined);
+});
+
+
+test("R2: save ja iniciado conserva A quando o read de storage termina com B aberto", async () => {
+  const h = loadRecoveryModule({ realObservations: true });
+  h.store.observations = {};
+  h.live.name = "Gabriel";
+  await h.observations.syncChatContext();
+  const note = el("textarea", { id: "atendeai-observation-text" });
+  const summary = el("textarea", { id: "atendeai-prompt-complement" });
+  h.document.body.appendChild(note);
+  h.document.body.appendChild(summary);
+  note.value = "PRIVATE-A";
+  summary.value = "OBS-A";
+  h.observations.scheduleSave();
+  const finishRead = h.deferObservationLoad();
+  const saving = h.flushTimers();
+  h.live.name = "Maria";
+  const switching = h.observations.syncChatContext();
+  finishRead();
+  await Promise.all([saving, switching]);
+  assert.ok(h.store.observations["contact:gabriel"], "o save em andamento pertence a Gabriel");
+  assert.equal(h.store.observations["contact:gabriel"].promptComplement, "OBS-A");
+  assert.equal(h.store.observations["contact:gabriel"].contactName, "Gabriel");
+  assert.equal(h.store.observations["contact:maria"], undefined);
+  assert.equal(h.observations.getCurrentObservationSnapshot().summaryObservation, "");
 });
