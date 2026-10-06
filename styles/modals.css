@@ -1,4 +1,4 @@
-.modal-overlay {
+.atendeai-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -12,7 +12,7 @@
     animation: fadeIn 0.16s ease;
 }
 
-.modal-form-container {
+:where(.atendeai-modal-overlay) .modal-form-container {
     background: var(--ai-surface, #ffffff);
     border-radius: var(--ai-radius-lg, 12px);
     box-shadow: var(--ai-shadow-md, 0 8px 24px rgba(16, 24, 40, 0.12));
@@ -25,7 +25,7 @@
     font-family: var(--ai-font, "Segoe UI", system-ui, sans-serif);
 }
 
-.modal-form-header {
+:where(.atendeai-modal-overlay) .modal-form-header {
     background: var(--ai-surface-muted, #f7f8fa);
     padding: 14px 16px;
     border-bottom: 1px solid var(--ai-border, #e4e7ec);
@@ -35,13 +35,13 @@
     align-items: center;
 }
 
-.modal-form-title {
+:where(.atendeai-modal-overlay) .modal-form-title {
     font-size: 15px;
     font-weight: 650;
     color: var(--ai-text, #1f2937);
 }
 
-.modal-close-btn {
+:where(.atendeai-modal-overlay) .modal-close-btn {
     background: none;
     border: none;
     font-size: 20px;
@@ -57,20 +57,20 @@
     transition: background 0.15s;
 }
 
-.modal-close-btn:hover {
+:where(.atendeai-modal-overlay) .modal-close-btn:hover {
     background: var(--ai-surface-hover, #eef1f5);
     color: var(--ai-text, #1f2937);
 }
 
-.modal-form-body {
+:where(.atendeai-modal-overlay) .modal-form-body {
     padding: 16px;
 }
 
-.form-group {
+:where(.atendeai-modal-overlay) .form-group {
     margin-bottom: 14px;
 }
 
-.form-label {
+:where(.atendeai-modal-overlay) .form-label {
     display: block;
     font-size: 13px;
     font-weight: 600;
@@ -78,14 +78,12 @@
     margin-bottom: 6px;
 }
 
-.form-label.required::after {
+:where(.atendeai-modal-overlay) .form-label.required::after {
     content: ' *';
     color: var(--ai-danger, #b42318);
 }
 
-.form-input,
-.form-textarea,
-.form-select {
+:where(.atendeai-modal-overlay) :is(.form-input, .form-textarea, .form-select) {
     width: 100%;
     padding: 8px 10px;
     border: 1px solid var(--ai-border-strong, #d0d5dd);
@@ -98,29 +96,27 @@
     background: #fff;
 }
 
-.form-input:focus,
-.form-textarea:focus,
-.form-select:focus {
+:where(.atendeai-modal-overlay) :is(.form-input, .form-textarea, .form-select):focus {
     outline: none;
     border-color: var(--ai-primary, #2f5ea8);
     box-shadow: 0 0 0 3px rgba(47, 94, 168, 0.14);
 }
 
-.form-textarea {
+:where(.atendeai-modal-overlay) .form-textarea {
     min-height: 80px;
     resize: vertical;
 }
 
-.form-row {
+:where(.atendeai-modal-overlay) .form-row {
     display: flex;
     gap: 12px;
 }
 
-.form-row .form-group {
+:where(.atendeai-modal-overlay) .form-row .form-group {
     flex: 1;
 }
 
-.modal-form-footer {
+:where(.atendeai-modal-overlay) .modal-form-footer {
     padding: 12px 16px;
     border-top: 1px solid var(--ai-border, #e4e7ec);
     display: flex;
@@ -130,9 +126,7 @@
     border-radius: 0 0 12px 12px;
 }
 
-.btn-primary,
-.btn-secondary,
-.btn-danger {
+:where(.atendeai-modal-overlay) :is(.btn-primary, .btn-secondary, .btn-danger) {
     padding: 7px 14px;
     border-radius: 6px;
     font-size: 13px;
@@ -141,34 +135,34 @@
     transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
-.btn-primary {
+:where(.atendeai-modal-overlay) .btn-primary {
     background: var(--ai-primary, #2f5ea8);
     color: white;
     border: 1px solid var(--ai-primary, #2f5ea8);
 }
 
-.btn-primary:hover {
+:where(.atendeai-modal-overlay) .btn-primary:hover {
     background: var(--ai-primary-hover, #264d8c);
     box-shadow: none;
 }
 
-.btn-secondary {
+:where(.atendeai-modal-overlay) .btn-secondary {
     background: #fff;
     color: var(--ai-text, #1f2937);
     border: 1px solid var(--ai-border-strong, #d0d5dd);
 }
 
-.btn-secondary:hover {
+:where(.atendeai-modal-overlay) .btn-secondary:hover {
     background: var(--ai-surface-hover, #eef1f5);
 }
 
-.btn-danger {
+:where(.atendeai-modal-overlay) .btn-danger {
     background: var(--ai-danger-soft, #fef3f2);
     color: var(--ai-danger, #b42318);
     border: 1px solid var(--ai-danger-border, #f0c7c3);
 }
 
-.btn-danger:hover {
+:where(.atendeai-modal-overlay) .btn-danger:hover {
     background: #fce9e7;
     box-shadow: none;
 }

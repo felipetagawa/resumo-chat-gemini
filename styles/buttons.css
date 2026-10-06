@@ -255,7 +255,7 @@
     }
 }
 
-.product-classifier-result {
+:where(#containerBotoesGemini) .product-classifier-result {
     width: var(--ai-dock-width);
     box-sizing: border-box;
     margin: 0 0 6px 0;
@@ -268,11 +268,11 @@
     color: var(--ai-text);
 }
 
-.product-classifier-result[hidden] {
+:where(#containerBotoesGemini) .product-classifier-result[hidden] {
     display: none;
 }
 
-.product-classifier-title {
+:where(#containerBotoesGemini) .product-classifier-title {
     margin-bottom: 4px;
     font-size: var(--ai-font-size-xs);
     font-weight: var(--ai-weight-medium);
@@ -281,20 +281,20 @@
     color: var(--ai-text-muted);
 }
 
-.product-classifier-primary {
+:where(#containerBotoesGemini) .product-classifier-primary {
     font-size: var(--ai-font-size);
     font-weight: var(--ai-weight-bold);
     line-height: 1.35;
     color: var(--ai-text);
 }
 
-.product-classifier-list {
+:where(#containerBotoesGemini) .product-classifier-list {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.product-classifier-option {
+:where(#containerBotoesGemini) .product-classifier-option {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -303,18 +303,18 @@
     line-height: 1.3;
 }
 
-.product-classifier-option span {
+:where(#containerBotoesGemini) .product-classifier-option span {
     min-width: 0;
     flex: 1;
 }
 
-.product-classifier-option strong {
+:where(#containerBotoesGemini) .product-classifier-option strong {
     flex: 0 0 auto;
     color: var(--ai-text-secondary);
     font-weight: var(--ai-weight-medium);
 }
 
-.product-classifier-empty {
+:where(#containerBotoesGemini) .product-classifier-empty {
     font-size: var(--ai-font-size-sm);
     line-height: 1.35;
     color: var(--ai-text-muted);

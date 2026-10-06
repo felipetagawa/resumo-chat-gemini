@@ -1,4 +1,5 @@
-/* AtendeAI — design tokens (scoped to extension UI, never :root) */
+/* AtendeAI — design tokens (scoped to exclusive extension roots, never :root).
+   Isolation uses unique IDs/classes, not the mere presence of --ai-* variables. */
 #containerBotoesGemini,
 #atendeai-recovery-report-fallback,
 #atendeai-recovery-overlay,
@@ -8,12 +9,11 @@
 #geminiDicaPopup,
 #gemini-notification-toast,
 #atendeai-onboarding-overlay,
-.modal-overlay,
+#chamadoManualPopup,
+#productClassifierResult,
+.atendeai-modal-overlay,
 .atendeai-observations-drawer,
-.atendeai-observations-overlay,
-.chamado-popup,
-.gemini-dropdown-content,
-.product-classifier-result {
+.atendeai-observations-overlay {
   --ai-font: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --ai-font-size: 13px;
   --ai-font-size-sm: 12px;
@@ -67,10 +67,7 @@
   -webkit-font-smoothing: antialiased;
 }
 
-.ai-btn,
-.btn-primary,
-.btn-secondary,
-.btn-danger,
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, #chamadoManualPopup, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(.ai-btn, .btn-primary, .btn-secondary, .btn-danger),
 .recovery-buffer-generate,
 .recovery-buffer-delete,
 .smart-reply-preview button {
@@ -91,10 +88,7 @@
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.ai-btn:focus-visible,
-.btn-primary:focus-visible,
-.btn-secondary:focus-visible,
-.btn-danger:focus-visible,
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, #chamadoManualPopup, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(.ai-btn, .btn-primary, .btn-secondary, .btn-danger):focus-visible,
 .recovery-buffer-generate:focus-visible,
 .recovery-buffer-delete:focus-visible,
 .smart-reply-preview button:focus-visible,
@@ -105,17 +99,14 @@
 .gemini-dock-toggle:focus-visible,
 .gemini-dock-handle:focus-visible,
 .gemini-dropdown-item:focus-visible,
-.modal-close-btn:focus-visible,
+:where(.atendeai-modal-overlay) .modal-close-btn:focus-visible,
 .recovery-buffer-close:focus-visible,
 .smart-reply-close:focus-visible {
   outline: none;
   box-shadow: var(--ai-focus);
 }
 
-.ai-btn:disabled,
-.btn-primary:disabled,
-.btn-secondary:disabled,
-.btn-danger:disabled,
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, #chamadoManualPopup, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(.ai-btn, .btn-primary, .btn-secondary, .btn-danger):disabled,
 .recovery-buffer-generate:disabled,
 .recovery-buffer-delete:disabled,
 .smart-reply-preview button:disabled,
@@ -126,8 +117,7 @@
   transform: none;
 }
 
-.ai-btn-primary,
-.btn-primary,
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-primary, .btn-primary),
 .recovery-buffer-generate,
 .smart-reply-insert,
 .smart-reply-choice-primary {
@@ -136,8 +126,7 @@
   border: 1px solid var(--ai-primary);
 }
 
-.ai-btn-primary:hover:not(:disabled),
-.btn-primary:hover:not(:disabled),
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-primary, .btn-primary):hover:not(:disabled),
 .recovery-buffer-generate:hover:not(:disabled),
 .smart-reply-insert:hover:not(:disabled),
 .smart-reply-choice-primary:hover:not(:disabled) {
@@ -145,8 +134,7 @@
   border-color: var(--ai-primary-hover);
 }
 
-.ai-btn-primary:active:not(:disabled),
-.btn-primary:active:not(:disabled),
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-primary, .btn-primary):active:not(:disabled),
 .recovery-buffer-generate:active:not(:disabled),
 .smart-reply-insert:active:not(:disabled),
 .smart-reply-choice-primary:active:not(:disabled) {
@@ -154,8 +142,7 @@
   border-color: var(--ai-primary-active);
 }
 
-.ai-btn-secondary,
-.btn-secondary,
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-secondary, .btn-secondary),
 .smart-reply-regenerate,
 .smart-reply-choice {
   background: var(--ai-surface);
@@ -163,20 +150,18 @@
   border: 1px solid var(--ai-border-strong);
 }
 
-.ai-btn-secondary:hover:not(:disabled),
-.btn-secondary:hover:not(:disabled),
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-secondary, .btn-secondary):hover:not(:disabled),
 .smart-reply-regenerate:hover:not(:disabled),
 .smart-reply-choice:hover:not(:disabled) {
   background: var(--ai-surface-hover);
   border-color: #b8c0cc;
 }
 
-.ai-btn-secondary:active:not(:disabled),
-.btn-secondary:active:not(:disabled) {
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-secondary, .btn-secondary):active:not(:disabled) {
   background: #e7ebf0;
 }
 
-.ai-btn-ghost,
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) .ai-btn-ghost,
 .smart-reply-close,
 .recovery-buffer-close,
 .smart-reply-choice-ghost {
@@ -185,7 +170,7 @@
   border: 1px solid transparent;
 }
 
-.ai-btn-ghost:hover:not(:disabled),
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) .ai-btn-ghost:hover:not(:disabled),
 .smart-reply-close:hover:not(:disabled),
 .recovery-buffer-close:hover:not(:disabled),
 .smart-reply-choice-ghost:hover:not(:disabled) {
@@ -193,22 +178,20 @@
   color: var(--ai-text);
 }
 
-.ai-btn-danger,
-.btn-danger,
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-danger, .btn-danger),
 .recovery-buffer-delete {
   background: var(--ai-danger-soft);
   color: var(--ai-danger);
   border: 1px solid var(--ai-danger-border);
 }
 
-.ai-btn-danger:hover:not(:disabled),
-.btn-danger:hover:not(:disabled),
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-danger, .btn-danger):hover:not(:disabled),
 .recovery-buffer-delete:hover:not(:disabled) {
   background: #fce9e7;
   border-color: #e8b4af;
 }
 
-.ai-btn-danger:active:not(:disabled),
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) .ai-btn-danger:active:not(:disabled),
 .recovery-buffer-delete:active:not(:disabled) {
   background: #f8d7d3;
 }
