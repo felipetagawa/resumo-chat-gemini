@@ -1,0 +1,33 @@
+.smart-reply-preview {
+    position: fixed;
+    right: 20px;
+    bottom: 90px;
+    width: 440px;
+    max-width: calc(100vw - 40px);
+    max-height: 70vh;
+    overflow: auto;
+    box-sizing: border-box;
+    padding: 16px;
+    background: #fff;
+    color: #202124;
+    border: 1px solid #c7d7ea;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,.18);
+    z-index: 1000003;
+    font: 14px "Segoe UI", sans-serif;
+}
+.smart-reply-header { display: flex; align-items: center; justify-content: space-between; }
+.smart-reply-text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 14px 0; line-height: 1.5; }
+.smart-reply-status, .smart-reply-warning { color: #9b3300; margin: 8px 0; }
+.smart-reply-actions, .smart-reply-draft-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.smart-reply-draft-choices[hidden] { display: none; }
+.smart-reply-preview button, .smart-reply-preview select {
+    border: 1px solid #b7c9e2;
+    border-radius: 5px;
+    background: #f4f8ff;
+    color: #174ea6;
+    padding: 7px 10px;
+    cursor: pointer;
+    font: inherit;
+}
+.smart-reply-preview button:disabled { opacity: .5; cursor: default; }

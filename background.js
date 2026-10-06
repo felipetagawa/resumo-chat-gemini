@@ -180,6 +180,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request?.action === "gerarResposta") {
+    (async () => {
+      try {
+        const conversation = typeof request.conversation === "string" ? request.conversation.trim() : "";
+        const promptComplement = typeof request.promptComplement === "string" ? request.promptComplement.trim() : "";
+        if (!conversation || conversation.length > 16000 || promptComplement.length > 2000
+          || !["DIRECT", "EMPATHETIC", "DIDACTIC"].includes(request.profile)
+          || (request.regenerate != null && typeof request.regenerate !== "boolean")) {
+          safeSend({ success: false, erro: "Contexto ou perfil inválido para sugerir resposta." });
+          return;
+        }
+        const payload = { conversation, profile: request.profile, regenerate: request.regenerate === true };
+        if (promptComplement) payload.promptComplement = promptComplement;
+        const apiBaseUrl = await getApiBaseUrl();
+        const result = await apiFetchJson(`${apiBaseUrl}/api/gemini/responder`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(15000)
+        });
+        safeSend({ success: true, reply: result.reply });
+      } catch (err) {
+        safeSend({ success: false, erro: err?.name === "TimeoutError"
+          ? "A sugestão demorou para responder. Tente novamente." : err?.message || "Não foi possível sugerir uma resposta." });
+      }
+    })();
+    return true;
+  }
+
   if (request?.action === "gerarResumo") {
     (async () => {
       try {

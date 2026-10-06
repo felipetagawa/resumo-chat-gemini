@@ -176,6 +176,7 @@ function loadBackground({ fetchImpl, storageData = {} }) {
     console,
     fetch: fetchImpl,
     URL,
+    AbortSignal,
     setTimeout,
     clearTimeout,
   };
@@ -492,4 +493,35 @@ test("snapshot sem drawer usa os valores carregados do atendimento", async () =>
     summaryObservation: "observacao a",
     privateNote: "nota a"
   });
+});
+
+test('Smart Reply envia somente contrato dedicado sem privateNote, recovery ou historico', async () => {
+  let calls = 0;
+  const persisted = { history: [{ summary: 'existente' }], privateNote: 'SEGREDO', customInstructions: 'nao encaminhar' };
+  const background = loadBackground({ storageData: persisted, fetchImpl: async (url, options) => {
+    calls++;
+    assert.match(url, /\/api\/gemini\/responder$/);
+    assert.deepEqual(JSON.parse(options.body), { conversation: 'Cliente: oi', profile: 'EMPATHETIC', regenerate: true, promptComplement: 'observacao' });
+    return { ok: true, async json() { return { reply: 'Resposta' }; } };
+  } });
+  const response = await background.dispatch({ action: 'gerarResposta', conversation: 'Cliente: oi', profile: 'EMPATHETIC',
+    regenerate: true, promptComplement: 'observacao', privateNote: 'SEGREDO', buffer: persisted, prompt: 'instrucoes' });
+  assert.equal(response.success, true);
+  assert.equal(response.reply, 'Resposta');
+  assert.equal(calls, 1); assert.deepEqual(background.persisted.history, persisted.history);
+});
+
+test('Smart Reply valida localmente e propaga erro sem afetar composer', async () => {
+  let calls = 0;
+  const background = loadBackground({ fetchImpl: async () => { calls++; return { ok: false, status: 429, async json() { return { erro: 'Limite de sugestões' }; } }; } });
+  for (const request of [
+    { conversation: '', profile: 'DIRECT' },
+    { conversation: 'x'.repeat(16001), profile: 'DIRECT' },
+    { conversation: 'oi', profile: 'JEV' },
+    { conversation: 'oi', profile: 'DIRECT', promptComplement: 'x'.repeat(2001) },
+    { conversation: 'oi', profile: 'DIRECT', regenerate: 'prompt' }
+  ]) assert.equal((await background.dispatch({ action: 'gerarResposta', ...request })).success, false);
+  assert.equal(calls, 0);
+  const response = await background.dispatch({ action: 'gerarResposta', conversation: 'oi', profile: 'DIRECT' });
+  assert.match(response.erro, /Limite de sugestões/); assert.equal(calls, 1);
 });

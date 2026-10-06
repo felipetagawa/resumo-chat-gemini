@@ -31,6 +31,7 @@
       "css": [
         "styles/main.css",
         "styles/buttons.css",
+        "styles/smart-reply.css",
         "styles/modals.css",
         "styles/calendar.css",
         "styles/called.css"
@@ -51,6 +52,7 @@
         "modules/pre-controls.js",
         "modules/observations.js",
         "modules/recovery-buffer.js",
+        "modules/smart-reply.js",
         "content.js"
       ],
       "run_at": "document_end"

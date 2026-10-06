@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
     creditsDialog: document.getElementById("creditsDialog"),
     closeCredits: document.getElementById("closeCredits"),
     customInstructionsInput: document.getElementById("customInstructions"),
+    smartReplyProfile: document.getElementById("smartReplyProfile"),
     btnSalvar: document.getElementById("salvar"),
     status: document.getElementById("status"),
     historyList: document.getElementById("historyList"),
@@ -1735,7 +1736,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const name = await loadUserName();
     setNameUI(name);
 
-    const base = await storageGet(["customInstructions", "history", "chamado_manual_history", "customMessages", "versionHistory"]);
+    const base = await storageGet(["customInstructions", "history", "chamado_manual_history", "customMessages", "versionHistory", "atendeai_smart_reply_profile"]);
+    if (el.smartReplyProfile) {
+      el.smartReplyProfile.value = ["DIRECT", "EMPATHETIC", "DIDACTIC"].includes(base.atendeai_smart_reply_profile)
+        ? base.atendeai_smart_reply_profile : "DIRECT";
+      el.smartReplyProfile.addEventListener("change", async () => {
+        const profile = el.smartReplyProfile.value;
+        if (["DIRECT", "EMPATHETIC", "DIDACTIC"].includes(profile)) {
+          await storageSet({ atendeai_smart_reply_profile: profile });
+        }
+      });
+    }
 
     renderHistory(base.history || []);
     renderManualCallHistory(base.chamado_manual_history || []);

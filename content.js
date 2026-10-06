@@ -859,6 +859,13 @@ function criarBotoesFlutuantes(visibility, userSector) {
   });
 
   if (isVisible("btnConsultarDocsLoop")) dropdownContent.appendChild(itemDocs);
+  const itemSmartReply = document.createElement("button");
+  itemSmartReply.id = "btnSmartReply";
+  itemSmartReply.className = "gemini-dropdown-item";
+  itemSmartReply.type = "button";
+  itemSmartReply.textContent = "Sugerir resposta";
+  itemSmartReply.addEventListener("click", guardFeature(() => SmartReplyModule.open()));
+  dropdownContent.appendChild(itemSmartReply);
   if (isVisible("btnDica")) dropdownContent.appendChild(itemDica);
 
   containerDropdown.appendChild(botaoMain);
