@@ -22,7 +22,7 @@ class Node {
   dispatchEvent(event) { this.events.push(event.type); }
 }
 const all = n => [n, ...n.children.flatMap(all)];
-function harness(store = {}) {
+function harness(store = {}, realContext = false) {
   const body = new Node('body'), composer = new Node('textarea');
   const live = { conversation: 'Gabriel: preciso de ajuda', complement: 'verificação em andamento', name: 'Gabriel', platform: 'webchat', time: '06/10/26 08:14', explicit: '', messages: [] };
   const card = new Node();
@@ -49,13 +49,20 @@ function harness(store = {}) {
     addEventListener(k, fn) { (listeners[k] ||= []).push(fn); },
     createRange() { return { selectNodeContents() {}, collapse() {} }; }
   };
+  let sequence = 0;
   const context = { document, window: { getSelection: () => ({ removeAllRanges() {}, addRange() {} }) },
+    crypto: { randomUUID: () => `profile-${++sequence}` },
+    chrome: { runtime: {}, storage: { local: {
+      get(keys, callback) { callback(structuredClone(store)); },
+      set(data, callback) { Object.assign(store, structuredClone(data)); callback(); }
+    } } },
     getComputedStyle: () => ({ visibility: 'visible' }), HTMLTextAreaElement: Node,
     Event: class { constructor(type) { this.type = type; } },
     MutationObserver: class { constructor(fn) { this.fn = fn; observers.push(this); } observe() { this.observing = true; } disconnect() { this.disconnected = true; } },
     StorageHelper: { async get() { return store; }, async set(data) { Object.assign(store, data); } },
     ChatCaptureModule: { capturarTextoChat: () => live.conversation },
-    ObservationsModule: { getPromptComplementForCurrentChat: () => live.complement,
+    SmartReplyContextModule: { async sync() {}, getForCurrentChat: () => live.complement, onChanged: () => () => {} },
+    ObservationsModule: { getPromptComplementForCurrentChat: () => live.summary || 'SUMMARY_ONLY',
       getCurrentObservationSnapshot() { assert.fail('private-note snapshot must never be read'); } },
     RecoveryBufferModule: new Proxy({}, { get() { assert.fail('Recovery must not participate'); } }),
     MessagingHelper: { async send(payload) {
@@ -66,12 +73,19 @@ function harness(store = {}) {
     } }
   };
   vm.createContext(context);
+  vm.runInContext(fs.readFileSync('modules/smart-reply-profiles.js', 'utf8'), context);
+  vm.runInContext(fs.readFileSync('modules/smart-reply-profiles-ui.js', 'utf8'), context);
+  if (realContext) {
+    context.setTimeout = setTimeout; context.clearTimeout = clearTimeout;
+    context.RecoveryBufferModule = { getCurrentConversationIdentity: () => ({ sourceId: `chat:${live.name}|${live.time}` }) };
+    vm.runInContext(fs.readFileSync('modules/smart-reply-context.js', 'utf8'), context);
+  }
   vm.runInContext(fs.readFileSync('modules/smart-reply.js', 'utf8'), context);
   const panel = () => document.getElementById('atendeai-smart-reply');
   const button = label => all(body).find(n => n.tagName === 'button' && n.textContent === label);
   const profile = () => all(body).find(n => n.tagName === 'select');
   const status = () => all(body).filter(n => /smart-reply-(status|warning)/.test(n.className)).map(n => n.textContent).join(' ');
-  return { module: context.window.SmartReplyModule, document, live, composer, store, sent, panel, button, profile, status,
+  return { module: context.window.SmartReplyModule, context, document, live, composer, store, sent, panel, button, profile, status,
     defer() { deferred = true; }, respond() { resolveReply({ success: true, reply: 'Resposta de Gabriel' }); },
     normal() { deferred = false; },
     fail() { fail = true; }, succeed() { fail = false; },
@@ -185,11 +199,12 @@ test('contenteditable recebe apenas input; composer ausente nao altera draft', a
 
 test('configuracoes carregam e salvam somente o perfil default aceito', async () => {
   const source = fs.readFileSync('options.js', 'utf8');
-  const start = source.indexOf('    const base = await storageGet(["customInstructions"');
+  const start = source.indexOf('    const base = await storageGet(["history"');
   const end = source.indexOf('    renderHistory(base.history', start);
   const profile = new Node('select');
   const store = { atendeai_smart_reply_profile: 'EMPATHETIC', privateNote: 'segredo' };
-  const context = { el: { smartReplyProfile: profile },
+  const context = { el: { smartReplyProfile: profile }, document: { createElement: tag => new Node(tag) },
+    SmartReplyProfilesModule: harness(store).context.window.SmartReplyProfilesModule,
     storageGet: async () => store, storageSet: async data => Object.assign(store, data) };
   vm.createContext(context);
   await vm.runInContext(`(async () => { ${source.slice(start, end)} })()`, context);
@@ -357,4 +372,113 @@ test('SMART2: Mutação interna do preview continua sem loop', async () => {
   h.flushMutations();
   assert.equal(h.sent.length, 1);
   assert.equal(panel.attributeWrites.filter(([key]) => key === 'aria-busy').length, before);
+});
+
+test('summary-only observations never enter Smart Reply or invalidate freshness', async () => {
+  const h = harness(); await h.module.open(); h.live.summary = 'SUMMARY_CHANGED'; h.notify(); h.input();
+  assert.equal(h.button('Inserir').disabled, false);
+  assert.ok(!JSON.stringify(h.sent).includes('SUMMARY'));
+  h.live.complement = 'ATUALIZADO'; h.input(); assert.equal(h.button('Inserir').disabled, true);
+  await h.module.open(); assert.equal(h.sent.at(-1).promptComplement, 'ATUALIZADO');
+});
+
+test('main preview manages custom profiles and applies a new style only on explicit regeneration', async () => {
+  const h = harness({ privateNote: 'PRIVATE_ONLY', summaryObservation: 'SUMMARY_ONLY' }); await h.module.open();
+  await h.button('Perfis').emit('click');
+  const manager = all(h.document.body).find(n => n.className === 'smart-reply-profiles-panel');
+  const manageButton = label => all(manager).find(n => n.tagName === 'button' && n.textContent === label);
+  assert.equal(manager.hidden, false); assert.ok(all(manager).some(n => n.textContent === 'Regras sempre aplicadas'));
+  assert.equal(all(manager).filter(n => n.textContent === 'Duplicar e personalizar').length, 3);
+  await h.button('+ Novo perfil').emit('click');
+  const name = h.document.getElementById('atendeai-reply-profile-name'), instruction = h.document.getElementById('atendeai-reply-profile-instruction');
+  assert.equal(name.maxLength, 40); assert.equal(instruction.maxLength, 600);
+  name.value = 'Meu tom'; instruction.value = 'STYLE_CUSTOM'; await h.button('Salvar perfil').emit('click');
+  await h.button('Definir como padrão').emit('click');
+  const customRow = all(manager).find(n => n.getAttribute('data-profile-id') === h.context.window.SmartReplyProfilesModule.defaultId());
+  assert.equal(customRow.children[0].children[0].textContent, 'Meu tom');
+  assert.equal(customRow.children[0].children[1].textContent, 'Padrão');
+  assert.deepEqual(customRow.children[1].children.map(n => n.textContent), ['Definir como padrão', 'Editar', 'Excluir']);
+  assert.equal(all(manager).find(n => n.className === 'smart-reply-profiles-chip').textContent, 'Meu tom');
+  const preview = all(h.document.body).find(n => n.className === 'smart-reply-text');
+  assert.equal(preview.textContent, 'Pode informar o erro exibido?'); assert.equal(h.sent.length, 1);
+  assert.equal(h.button('Inserir').disabled, true);
+  await h.button('↻ Outra resposta').emit('click');
+  assert.equal(h.sent[1].profile, 'CUSTOM'); assert.equal(h.sent[1].styleInstruction, 'STYLE_CUSTOM');
+  assert.equal(h.sent[1].promptComplement, 'verificação em andamento');
+  assert.equal(JSON.stringify(h.sent).includes('PRIVATE_ONLY'), false); assert.equal(JSON.stringify(h.sent).includes('SUMMARY_ONLY'), false);
+  await h.button('Editar').emit('click'); h.document.getElementById('atendeai-reply-profile-instruction').value = 'STYLE_EDITED';
+  await h.button('Salvar perfil').emit('click'); assert.equal(h.button('Inserir').disabled, true);
+  assert.equal(h.sent.length, 2); await h.button('↻ Outra resposta').emit('click'); assert.equal(h.sent[2].styleInstruction, 'STYLE_EDITED');
+  await h.button('Excluir').emit('click'); assert.ok(h.button('Confirmar exclusão'));
+  await manageButton('Cancelar').emit('click'); assert.equal(h.context.window.SmartReplyProfilesModule.list().length, 4);
+  await h.button('Excluir').emit('click'); await h.button('Confirmar exclusão').emit('click');
+  assert.equal(h.profile().value, 'DIRECT'); assert.equal(h.store.atendeai_smart_reply_profile, 'DIRECT');
+  await h.button('↻ Outra resposta').emit('click'); assert.equal(h.sent.at(-1).profile, 'DIRECT'); assert.equal(Object.hasOwn(h.sent.at(-1), 'styleInstruction'), false);
+});
+
+test('real addendum edits invalidate preview immediately and next generation reads the updated value', async () => {
+  const h = harness({}, true);
+  const field = new Node('textarea'); field.id = 'atendeai-reply-addendum'; h.document.body.appendChild(field);
+  const addendum = h.context.window.SmartReplyContextModule;
+  await addendum.sync(); addendum.bind(); field.value = 'LIGAÇÃO_A'; await field.emit('input'); await addendum.flush();
+  await h.module.open(); assert.equal(h.sent[0].promptComplement, 'LIGAÇÃO_A');
+  field.value = 'ANYDESK_ATUALIZADO'; await field.emit('input');
+  assert.equal(h.button('Inserir').disabled, true); assert.match(h.status(), /Gere uma nova resposta/);
+  await h.module.open(); assert.equal(h.sent[1].promptComplement, 'ANYDESK_ATUALIZADO');
+  await addendum.flush();
+});
+
+test('main manager duplicates a builtin and cancellation never mutates the builtin', async () => {
+  const h = harness(); await h.module.open(); await h.button('Perfis').emit('click');
+  await h.button('Duplicar e personalizar').emit('click');
+  const m = h.context.window.SmartReplyProfilesModule, original = m.get('DIRECT').instruction;
+  assert.equal(m.list().length, 4); const copy = m.list().find(p => !p.builtin);
+  assert.equal(copy.instruction, original);
+  h.document.getElementById('atendeai-reply-profile-instruction').value = 'UNSAVED';
+  const manager = all(h.document.body).find(n => n.className === 'smart-reply-profiles-panel');
+  await all(manager).find(n => n.tagName === 'button' && n.textContent === 'Cancelar').emit('click');
+  assert.equal(m.get(copy.id).instruction, original); assert.equal(m.get('DIRECT').instruction, original);
+  assert.equal(h.sent.length, 1);
+});
+
+test('editing style while a request is pending cannot authorize insertion of a reply with the old style', async () => {
+  const h = harness(); await h.module.open(); const m = h.context.window.SmartReplyProfilesModule;
+  const p = await m.save({ name: 'Estilo', instruction: 'OLD_STYLE' }); await m.setDefault(p.id);
+  h.defer(); const pending = h.button('↻ Outra resposta').emit('click'); await new Promise(setImmediate);
+  await m.save({ id: p.id, name: p.name, instruction: 'NEW_STYLE' }); h.respond(); await pending;
+  assert.equal(h.sent.at(-1).styleInstruction, 'OLD_STYLE'); assert.equal(h.button('Inserir').disabled, true);
+  h.normal(); await h.button('↻ Outra resposta').emit('click'); assert.equal(h.sent.at(-1).styleInstruction, 'NEW_STYLE');
+  assert.equal(h.button('Inserir').disabled, false);
+});
+
+test('options retires the unused global prompt while preserving legacy storage', async () => {
+  const source = fs.readFileSync('options.js', 'utf8'), html = fs.readFileSync('options.html', 'utf8');
+  assert.doesNotMatch(source, /customInstructions/); assert.doesNotMatch(html, /id="customInstructions"|Prompt Personalizado/);
+  const store = { customInstructions: 'LEGACY_NO_MIGRATION' }, h = harness(store); await h.module.open();
+  assert.equal(store.customInstructions, 'LEGACY_NO_MIGRATION'); assert.equal(JSON.stringify(h.sent).includes('LEGACY'), false);
+});
+
+test('manager prioritizes create and resets scroll for reachable editor actions', async () => {
+ const h=harness();await h.module.open();const root=h.document.getElementById('atendeai-smart-reply');await h.button('Perfis').emit('click');
+ assert.equal(root.getAttribute('data-profiles-open'),'true');
+ const body=all(root).find(n=>n.className==='smart-reply-profiles-body');
+ const sections=body.children;
+ assert.deepEqual(sections.map(n=>n.getAttribute('aria-label')),['Perfil atual','Meus perfis','Perfis padrão',null]);
+ assert.equal(sections[3].children[0].textContent,'Regras sempre aplicadas');
+ const current=sections[0];
+ assert.equal(current.children[0].tagName,'h3');assert.equal(current.children[0].textContent,'Perfil atual');
+ assert.equal(current.children[1].textContent,'Direta');assert.equal(current.children[1].tagName,'span');
+ const header=sections[1].children[0];
+ assert.equal(header.children[0].textContent,'Meus perfis');assert.equal(header.children[0].tagName,'h3');
+ assert.equal(header.children[1],h.button('+ Novo perfil'));
+ assert.equal(sections[2].children.filter(n=>n.getAttribute('data-profile-id')).length,3);
+ for(const row of sections[2].children.filter(n=>n.getAttribute('data-profile-id'))){
+  assert.equal(row.children[0].tagName,'h4');assert.equal(row.children[1].tagName,'p');
+  assert.equal(row.children[2].children[0].textContent,'Duplicar e personalizar');
+ }
+ body.scrollTop=999;await h.button('+ Novo perfil').emit('click');assert.equal(body.scrollTop,0);
+ assert.equal(body.children[0].className,'smart-reply-profiles-editor');
+ assert.ok(body.contains(h.button('Salvar perfil')));assert.ok(all(body).some(n=>n.tagName==='button'&&n.textContent==='Cancelar'));
+ await h.button('Perfis').emit('click');assert.equal(root.getAttribute('data-profiles-open'),'false');
+ assert.equal(all(root).find(n=>n.className==='smart-reply-text').textContent,'Pode informar o erro exibido?');
 });

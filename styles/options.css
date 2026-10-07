@@ -1,30 +1,4 @@
-:root {
-  --ai-font: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-  --ai-bg: #f4f6f8;
-  --ai-surface: #ffffff;
-  --ai-surface-muted: #f7f8fa;
-  --ai-surface-hover: #eef1f5;
-  --ai-border: #e4e7ec;
-  --ai-border-strong: #d0d5dd;
-  --ai-text: #1f2937;
-  --ai-text-secondary: #4b5563;
-  --ai-text-muted: #6b7280;
-  --ai-primary: #2f5ea8;
-  --ai-primary-hover: #264d8c;
-  --ai-primary-soft: #eef3f9;
-  --ai-primary-border: #c5d4e8;
-  --ai-danger: #b42318;
-  --ai-danger-soft: #fef3f2;
-  --ai-danger-border: #f0c7c3;
-  --ai-success: #17663a;
-  --ai-radius-sm: 6px;
-  --ai-radius-md: 8px;
-  --ai-radius-lg: 12px;
-  --ai-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-  --ai-shadow-md: 0 8px 24px rgba(16, 24, 40, 0.10);
-  --ai-focus: 0 0 0 2px #ffffff, 0 0 0 4px rgba(47, 94, 168, 0.45);
-}
-
+/* Standalone extension page: palette comes from scoped tokens.css. */
 * { box-sizing: border-box; }
 
 body {
@@ -113,7 +87,7 @@ input:focus,
 select:focus {
   outline: none;
   border-color: var(--ai-primary);
-  box-shadow: 0 0 0 3px rgba(47, 94, 168, 0.14);
+  box-shadow: var(--ai-focus);
 }
 
 .hint {
@@ -152,7 +126,7 @@ button:disabled {
 
 .btn-primary {
   background: var(--ai-primary);
-  color: #fff;
+  color: var(--ai-on-primary);
   border-color: var(--ai-primary);
 }
 
@@ -177,7 +151,7 @@ button:disabled {
 
 .message-card.custom,
 .custom {
-  background: #f8fafc;
+  background: var(--ai-surface-muted);
   border-color: var(--ai-primary-border);
 }
 
@@ -212,8 +186,8 @@ button:disabled {
 }
 
 .btn-test-shortcut {
-  background: var(--ai-success);
-  color: white;
+  background: var(--ai-success-soft);
+  color: var(--ai-success);
   border: none;
   border-radius: var(--ai-radius-sm);
   padding: 6px 12px;
@@ -238,7 +212,7 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 .btn-copy:hover {
-  background: #e4ecf6;
+  background: var(--ai-surface-hover);
 }
 
 .btn-edit {
@@ -258,12 +232,12 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 .btn-delete:hover {
-  background: #fce9e7;
+  background: var(--ai-danger-soft-hover);
 }
 
 .btn-backup {
-  background: var(--ai-success);
-  color: #fff;
+  background: var(--ai-success-soft);
+  color: var(--ai-success);
   margin-top: 15px;
 }
 
@@ -316,7 +290,7 @@ input[type="number"]::-webkit-outer-spin-button {
 
 #limparHistorico:hover,
 #limparHistoricoManual:hover {
-  background: #fce9e7;
+  background: var(--ai-danger-soft-hover);
 }
 
 .empty-history {
@@ -364,7 +338,7 @@ input[type="number"]::-webkit-outer-spin-button {
   border: 1px solid var(--ai-border);
   border-top: none;
   border-radius: 0 0 var(--ai-radius-md) var(--ai-radius-md);
-  background: white;
+  background: var(--ai-surface);
   max-height: 0;
   overflow: hidden;
   opacity: 0;
@@ -391,7 +365,7 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 .credits-log-scroll::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: var(--ai-border-strong);
   border-radius: 999px;
 }
 
@@ -779,9 +753,9 @@ input[type="number"]::-webkit-outer-spin-button {
   font-size: 11px;
   padding: 2px 7px;
   border-radius: 999px;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
+  background: var(--ai-success-soft);
+  border: 1px solid var(--ai-border-strong);
+  color: var(--ai-success);
   font-weight: 650;
 }
 
@@ -843,7 +817,7 @@ input[type="number"]::-webkit-outer-spin-button {
   padding: 8px 10px;
   border: 1px solid var(--ai-border-strong);
   border-radius: var(--ai-radius-sm);
-  background: #fff;
+  background: var(--ai-surface);
   box-sizing: border-box;
   min-width: 0;
   margin-top: 0;
@@ -937,3 +911,7 @@ input[type="number"]::-webkit-outer-spin-button {
     grid-template-columns: 1fr;
   }
 }
+
+#atendeai-options :is(input, textarea)::placeholder { color: var(--ai-text-muted); opacity: 1; }
+#atendeai-options :is(input, textarea, select, button):disabled { color: var(--ai-text-muted); background: var(--ai-surface-muted); opacity: 1; cursor: not-allowed; }
+#atendeai-options button:focus-visible { outline: none; box-shadow: var(--ai-focus); }

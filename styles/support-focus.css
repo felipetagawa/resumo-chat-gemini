@@ -17,6 +17,25 @@
   white-space: nowrap;
 }
 .atendeai-focus-status { margin-top: 3px; color: var(--ai-text-secondary); }
+.atendeai-focus-pill {
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 100%;
+  padding: 2px 6px;
+  border: 1px solid var(--ai-border);
+  border-radius: 999px;
+  background: var(--ai-surface-muted);
+  color: var(--ai-text-muted);
+  font: var(--ai-font-size-xs)/1.25 var(--ai-font);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.atendeai-focus-status.atendeai-focus-pill {
+  cursor: default;
+  margin-top: 5px;
+  font-size: var(--ai-font-size-sm);
+}
 .atendeai-focus-kicker {
   margin-top: 6px;
   font-size: var(--ai-font-size-xs);
@@ -34,6 +53,7 @@
   margin-top: 3px;
   color: var(--ai-text-muted);
 }
+.atendeai-focus-next { color: var(--ai-text-secondary); }
 .atendeai-focus-edit,
 .atendeai-focus-button,
 .atendeai-focus-choice {
@@ -72,17 +92,29 @@
 .atendeai-focus-choice:focus-visible,
 .atendeai-focus-button:focus-visible,
 .atendeai-focus-input:focus-visible { outline: none; box-shadow: var(--ai-focus); }
-.atendeai-focus-badge {
-  display: inline-block;
-  margin-inline-start: 4px;
-  font: 12px/1 "Segoe UI", system-ui, sans-serif;
-  vertical-align: baseline;
-  color: #6b7280;
+.atendeai-focus-saved { color: var(--ai-success); font-size: var(--ai-font-size-xs); }
+.atendeai-focus-actions { flex-wrap: wrap; }
+.atendeai-focus-button:disabled, .atendeai-focus-choice:disabled { cursor: not-allowed; color: var(--ai-text-muted); }
+.atendeai-focus-edit:hover, .atendeai-focus-button:hover:not(:disabled), .atendeai-focus-choice:hover:not(:disabled) { background: var(--ai-surface-hover); }
+.atendeai-focus-pill.atendeai-focus-my_turn {
+  background: var(--ai-primary-soft);
+  border-color: var(--ai-primary-border);
+  border-inline-start: 3px solid var(--ai-primary);
+  color: var(--ai-primary);
+  font-weight: var(--ai-weight-bold);
 }
-.atendeai-focus-my_turn { color: #2f5ea8; }
-.atendeai-focus-checking { color: #92651f; }
-.atendeai-focus-waiting_customer { color: #6b7280; }
-.atendeai-focus-waiting_third_party { color: #79639a; }
+.atendeai-focus-pill.atendeai-focus-checking {
+  background: var(--ai-warning-soft);
+  color: var(--ai-warning);
+  font-weight: var(--ai-weight-medium);
+}
+.atendeai-focus-pill.atendeai-focus-waiting_customer,
+.atendeai-focus-pill.atendeai-focus-waiting_third_party {
+  background: var(--ai-surface-muted);
+  color: var(--ai-text-muted);
+  font-weight: var(--ai-weight-regular);
+}
+.atendeai-focus-pill.atendeai-focus-waiting_third_party { border-style: dashed; }
 #containerBotoesGemini .atendeai-focus-primary {
   background: var(--ai-primary-soft);
   border-color: var(--ai-primary-border);

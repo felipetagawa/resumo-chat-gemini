@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" id="atendeai-options">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal AtendeAI Manager</title>
 
+  <link rel="stylesheet" href="styles/tokens.css">
   <link rel="stylesheet" href="styles/options.css">
 
   <dialog id="creditsDialog" style="
@@ -20,9 +21,9 @@
   ">
     <div style="
       padding: 18px 20px;
-      background: #f7f8fa;
-      color: #1f2937;
-      border-bottom: 1px solid #e4e7ec;
+      background: var(--ai-surface-muted);
+      color: var(--ai-text);
+      border-bottom: 1px solid var(--ai-border);
     ">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
         <div>
@@ -35,28 +36,28 @@
         </div>
 
         <div class="app-version" style="
-          background: #eef3f9;
-          border: 1px solid #c5d4e8;
+          background: var(--ai-primary-soft);
+          border: 1px solid var(--ai-primary-border);
           padding: 4px 9px;
           border-radius: 999px;
           font-size: 12px;
           font-weight: 650;
           letter-spacing: .2px;
           white-space: nowrap;
-          color: #2f5ea8;
+          color: var(--ai-primary);
         ">
           v1.4.7
         </div>
       </div>
     </div>
 
-    <div style="padding: 18px 18px 16px; background:#fff;">
+    <div style="padding: 18px 18px 16px; background:var(--ai-surface);">
       <div style="display:grid; grid-template-columns: 1fr; gap: 10px;">
         <div style="
           padding: 14px;
           border-radius: 12px;
-          background: #f9fafb;
-          border: 1px solid #e5e7eb;
+          background: var(--ai-surface-muted);
+          border: 1px solid var(--ai-border);
         ">
           <div style="
             display:flex;
@@ -65,21 +66,21 @@
             gap:10px;
             margin-bottom: 8px;
           ">
-            <div style="font-size:13px; color:#6b7280; font-weight:600;">
+            <div style="font-size:13px; color:var(--ai-text-muted); font-weight:600;">
               Idealizador e Proprietário
             </div>
             <span style="
               font-size: 11px;
               padding: 4px 8px;
               border-radius: 999px;
-              background: #eef2ff;
-              border: 1px solid #e0e7ff;
-              color: #3730a3;
+              background: var(--ai-primary-soft);
+              border: 1px solid var(--ai-primary-border);
+              color: var(--ai-primary);
               font-weight: 700;
               white-space: nowrap;
             ">Owner</span>
           </div>
-          <div style="font-size:15px; font-weight:700; color:#111827;">
+          <div style="font-size:15px; font-weight:700; color:var(--ai-text);">
             Felipe Okamoto
           </div>
         </div>
@@ -87,8 +88,8 @@
         <div style="
           padding: 14px;
           border-radius: 12px;
-          background: #f8fbff;
-          border: 1px solid #dbeafe;
+          background: var(--ai-surface-muted);
+          border: 1px solid var(--ai-primary-soft);
         ">
           <div style="
             display:flex;
@@ -97,7 +98,7 @@
             gap:10px;
             margin-bottom: 10px;
           ">
-            <div style="font-size:13px; color:#1e40af; font-weight:700;">
+            <div style="font-size:13px; color:var(--ai-primary); font-weight:700;">
               Desenvolvimento
             </div>
             <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
@@ -105,18 +106,18 @@
                 font-size: 11px;
                 padding: 4px 8px;
                 border-radius: 999px;
-                background: #eff6ff;
-                border: 1px solid #bfdbfe;
-                color: #1e40af;
+                background: var(--ai-primary-soft);
+                border: 1px solid var(--ai-primary-border);
+                color: var(--ai-primary);
                 font-weight: 700;
               ">Front-end</span>
               <span style="
                 font-size: 11px;
                 padding: 4px 8px;
                 border-radius: 999px;
-                background: #eff6ff;
-                border: 1px solid #bfdbfe;
-                color: #1e40af;
+                background: var(--ai-primary-soft);
+                border: 1px solid var(--ai-primary-border);
+                color: var(--ai-primary);
                 font-weight: 700;
               ">Back-end</span>
             </div>
@@ -126,13 +127,13 @@
             <div style="
               padding: 10px 12px;
               border-radius: 10px;
-              background: #ffffff;
-              border: 1px solid #e5e7eb;
+              background: var(--ai-surface);
+              border: 1px solid var(--ai-border);
             ">
-              <div style="font-size:12px; color:#6b7280; font-weight:600; margin-bottom:4px;">
+              <div style="font-size:12px; color:var(--ai-text-muted); font-weight:600; margin-bottom:4px;">
                 Diego Martins
               </div>
-              <div style="font-size:13px; color:#111827;">
+              <div style="font-size:13px; color:var(--ai-text);">
                 Front-end • Back-end
               </div>
             </div>
@@ -140,13 +141,13 @@
             <div style="
               padding: 10px 12px;
               border-radius: 10px;
-              background: #ffffff;
-              border: 1px solid #e5e7eb;
+              background: var(--ai-surface);
+              border: 1px solid var(--ai-border);
             ">
-              <div style="font-size:12px; color:#6b7280; font-weight:600; margin-bottom:4px;">
+              <div style="font-size:12px; color:var(--ai-text-muted); font-weight:600; margin-bottom:4px;">
                 Felipe Okamoto
               </div>
-              <div style="font-size:13px; color:#111827;">
+              <div style="font-size:13px; color:var(--ai-text);">
                 Front-end • Back-end
               </div>
             </div>
@@ -154,25 +155,25 @@
         </div>
       </div>
 
-      <div style="height:1px; background:#eef2f7; margin: 14px 0;"></div>
+      <div style="height:1px; background:var(--ai-border); margin: 14px 0;"></div>
 
       <div style="
         padding: 14px;
         border-radius: 12px;
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
+        background: var(--ai-surface);
+        border: 1px solid var(--ai-border);
       ">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom: 10px;">
-          <div style="font-size:13px; color:#111827; font-weight:800;">
+          <div style="font-size:13px; color:var(--ai-text); font-weight:800;">
             Log de Atualizações
           </div>
           <span style="
             font-size: 11px;
             padding: 4px 8px;
             border-radius: 999px;
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
-            color: #374151;
+            background: var(--ai-surface-muted);
+            border: 1px solid var(--ai-border);
+            color: var(--ai-text-secondary);
             font-weight: 700;
             white-space: nowrap;
           ">Changelog</span>
@@ -182,23 +183,23 @@
 
           <div style="display:flex; gap:10px;">
             <div style="width:10px; display:flex; justify-content:center;">
-              <div style="width:8px; height:8px; border-radius:50%; background:#34a853; margin-top:6px;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:var(--ai-success); margin-top:6px;"></div>
             </div>
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span class="app-version" style="font-size:12px; font-weight:800; color:#111827;">v1.4.7</span>
-                <span style="font-size:12px; color:#6b7280;">Melhorias</span>
+                <span class="app-version" style="font-size:12px; font-weight:800; color:var(--ai-text);">v1.4.7</span>
+                <span style="font-size:12px; color:var(--ai-text-muted);">Melhorias</span>
                 <span style="
                   font-size: 11px;
                   padding: 3px 8px;
                   border-radius: 999px;
-                  background: #ecfdf5;
-                  border: 1px solid #a7f3d0;
-                  color: #065f46;
+                  background: var(--ai-success-soft);
+                  border: 1px solid var(--ai-border-strong);
+                  color: var(--ai-success);
                   font-weight: 800;
                 ">Atual</span>
               </div>
-              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+              <div style="font-size:13px; color:var(--ai-text-secondary); margin-top:4px; line-height:1.35;">
                 Melhorias na paginação e exportação do painel Líder; Ajustes na leitura de Upsell.
               </div>
             </div>
@@ -206,14 +207,14 @@
 
           <div style="display:flex; gap:10px;">
             <div style="width:10px; display:flex; justify-content:center;">
-              <div style="width:8px; height:8px; border-radius:50%; background:#1a73e8; margin-top:6px;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:var(--ai-primary); margin-top:6px;"></div>
             </div>
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-size:12px; font-weight:800; color:#111827;">v1.4.5</span>
-                <span style="font-size:12px; color:#6b7280;">Melhorias e Correções</span>
+                <span style="font-size:12px; font-weight:800; color:var(--ai-text);">v1.4.5</span>
+                <span style="font-size:12px; color:var(--ai-text-muted);">Melhorias e Correções</span>
               </div>
-              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+              <div style="font-size:13px; color:var(--ai-text-secondary); margin-top:4px; line-height:1.35;">
                 Correções no fluxo de edição de mensagens padrão, restauração do histórico do branch main com merge
                 adequado da branch fix/fluxopre.
               </div>
@@ -222,14 +223,14 @@
 
           <div style="display:flex; gap:10px;">
             <div style="width:10px; display:flex; justify-content:center;">
-              <div style="width:8px; height:8px; border-radius:50%; background:#1a73e8; margin-top:6px;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:var(--ai-primary); margin-top:6px;"></div>
             </div>
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-size:12px; font-weight:800; color:#111827;">v1.4.3</span>
-                <span style="font-size:12px; color:#6b7280;">Melhorias e Correções</span>
+                <span style="font-size:12px; font-weight:800; color:var(--ai-text);">v1.4.3</span>
+                <span style="font-size:12px; color:var(--ai-text-muted);">Melhorias e Correções</span>
               </div>
-              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+              <div style="font-size:13px; color:var(--ai-text-secondary); margin-top:4px; line-height:1.35;">
                 Correções no fluxo de edição de mensagens padrão, restauração do histórico do branch main com merge
                 adequado da branch fix/fluxopre.
               </div>
@@ -238,15 +239,15 @@
 
           <div style="display:flex; gap:10px;">
             <div style="width:10px; display:flex; justify-content:center;">
-              <div style="width:8px; height:8px; border-radius:50%; background:#1a73e8; margin-top:6px;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:var(--ai-primary); margin-top:6px;"></div>
             </div>
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-size:12px; font-weight:800; color:#111827;">v1.2</span>
-                <span style="font-size:12px; color:#6b7280;">Mensagens Padrão, Dicas inteligentes com IA e Agenda &
+                <span style="font-size:12px; font-weight:800; color:var(--ai-text);">v1.2</span>
+                <span style="font-size:12px; color:var(--ai-text-muted);">Mensagens Padrão, Dicas inteligentes com IA e Agenda &
                   Gestão</span>
               </div>
-              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+              <div style="font-size:13px; color:var(--ai-text-secondary); margin-top:4px; line-height:1.35;">
                 Adicionadas mensagens padrão, Dicas inteligentes com IA, Área Agenda & Gestão com Kanban, Calendário e
                 área para Anotações.
               </div>
@@ -255,14 +256,14 @@
 
           <div style="display:flex; gap:10px;">
             <div style="width:10px; display:flex; justify-content:center;">
-              <div style="width:8px; height:8px; border-radius:50%; background:#1a73e8; margin-top:6px;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:var(--ai-primary); margin-top:6px;"></div>
             </div>
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-size:12px; font-weight:800; color:#111827;">v1.1</span>
-                <span style="font-size:12px; color:#6b7280;">Resumo de atendimentos com IA</span>
+                <span style="font-size:12px; font-weight:800; color:var(--ai-text);">v1.1</span>
+                <span style="font-size:12px; color:var(--ai-text-muted);">Resumo de atendimentos com IA</span>
               </div>
-              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+              <div style="font-size:13px; color:var(--ai-text-secondary); margin-top:4px; line-height:1.35;">
                 Ferramenta gerar o resumo conforme os parâmetros definidos pela gerência.
               </div>
             </div>
@@ -283,8 +284,7 @@
           padding: 10px 14px;
           font-weight: 800;
           cursor: pointer;
-          background: #1a73e8;
-          color: #fff;
+          background:var(--ai-primary); color:var(--ai-on-primary);
         ">
           Fechar
         </button>
@@ -354,7 +354,7 @@
                 <span class="changelog-badge">Atual</span>
               </div>
               <div class="changelog-body">
-                Novo estado e próximo passo por atendimento; indicadores na lista do SZ;
+                Estado e próximo passo por atendimento no dock;
                 Sugerir resposta como ação principal; dark mode do AtendeAI;
                 correção do travamento do Smart Reply.
               </div>
@@ -422,16 +422,7 @@
         </div>
       </div>
 
-      <div class="card">
-        <div class="visibility-title">Organização do atendimento</div>
-        <p class="hint" style="margin-bottom:12px;">Indicadores locais na lista esquerda do SZ. Não reordenam os cards.</p>
-        <label class="setting-check">
-          <input type="checkbox" id="supportFocusBadgesEnabled" checked>
-          Mostrar indicadores na lista de atendimentos do SZ
-        </label>
-      </div>
-
-      <div class="card">
+<div class="card">
         <div class="visibility-title">Sugestão de documentação</div>
         <p class="hint" style="margin-bottom:12px;">Aprendizado fica somente neste navegador e não envia dados extras à API.</p>
         <label class="setting-check">
@@ -506,7 +497,7 @@
 
     <section id="sec-ia" class="page-section">
       <div class="card">
-        <h2>Instruções da IA</h2>
+        <h2>Estilo de Sugerir resposta</h2>
 
         <label for="smartReplyProfile">Perfil padrão de Sugerir resposta</label>
         <select id="smartReplyProfile">
@@ -516,15 +507,9 @@
         </select>
         <div class="hint">Salvo neste navegador. A resposta sempre passa por preview antes da inserção.</div>
 
-        <label for="customInstructions">Prompt Personalizado</label>
-        <textarea id="customInstructions"></textarea>
-
-        <div class="hint">
-          Essas instruções serão enviadas junto com o chat para guiar o comportamento da IA.
-        </div>
-
-        <button id="salvar" class="btn-primary">Salvar Configurações</button>
-        <div id="status"></div>
+        <div class="hint">Para criar, editar ou duplicar estilos, abra Sugerir resposta e clique em Perfis.</div>
+        <div class="hint">O antigo prompt global foi descontinuado. Seu conteúdo salvo permanece no navegador e não é usado nem convertido automaticamente.</div>
+        <div id="status" role="status"></div>
       </div>
     </section>
 
@@ -532,13 +517,13 @@
       <div class="card">
         <h2>Histórico de Resumos</h2>
         <ul id="historyList"></ul>
-        <button id="limparHistorico" style="background: #e74c3c; color: #fff;">Limpar Histórico de Resumos</button>
+        <button id="limparHistorico" style="background: var(--ai-danger-soft); color: var(--ai-danger);">Limpar Histórico de Resumos</button>
       </div>
 
       <div class="card">
         <h2>Histórico de Chamados Manuais</h2>
         <ul id="manualCallHistoryList"></ul>
-        <button id="limparHistoricoManual" style="background: #e74c3c; color: #fff;">Limpar Histórico de
+        <button id="limparHistoricoManual" style="background: var(--ai-danger-soft); color: var(--ai-danger);">Limpar Histórico de
           Chamados</button>
       </div>
     </section>
@@ -600,19 +585,19 @@
         </div>
 
         <div id="leaderAvgBox" style="
-          padding:12px; border:1px solid #e2e8f0; border-radius:12px;
-          background:#f8fafc; margin-bottom:12px; font-size:13px;
+          padding:12px; border:1px solid var(--ai-border); border-radius:12px;
+          background:var(--ai-surface-muted); margin-bottom:12px; font-size:13px;
         "></div>
 
-        <div style="overflow:auto; border:1px solid #e2e8f0; border-radius:12px;">
+        <div style="overflow:auto; border:1px solid var(--ai-border); border-radius:12px;">
           <table style="width:100%; border-collapse:collapse; font-size:13px;">
             <thead>
-              <tr style="background:#f1f5f9;">
-                <th style="text-align:left; padding:10px; border-bottom:1px solid #e2e8f0;">Data</th>
-                <th style="text-align:left; padding:10px; border-bottom:1px solid #e2e8f0;">Pré</th>
-                <th style="text-align:left; padding:10px; border-bottom:1px solid #e2e8f0;">Cliente</th>
-                <th style="text-align:left; padding:10px; border-bottom:1px solid #e2e8f0;">Tempo</th>
-                <th style="text-align:left; padding:10px; border-bottom:1px solid #e2e8f0;">Negociação</th>
+              <tr style="background:var(--ai-surface-muted);">
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Data</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Pré</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Cliente</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Tempo</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Negociação</th>
               </tr>
             </thead>
             <tbody id="leaderTableBody"></tbody>
@@ -635,6 +620,8 @@
 
   </main>
 
+  <script src="modules/theme.js"></script>
+  <script src="modules/smart-reply-profiles.js"></script>
   <script src="options.js"></script>
 
   <footer class="app-footer">
@@ -656,13 +643,13 @@
       <div class="kicker">Informe seu nome e selecione seu setor para continuar.</div>
     </div>
 
-    <div style="padding:16px 18px; background:#fff;">
+    <div style="padding:16px 18px; background:var(--ai-surface);">
       <label style="font-weight:800; font-size:13px; display:block;">Nome</label>
       <input id="onboardingNameInput" type="text" placeholder="Digite seu Nome" style="
           width: 90%;
           margin-top:8px;
           padding:10px 12px;
-          border:1px solid #cbd5e1;
+          border:1px solid var(--ai-border-strong);
           border-radius:10px;
           font-size:14px;
           outline:none;
@@ -674,8 +661,8 @@
       <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
         <label style="
           display:flex; align-items:center; gap:8px; cursor:pointer;
-          padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;
-          font-weight:800; font-size:13px; color:#0f172a;
+          padding:10px 12px; border:1px solid var(--ai-border); border-radius:12px; background:var(--ai-surface-muted);
+          font-weight:800; font-size:13px; color:var(--ai-text);
         ">
           <input type="radio" name="onboardingSector" value="suporte" />
           Suporte
@@ -683,8 +670,8 @@
 
         <label style="
           display:flex; align-items:center; gap:8px; cursor:pointer;
-          padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;
-          font-weight:800; font-size:13px; color:#0f172a;
+          padding:10px 12px; border:1px solid var(--ai-border); border-radius:12px; background:var(--ai-surface-muted);
+          font-weight:800; font-size:13px; color:var(--ai-text);
         ">
           <input type="radio" name="onboardingSector" value="preatendimento" />
           Pré-atendimento
@@ -692,8 +679,8 @@
 
         <label style="
           display:flex; align-items:center; gap:8px; cursor:pointer;
-          padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;
-          font-weight:800; font-size:13px; color:#0f172a;
+          padding:10px 12px; border:1px solid var(--ai-border); border-radius:12px; background:var(--ai-surface-muted);
+          font-weight:800; font-size:13px; color:var(--ai-text);
         ">
           <input type="radio" name="onboardingSector" value="lider" />
           Líder
@@ -706,7 +693,7 @@
             width: 90%;
             margin-top:8px;
             padding:10px 12px;
-            border:1px solid #cbd5e1;
+            border:1px solid var(--ai-border-strong);
             border-radius:10px;
             font-size:14px;
             outline:none;
@@ -721,7 +708,7 @@
       </div>
 
       <div id="onboardingStatus"
-        style="font-size:12px; margin-top:10px; min-height:18px; color:#b45309; font-weight:700;"></div>
+        style="font-size:12px; margin-top:10px; min-height:18px; color:var(--ai-warning); font-weight:700;"></div>
 
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
         <button id="onboardingSaveBtn" type="button" class="btn-primary" style="margin-top:0; font-weight:900;">
@@ -752,9 +739,9 @@
 
         <button id="editCloseNameDialog" type="button" aria-label="Fechar" style="
           appearance:none;
-          border:1px solid #e4e7ec;
-          background: #fff;
-          color:#4b5563;
+          border:1px solid var(--ai-border);
+          background: var(--ai-surface);
+          color:var(--ai-text-secondary);
           width:32px;
           height:32px;
           border-radius:6px;
@@ -767,7 +754,7 @@
       </div>
     </div>
 
-    <div style="padding:16px 18px; background:#fff;">
+    <div style="padding:16px 18px; background:var(--ai-surface);">
       <label for="editNameDialogInput" style="display:block; margin-bottom:6px; font-weight:800;">
         Nome
       </label>
@@ -775,7 +762,7 @@
       <input id="editNameDialogInput" type="text" placeholder="Digite seu nome" autocomplete="name" style="
         width:90%;
         padding:10px 12px;
-        border:1px solid #cbd5e1;
+        border:1px solid var(--ai-border-strong);
         border-radius:10px;
         font-size:14px;
         outline:none;
@@ -783,8 +770,8 @@
 
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
         <button id="editCancelNameDialog" type="button" style="
-          background:#e5e7eb;
-          color:#111827;
+          background:var(--ai-border);
+          color:var(--ai-text);
           font-weight:800;
           border:none;
           border-radius:10px;

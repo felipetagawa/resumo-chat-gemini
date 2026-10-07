@@ -276,6 +276,7 @@ const ObservationsModule = (() => {
   }
 
   async function syncChatContext() {
+    void globalThis.SmartReplyContextModule?.sync?.();
     if (syncInProgress) return;
     syncInProgress = true;
     try {
@@ -317,7 +318,7 @@ const ObservationsModule = (() => {
     clearTimeout(saveTimer);
     const edit = pendingSave || captureCurrentInputs();
     pendingSave = null;
-    persistCurrentInputs(edit)
+    Promise.all([persistCurrentInputs(edit), globalThis.SmartReplyContextModule?.flush?.()])
       .catch((err) => console.error("Observations close save error:", err))
       .finally(removeDrawerElements);
   }
@@ -346,15 +347,23 @@ const ObservationsModule = (() => {
 
       <div class="atendeai-observations-body">
         <label class="atendeai-observations-label" for="${OBS_FIELD_ID}">Notas privadas</label>
-        <textarea id="${OBS_FIELD_ID}" rows="7" placeholder="Notas privadas deste atendimento. Ficam somente no navegador e não são enviadas para a IA."></textarea>
+        <div class="atendeai-observations-help">Ficam somente no navegador e nunca são enviadas para a IA.</div>
+        <textarea id="${OBS_FIELD_ID}" rows="3" placeholder="Notas privadas deste atendimento. Ficam somente no navegador e não são enviadas para a IA."></textarea>
 
         <label class="atendeai-observations-label" for="${COMPLEMENT_FIELD_ID}">Observações para o resumo</label>
-        <div class="atendeai-observations-section-title">Complementam o histórico principal do chat e são enviadas automaticamente para a IA quando preenchidas.</div>
-        <textarea id="${COMPLEMENT_FIELD_ID}" rows="6" maxlength="${MAX_COMPLEMENT_CHARS}" placeholder="Adicione contexto do atendimento, ações feitas fora do chat, conclusões ou informações importantes que devem complementar o resumo."></textarea>
+        <div class="atendeai-observations-help">Complementam o relatório do atendimento.</div>
+        <textarea id="${COMPLEMENT_FIELD_ID}" rows="3" maxlength="${MAX_COMPLEMENT_CHARS}" placeholder="Adicione contexto do atendimento, ações feitas fora do chat, conclusões ou informações importantes que devem complementar o resumo."></textarea>
 
         <div class="atendeai-observations-footer-row">
           <span id="${SAVE_STATUS_ID}" data-tone="neutral">Salvo</span>
           <span id="atendeai-prompt-complement-count">0/${MAX_COMPLEMENT_CHARS}</span>
+        </div>
+        <label class="atendeai-observations-label" for="atendeai-reply-addendum">Adendo para resposta</label>
+        <div class="atendeai-observations-help">Use para informações que não aparecem no chat, como áudio, ligação, acesso remoto ou algo verificado pelo suporte. É usado somente em Sugerir resposta.</div>
+        <textarea id="atendeai-reply-addendum" rows="3" maxlength="2000" disabled placeholder="Informações adicionais somente para esta resposta"></textarea>
+        <div class="atendeai-observations-footer-row">
+          <span id="atendeai-reply-addendum-status" role="status">Carregando…</span>
+          <span id="atendeai-reply-addendum-count">0/2000</span>
         </div>
       </div>
     `;
@@ -369,6 +378,8 @@ const ObservationsModule = (() => {
 
     drawer.querySelector(".atendeai-observations-close")?.addEventListener("click", closeDrawer);
     bindDrawerEvents();
+    globalThis.SmartReplyContextModule?.bind?.();
+    void globalThis.SmartReplyContextModule?.sync?.();
     applyValuesToInputs();
     drawer.querySelector(`#${OBS_FIELD_ID}`)?.focus();
   }

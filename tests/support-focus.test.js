@@ -5,6 +5,12 @@ const vm = require('node:vm');
 const { el, createDocument, collect, textOf } = require('./mini-dom');
 const KEY = 'atendeai_support_focus_v1';
 const BADGES_KEY = 'atendeai_support_focus_badges_enabled';
+const visualStates = [
+  ['MY_TURN', '● Minha vez', '●', 'Minha vez', 'atendeai-focus-my_turn'],
+  ['CHECKING', '◐ Verificando', '◐', 'Verificando', 'atendeai-focus-checking'],
+  ['WAITING_CUSTOMER', '○ Aguardando cliente', '○', 'Aguardando cliente', 'atendeai-focus-waiting_customer'],
+  ['WAITING_THIRD_PARTY', '↗ Aguardando terceiro', '↗', 'Aguardando terceiro', 'atendeai-focus-waiting_third_party']
+];
 function harness(store = {}, locks) {
   const document = createDocument(), observers = [], timers = new Map(), changeListeners = []; let seq = 0, clock = 100000000;
   const context = { document, window: {}, console, navigator: { locks }, Date: class extends Date { static now() { return clock; } },
@@ -36,7 +42,7 @@ function harness(store = {}, locks) {
     const pending=[...timers.values()]; timers.clear(); for(const fn of pending) await fn();
   }
   async function mount() { await context.window.SupportFocusModule.mount(dock); }
-  async function save() { await click('Alterar'); await click('◐ Verificando'); dock.querySelector('.atendeai-focus-input').value='Conferir emissão'; await click('Salvar'); }
+  async function save() { await click('Alterar'); await click('◐ Verificando'); dock.querySelector('.atendeai-focus-input').value='Conferir emissão'; await click('Salvar alterações'); }
   function addMessage({ name = 'Lucia', text = 'preciso de ajuda', sent = false, auto = false } = {}) {
     const msg = el('div', { class: sent ? 'msg sent' : 'msg' }, [
       el('div', { class: 'name', text: auto ? 'Automático' : name }),
@@ -54,29 +60,70 @@ function harness(store = {}, locks) {
   }
   return { document, dock, lucia, cassia, card, store, context, button, click, flush, mount, save, addMessage, setStorage, changeListeners, tick(ms=1000) { clock+=ms; }, advance() { clock+=86400001; } };
 }
-test('F1/F2/F8/F9/F11/F12: local save, restore, accessible badge and idempotent rerender', async () => {
+for (const [state, choice, short, full, className] of visualStates) {
+  test(`visual ${state}: no native decoration and full dock status`, async () => {
+    const h = harness(); await h.mount(); await h.click('Alterar'); await h.click(choice);
+    h.dock.querySelector('.atendeai-focus-input').value = 'Passo exclusivo de Lucia';
+    await h.click('Salvar alterações');
+    assert.equal(h.lucia.querySelector('.atendeai-focus-badge'), null);
+    const status = h.dock.querySelector('.atendeai-focus-status');
+    assert.equal(status.textContent, `${short} ${full}`);
+    assert.ok(status.classList.contains('atendeai-focus-pill'));
+    assert.ok(status.classList.contains(className));
+    assert.equal(h.dock.querySelector('.atendeai-focus-choice'), null);
+    assert.equal(h.cassia.querySelector('.atendeai-focus-badge'), null);
+  });
+}
+
+test('all state changes leave native card children, attributes, text and order untouched', async () => {
+ const h=harness(); const before=JSON.stringify({attrs:h.lucia.attrs,className:h.lucia.className}), children=[...h.lucia.children], text=textOf(h.lucia), cards=h.document.querySelectorAll('.sz_contact');
+ await h.mount();
+ for(const [,choice] of visualStates){await h.click('Alterar');await h.click(choice);await h.click('Salvar alterações');assert.deepEqual(h.lucia.children,children);assert.equal(JSON.stringify({attrs:h.lucia.attrs,className:h.lucia.className}),before);assert.equal(textOf(h.lucia),text);assert.deepEqual(h.document.querySelectorAll('.sz_contact'),cards);}
+});
+
+test('unsafe recycled card remains undecorated', async () => {
+  const h = harness(); await h.mount(); await h.save();
+  h.lucia.querySelector('.times').setAttribute('title', '');
+  await h.flush();
+  assert.equal(h.lucia.querySelector('.atendeai-focus-badge'), null);
+  assert.equal(h.cassia.querySelector('.atendeai-focus-badge'), null);
+});
+
+test('legacy preference stays untouched after mount with saved state', async () => {
+  const h = harness(); await h.mount(); await h.save();
+  h.store[BADGES_KEY] = false;
+  await h.mount(); await h.flush();
+  assert.equal(h.store[BADGES_KEY], false);
+  assert.equal(h.document.querySelector('.atendeai-focus-badge'), null);
+  assert.match(textOf(h.dock), /Verificando/);
+});
+
+test('dock mutations do not loop the inbound observer', async () => {
+ const h=harness();await h.mount();await h.save();const status=h.dock.querySelector('.atendeai-focus-status');let reads=0;const get=h.context.chrome.storage.local.get;h.context.chrome.storage.local.get=(...args)=>{reads++;get(...args)};
+ await h.flush([{type:'characterData',target:{parentNode:status}},{type:'attributes',target:status}]);assert.equal(reads,0);await h.flush();assert.equal(reads,1);
+});
+
+test('F1/F2/F8/F9/F11/F12: local save, restore and idempotent dock rerender', async () => {
   const h=harness(); await h.mount(); await h.save();
   const id=h.context.window.RecoveryBufferModule.getConversationIdentityFromCard(h.lucia).sourceId;
   assert.equal(h.store[KEY].items[id].status, 'CHECKING'); assert.equal(h.store[KEY].items[id].nextStep, 'Conferir emissão');
   await h.mount(); assert.match(textOf(h.dock), /Verificando/); assert.match(textOf(h.dock), /Conferir emissão/);
   for(let i=0;i<3;i++) await h.flush();
-  assert.equal(h.lucia.querySelectorAll('.atendeai-focus-badge').length, 1);
-  const badge=h.lucia.querySelector('.atendeai-focus-badge'); assert.equal(badge.textContent,'◐');
-  assert.equal(badge.getAttribute('title'), 'Verificando — Conferir emissão'); assert.equal(badge.getAttribute('aria-label'),badge.getAttribute('title'));
+  assert.equal(h.lucia.querySelectorAll('.atendeai-focus-badge').length,0);
   h.lucia.remove(); const replacement=h.card('Lucia','06/10/26 08:14',true); await h.flush();
-  assert.equal(replacement.querySelectorAll('.atendeai-focus-badge').length,1);
+  assert.equal(replacement.querySelectorAll('.atendeai-focus-badge').length,0);
 });
 test('F3/F5: same name with new attendance and Lucia to Cássia never share state', async () => {
   const h=harness(); await h.mount(); await h.save(); h.lucia.className='sz_contact'; h.cassia.className='sz_contact active'; await h.flush();
-  assert.match(textOf(h.dock),/Cássia/); assert.match(textOf(h.dock),/Sem estado definido/); assert.doesNotMatch(textOf(h.dock),/Conferir emissão/);
-  h.cassia.className='sz_contact'; h.card('Lucia','06/10/26 09:00',true); await h.flush(); assert.match(textOf(h.dock),/Sem estado definido/);
+  assert.match(textOf(h.dock),/Cássia/); assert.match(textOf(h.dock),/Organize este atendimento/); assert.doesNotMatch(textOf(h.dock),/Conferir emissão/);
+  h.cassia.className='sz_contact'; h.card('Lucia','06/10/26 09:00',true); await h.flush(); assert.match(textOf(h.dock),/Organize este atendimento/);
 });
 test('F4: unsafe identity never offers editing or persists by name', async () => {
   const h=harness(); h.lucia.querySelector('.times').setAttribute('title',''); await h.mount(); assert.equal(h.button('Alterar'),undefined); assert.equal(Object.keys(h.store[KEY]?.items || {}).length,0);
 });
-test('F6/F10: clear removes item and badge', async () => {
+test('F6/F10: clear removes the active saved item', async () => {
   const h=harness(); await h.mount(); await h.save(); await h.click('Alterar'); await h.click('Limpar');
-  assert.equal(Object.keys(h.store[KEY].items).length,0); assert.equal(h.lucia.querySelector('.atendeai-focus-badge'),null); assert.match(textOf(h.dock),/Sem estado definido/);
+  assert.equal(Object.keys(h.store[KEY].items).length,0); assert.equal(h.lucia.querySelector('.atendeai-focus-badge'),null); assert.match(textOf(h.dock),/Organize este atendimento/);
 });
 test('F7: reading and writing clean expired items', async () => {
   const h=harness(); await h.mount(); await h.save(); h.advance(); await h.flush();
@@ -85,8 +132,8 @@ test('F7: reading and writing clean expired items', async () => {
 test('own focus mutation is ignored and unsafe mount is skipped', async () => {
   const h=harness(); await h.mount(); await h.save();
   h.lucia.querySelector('.times').setAttribute('title','06/10/26 09:00');
-  await h.flush([{target:h.lucia.querySelector('.atendeai-focus-badge')}]); assert.match(textOf(h.dock),/Verificando/);
-  await h.flush(); assert.match(textOf(h.dock),/Sem estado definido/);
+  await h.flush([{target:h.dock.querySelector('.atendeai-focus-status')}]); assert.match(textOf(h.dock),/Verificando/);
+  await h.flush(); assert.match(textOf(h.dock),/Organize este atendimento/);
   const other=h.card('Lucia','06/10/26 08:14'); other.querySelector('.contact-name').remove(); await h.flush(); assert.equal(other.querySelector('.atendeai-focus-badge'),null);
 });
 
@@ -104,6 +151,9 @@ test('F13/F14: saved Focus stays out of actual report and direct Smart Reply req
   });
   const create = h.document.createElement;
   h.document.createElement = tag => { const n = create(tag); n.insertAdjacentHTML = () => {}; return n; };
+  vm.runInContext(fs.readFileSync('modules/smart-reply-context.js', 'utf8'), h.context);
+  vm.runInContext(fs.readFileSync('modules/smart-reply-profiles.js', 'utf8'), h.context);
+  vm.runInContext(fs.readFileSync('modules/smart-reply-profiles-ui.js', 'utf8'), h.context);
   vm.runInContext(fs.readFileSync('modules/smart-reply.js', 'utf8'), h.context);
   const source = fs.readFileSync('content.js', 'utf8');
   vm.runInContext(source.slice(source.indexOf('function criarBotoesFlutuantes('), source.indexOf('\nMessagingHelper.addListener(')), h.context);
@@ -122,7 +172,7 @@ test('F13/F14: saved Focus stays out of actual report and direct Smart Reply req
   assert.ok(dock.children.indexOf(smart.parentElement) < dock.children.indexOf(report.parentElement));
   await Promise.all(smart.click()); await Promise.all(report.click());
   assert.deepEqual(sent, [
-    { action: 'gerarResposta', conversation: 'Lucia: ajuda', profile: 'DIRECT', regenerate: false, promptComplement: 'Observação técnica' },
+    { action: 'gerarResposta', conversation: 'Lucia: ajuda', profile: 'DIRECT', regenerate: false },
     { action: 'gerarResumo', texto: 'Lucia: ajuda', promptComplement: 'Observação técnica' }
   ]);
   assert.equal(JSON.stringify(sent).includes('Conferir emissão'), false);
@@ -145,14 +195,14 @@ test('editor cannot save after chat switch, all four states and text bound are e
   assert.deepEqual(h.dock.querySelectorAll('.atendeai-focus-choice').map(n => n.textContent),
     ['● Minha vez', '◐ Verificando', '○ Aguardando cliente', '↗ Aguardando terceiro']);
   await h.click('● Minha vez'); h.dock.querySelector('.atendeai-focus-input').value = 'x'.repeat(350);
-  await h.click('Salvar');
+  await h.click('Salvar alterações');
   assert.equal(Object.values(h.store[KEY].items)[0].nextStep.length, 300);
   await h.click('Alterar');
   h.lucia.className = 'sz_contact'; h.cassia.className = 'sz_contact active';
-  h.dock.querySelector('.atendeai-focus-input').value = 'Não salvar em Cássia'; await h.click('Salvar');
+  h.dock.querySelector('.atendeai-focus-input').value = 'Não salvar em Cássia'; await h.click('Salvar alterações');
   assert.equal(Object.keys(h.store[KEY].items).length, 1);
   assert.equal(Object.values(h.store[KEY].items)[0].displayName, 'Lucia');
-  assert.match(textOf(h.dock), /Cássia/); assert.match(textOf(h.dock), /Sem estado definido/);
+  assert.match(textOf(h.dock), /Cássia/); assert.match(textOf(h.dock), /Organize este atendimento/);
 });
 
 test('explicit identity takes priority and phone/name/msg_ref never provide Focus identity', async () => {
@@ -172,9 +222,9 @@ test('Focus storage error keeps editor and reports failure without false saved s
   h.context.chrome.storage.local.set = (data, callback) => {
     h.context.chrome.runtime.lastError = { message: 'quota exceeded' }; callback(); delete h.context.chrome.runtime.lastError;
   };
-  await h.click('Salvar');
+  await h.click('Salvar alterações');
   assert.match(textOf(h.dock), /Não foi possível salvar/);
-  assert.equal(h.button('Salvar').disabled, false);
+  assert.equal(h.button('Salvar alterações').disabled, false);
   assert.equal(h.store[KEY], undefined);
 });
 
@@ -185,7 +235,7 @@ test('storage read pending across chat switch cannot save an old editor', async 
   let deliver;
   const originalGet = h.context.chrome.storage.local.get;
   h.context.chrome.storage.local.get = (keys, callback) => { deliver = () => { h.context.chrome.storage.local.get = originalGet; callback(structuredClone(h.store)); }; };
-  const pending = h.click('Salvar'); await new Promise(setImmediate);
+  const pending = h.click('Salvar alterações'); await new Promise(setImmediate);
   h.lucia.className = 'sz_contact'; h.cassia.className = 'sz_contact active';
   deliver(); await pending;
   assert.deepEqual(h.store, before);
@@ -194,11 +244,11 @@ test('storage read pending across chat switch cannot save an old editor', async 
 
 test('nextStep alone is local and saving an empty editor removes the item', async () => {
   const h = harness(); await h.mount(); await h.click('Alterar');
-  h.dock.querySelector('.atendeai-focus-input').value = 'Cliente enviar XML'; await h.click('Salvar');
+  h.dock.querySelector('.atendeai-focus-input').value = 'Cliente enviar XML'; await h.click('Salvar alterações');
   assert.equal(Object.values(h.store[KEY].items)[0].status, '');
   assert.match(textOf(h.dock), /Cliente enviar XML/);
   assert.equal(h.lucia.querySelector('.atendeai-focus-badge'), null);
-  await h.click('Alterar'); h.dock.querySelector('.atendeai-focus-input').value = ' '; await h.click('Salvar');
+  await h.click('Alterar'); h.dock.querySelector('.atendeai-focus-input').value = ' '; await h.click('Salvar alterações');
   assert.equal(Object.keys(h.store[KEY].items).length, 0);
 });
 
@@ -214,7 +264,7 @@ test('two tabs saving different attendances preserve both items under the shared
   for (const h of [a, b]) { await h.click('Alterar'); await h.click('◐ Verificando'); }
   a.dock.querySelector('.atendeai-focus-input').value = 'Passo Lucia';
   b.dock.querySelector('.atendeai-focus-input').value = 'Passo Cássia';
-  await Promise.all([a.click('Salvar'), b.click('Salvar')]);
+  await Promise.all([a.click('Salvar alterações'), b.click('Salvar alterações')]);
   assert.equal(Object.keys(store[KEY].items).length, 2);
   assert.deepEqual(Object.values(store[KEY].items).map(item => item.nextStep).sort(), ['Passo Cássia', 'Passo Lucia']);
 });
@@ -246,7 +296,7 @@ test('UX1: Support Focus inicia resumido', async () => {
   assert.equal(h.dock.querySelector('.atendeai-focus-choice'), null);
   assert.equal(h.dock.querySelector('.atendeai-focus-input'), null);
   assert.equal(h.button('Alterar')?.getAttribute('aria-expanded'), 'false');
-  assert.match(textOf(h.dock), /Próximo passo não definido/);
+  assert.match(textOf(h.dock), /Organize este atendimento/);
   assert.doesNotMatch(textOf(h.dock), /Aguardando cliente/);
 });
 
@@ -254,7 +304,7 @@ test('UX2: Alterar expande editor', async () => {
   const h = harness(); await h.mount(); await h.click('Alterar');
   assert.equal(h.dock.querySelectorAll('.atendeai-focus-choice').length, 4);
   assert.ok(h.dock.querySelector('.atendeai-focus-input'));
-  assert.ok(h.button('Salvar'));
+  assert.ok(h.button('Salvar alterações'));
 });
 
 test('UX3: Salvar recolhe editor', async () => {
@@ -271,23 +321,23 @@ test('UX4: Limpar recolhe editor', async () => {
   assert.equal(h.button('Alterar')?.textContent, 'Alterar');
 });
 
-test('UX9: Badge toggle false remove badges e não apaga storage', async () => {
+test('UX9: legacy preference false preserves storage and dock', async () => {
   const h = harness(); await h.mount(); await h.save();
   const id = h.context.window.RecoveryBufferModule.getConversationIdentityFromCard(h.lucia).sourceId;
-  assert.equal(h.lucia.querySelectorAll('.atendeai-focus-badge').length, 1);
+  assert.equal(h.lucia.querySelectorAll('.atendeai-focus-badge').length,0);
   await h.setStorage({ [BADGES_KEY]: false });
   assert.equal(h.lucia.querySelector('.atendeai-focus-badge'), null);
   assert.equal(h.store[KEY].items[id].status, 'CHECKING');
   assert.match(textOf(h.dock), /Verificando/);
 });
 
-test('UX10: Reativar badge recria indicadores', async () => {
+test('UX10: legacy preference true never recreates indicators', async () => {
   const h = harness(); await h.mount(); await h.save();
   await h.setStorage({ [BADGES_KEY]: false });
   assert.equal(h.lucia.querySelector('.atendeai-focus-badge'), null);
   await h.setStorage({ [BADGES_KEY]: true });
-  assert.equal(h.lucia.querySelectorAll('.atendeai-focus-badge').length, 1);
-  assert.equal(h.lucia.querySelector('.atendeai-focus-badge').textContent, '◐');
+  assert.equal(h.lucia.querySelectorAll('.atendeai-focus-badge').length,0);
+  assert.equal(h.lucia.querySelector('.atendeai-focus-badge'), null);
 });
 
 test('UX11: Não existe barra/header de foco superior', () => {
@@ -372,4 +422,22 @@ test('AUTO7: Nenhuma MessagingHelper/API é chamada pelo Support Focus automáti
   h.addMessage({ text: 'nova inbound' });
   await h.flush();
   assert.equal(h.store[KEY] && Object.values(h.store[KEY].items)[0].status, 'MY_TURN');
+});
+
+test('editor is transactional: choose and cancel do not persist, save reports success', async () => {
+  const h = harness(); await h.mount(); await h.save();
+  const saved = structuredClone(h.store[KEY]);
+  await h.click('Alterar'); await h.click('● Minha vez');
+  h.dock.querySelector('.atendeai-focus-input').value = 'não salvar';
+  assert.deepEqual(h.store[KEY], saved);
+  assert.equal(h.lucia.querySelector('.atendeai-focus-badge'), null);
+  await h.click('Cancelar'); assert.deepEqual(h.store[KEY], saved);
+  assert.match(textOf(h.dock), /Conferir emissão/); assert.doesNotMatch(textOf(h.dock), /não salvar/);
+  await h.click('Alterar'); await h.click('● Minha vez'); await h.click('Salvar alterações');
+  assert.equal(Object.values(h.store[KEY].items)[0].status, 'MY_TURN');
+  assert.match(textOf(h.dock), /Salvo/);
+});
+
+test('mount removes legacy extension decorations without changing native children or saved preferences',async()=>{
+ const h=harness({[BADGES_KEY]:true});const children=[...h.lucia.children];h.lucia.appendChild(el('span',{class:'atendeai-focus-anchor'},[el('span',{class:'atendeai-focus-badge'})]));await h.mount();assert.deepEqual(h.lucia.children,children);assert.equal(h.store[BADGES_KEY],true);
 });

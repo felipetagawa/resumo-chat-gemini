@@ -93,7 +93,7 @@
     color: var(--ai-text, #1f2937);
     transition: border-color 0.15s, box-shadow 0.15s;
     box-sizing: border-box;
-    background: #fff;
+    background: var(--ai-surface);
 }
 
 :where(.atendeai-modal-overlay) :is(.form-input, .form-textarea, .form-select):focus {
@@ -137,7 +137,7 @@
 
 :where(.atendeai-modal-overlay) .btn-primary {
     background: var(--ai-primary, #2f5ea8);
-    color: white;
+    color: var(--ai-on-primary);
     border: 1px solid var(--ai-primary, #2f5ea8);
 }
 
@@ -147,7 +147,7 @@
 }
 
 :where(.atendeai-modal-overlay) .btn-secondary {
-    background: #fff;
+    background: var(--ai-surface);
     color: var(--ai-text, #1f2937);
     border: 1px solid var(--ai-border-strong, #d0d5dd);
 }
@@ -163,6 +163,6 @@
 }
 
 :where(.atendeai-modal-overlay) .btn-danger:hover {
-    background: #fce9e7;
+    background: var(--ai-danger-soft-hover);
     box-shadow: none;
 }

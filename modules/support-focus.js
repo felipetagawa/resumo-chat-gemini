@@ -1,16 +1,14 @@
 // SUPPORT_FOCUS_V1: local attendance notes; never participates in AI payloads.
 const SupportFocusModule = (() => {
   const KEY = "atendeai_support_focus_v1";
-  const BADGES_KEY = "atendeai_support_focus_badges_enabled";
   const TTL = 24 * 60 * 60 * 1000;
   const STATES = Object.freeze({
-    MY_TURN: { label: "Minha vez", symbol: "●" },
-    CHECKING: { label: "Verificando", symbol: "◐" },
-    WAITING_CUSTOMER: { label: "Aguardando cliente", symbol: "○" },
-    WAITING_THIRD_PARTY: { label: "Aguardando terceiro", symbol: "↗" }
+    MY_TURN: { label: "Minha vez", shortLabel: "Minha vez", symbol: "●" },
+    CHECKING: { label: "Verificando", shortLabel: "Verificando", symbol: "◐" },
+    WAITING_CUSTOMER: { label: "Aguardando cliente", shortLabel: "Cliente", symbol: "○" },
+    WAITING_THIRD_PARTY: { label: "Aguardando terceiro", shortLabel: "Terceiro", symbol: "↗" }
   });
-  let root, observer, timer, identity, editing = false, renderKey = "", generation = 0;
-  let badgesEnabled = true;
+  let root, observer, timer, identity, editing = false, renderKey = "", generation = 0, editorEpoch = 0;
   let inboundWatch = null;
   let queue = Promise.resolve();
   function enqueue(task) {
@@ -83,8 +81,7 @@ const SupportFocusModule = (() => {
   }
   // Read/write cleanup share the same serialized queue to avoid losing rapid edits.
   async function read() {
-    const data = await storage("get", [KEY, BADGES_KEY]);
-    badgesEnabled = data?.[BADGES_KEY] !== false;
+    const data = await storage("get", [KEY]);
     const stored = data?.[KEY];
     const items = Object.create(null);
     for (const [id, item] of Object.entries(stored?.items || {})) {
@@ -125,35 +122,6 @@ const SupportFocusModule = (() => {
     return el;
   }
   function clearRoot() { Array.from(root.children).forEach(child => child.remove()); }
-  function describe(item) {
-    const state = STATES[item?.status];
-    return [state?.label || "Sem estado definido", item?.nextStep].filter(Boolean).join(" — ");
-  }
-  function decorate(items) {
-    if (!badgesEnabled) {
-      document.querySelectorAll(".atendeai-focus-badge").forEach(badge => badge.remove());
-      return;
-    }
-    for (const card of document.querySelectorAll(".sz_contact")) {
-      const id = RecoveryBufferModule.getConversationIdentityFromCard(card);
-      const item = id && items[id.sourceId];
-      const state = STATES[item?.status];
-      const name = card.querySelector(".contact-layout .content .name_in_hours .name .contact-name");
-      const badges = Array.from(card.querySelectorAll(".atendeai-focus-badge"));
-      if (!state || !name?.parentElement) { badges.forEach(b => b.remove()); continue; }
-      let badge = badges.shift();
-      badges.forEach(b => b.remove());
-      if (badge && badge.parentElement !== name.parentElement) { badge.remove(); badge = null; }
-      if (!badge) { badge = node("span", "", "badge"); name.parentElement.appendChild(badge); }
-      const className = `atendeai-focus-badge atendeai-focus-${item.status.toLowerCase()}`;
-      if (badge.className !== className) badge.className = className;
-      if (badge.textContent !== state.symbol) badge.textContent = state.symbol;
-      for (const attr of ["title", "aria-label"]) {
-        const label = describe(item);
-        if (badge.getAttribute(attr) !== label) badge.setAttribute(attr, label);
-      }
-    }
-  }
   function render(item) {
     clearRoot();
     root.hidden = !identity;
@@ -161,20 +129,23 @@ const SupportFocusModule = (() => {
     const name = node("strong", identity.displayName, "name"); name.title = identity.displayName;
     root.appendChild(name);
     const state = STATES[item?.status];
-    const status = node("div", state ? `${state.symbol} ${state.label}` : "Sem estado definido", "status");
-    if (state) status.className += ` atendeai-focus-${item.status.toLowerCase()}`;
-    root.appendChild(status);
-    root.appendChild(node("div", "Próximo passo", "kicker"));
     const nextStep = String(item?.nextStep || "").trim();
-    const next = node("div", nextStep || "Próximo passo não definido", nextStep ? "next" : "next-empty");
-    if (nextStep) next.title = nextStep;
-    root.appendChild(next);
+    if (state) {
+      const status = node("div", `${state.symbol} ${state.label}`, "status");
+      status.className += ` atendeai-focus-pill atendeai-focus-${item.status.toLowerCase()}`;
+      root.appendChild(status);
+    }
+    if (nextStep) {
+      root.appendChild(node("div", "Próximo passo", "kicker"));
+      const next = node("div", nextStep, "next"); next.title = nextStep; root.appendChild(next);
+    } else if (!state) root.appendChild(node("div", "Organize este atendimento", "next-empty"));
     const edit = button("Alterar", () => showEditor(item), "edit");
     edit.setAttribute("aria-expanded", "false");
     root.appendChild(edit);
   }
   function showEditor(item) {
     editing = true;
+    const editor = ++editorEpoch;
     const expected = { ...identity };
     clearRoot();
     root.appendChild(node("strong", expected.displayName, "name"));
@@ -202,7 +173,7 @@ const SupportFocusModule = (() => {
       buttons.forEach(([, b]) => { b.disabled = true; });
       Array.from(actions.children).forEach(b => { b.disabled = true; });
       try {
-        await enqueue(async () => {
+        const persisted = await enqueue(async () => {
           if (RecoveryBufferModule.getCurrentConversationIdentity()?.sourceId !== expected.sourceId) return;
           const state = await read();
           // Recheck after asynchronous storage read: an old editor cannot save to another chat.
@@ -210,16 +181,26 @@ const SupportFocusModule = (() => {
           if (!status && !nextStep) delete state.items[expected.sourceId];
           else state.items[expected.sourceId] = { ...expected, status, nextStep, updatedAt: Date.now() };
           await storage("set", { [KEY]: state });
+          return true;
         });
+        if (editor !== editorEpoch) return;
         editing = false; renderKey = "";
         await refresh();
+        if (persisted && identity?.sourceId === expected.sourceId) {
+          const saved = node("div", "Salvo", "saved"); saved.setAttribute("role", "status"); root.appendChild(saved);
+          setTimeout(() => saved.remove(), 1800);
+        }
       } catch {
+        if (editor !== editorEpoch) return;
         feedback.textContent = "Não foi possível salvar. Tente novamente.";
         buttons.forEach(([, b]) => { b.disabled = false; });
         Array.from(actions.children).forEach(b => { b.disabled = false; });
       }
     }
-    actions.appendChild(button("Salvar", () => save(false)));
+    actions.appendChild(button("Salvar alterações", () => save(false)));
+    actions.appendChild(button("Cancelar", async () => {
+      ++editorEpoch; editing = false; renderKey = ""; await refresh();
+    }));
     actions.appendChild(button("Limpar", () => save(true)));
     root.appendChild(actions); root.appendChild(feedback);
     buttons[0][1].focus();
@@ -233,9 +214,8 @@ const SupportFocusModule = (() => {
       });
       if (request !== generation || !root) return;
       const current = RecoveryBufferModule.getCurrentConversationIdentity();
-      if (current?.sourceId !== identity?.sourceId) editing = false;
+      if (current?.sourceId !== identity?.sourceId) { editing = false; ++editorEpoch; }
       identity = current;
-      decorate(state.items);
       const item = identity && state.items[identity.sourceId];
       const key = JSON.stringify([identity, item]);
       if (!editing && key !== renderKey) { renderKey = key; render(item); }
@@ -257,10 +237,13 @@ const SupportFocusModule = (() => {
     timer = setTimeout(refresh, 80);
   }
   async function mount(dock) {
+    // Remove only legacy extension nodes from a previously mounted version.
+    document.querySelectorAll(".atendeai-focus-anchor, .atendeai-focus-badge").forEach(el => el.remove());
     root?.remove();
     root = node("section", "", "card"); root.hidden = true;
     root.setAttribute("aria-label", "Estado do atendimento");
     dock.prepend(root); identity = null; editing = false; renderKey = ""; inboundWatch = null;
+    ++editorEpoch;
     if (!observer) {
       observer = new MutationObserver(records => {
         // Insertion/removal of only our nodes has the SZ parent as target.
@@ -270,7 +253,7 @@ const SupportFocusModule = (() => {
       });
       observer.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
       chrome.storage.onChanged?.addListener((changes, area) => {
-        if (area === "local" && (changes[KEY] || changes[BADGES_KEY])) schedule();
+        if (area === "local" && changes[KEY]) schedule();
       });
     }
     await refresh();

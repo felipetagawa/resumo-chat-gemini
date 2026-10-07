@@ -10,14 +10,14 @@ const UIBuilder = (() => {
       justify-content: space-between;
       align-items: center;
       padding: 12px 15px;
-      background: ${aberto ? '#f1f5f9' : '#f8fafc'};
-      border: 1px solid #e2e8f0;
+      background: ${aberto ? 'var(--ai-surface-muted)' : 'var(--ai-surface-muted)'};
+      border: 1px solid var(--ai-border);
       border-radius: 6px;
       cursor: pointer;
       user-select: none;
       font-weight: 600;
       font-size: 14px;
-      color: #334155;
+      color: var(--ai-text-secondary);
       transition: background 0.2s;
     `;
 
@@ -28,10 +28,10 @@ const UIBuilder = (() => {
 
         const content = document.createElement("div");
         content.style = `
-      border: 1px solid #e2e8f0;
+      border: 1px solid var(--ai-border);
       border-top: none;
       border-radius: 0 0 6px 6px;
-      background: white;
+      background:var(--ai-surface);
       max-height: ${aberto ? 'none' : '0'};
       overflow: ${aberto ? 'visible' : 'hidden'};
       opacity: ${aberto ? '1' : '0'};
@@ -55,7 +55,7 @@ const UIBuilder = (() => {
             const icon = header.querySelector('span:last-child');
             icon.textContent = isOpen ? '−' : '+';
 
-            header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
+            header.style.background = isOpen ? 'var(--ai-surface-muted)' : 'var(--ai-surface-muted)';
             header.style.borderRadius = isOpen ? '6px 6px 0 0' : '6px';
 
             if (isOpen) {
@@ -63,7 +63,7 @@ const UIBuilder = (() => {
                 content.style.maxHeight = 'none';
                 content.style.overflow = 'visible';
                 content.style.opacity = '1';
-                content.style.border = '1px solid #e2e8f0';
+                content.style.border = '1px solid var(--ai-border)';
                 content.style.borderTop = 'none';
                 content.style.marginTop = '0';
             } else {
@@ -79,11 +79,11 @@ const UIBuilder = (() => {
         header.addEventListener('click', toggleAcordeon);
 
         header.addEventListener('mouseenter', () => {
-            header.style.background = isOpen ? '#e2e8f0' : '#f1f5f9';
+            header.style.background = 'var(--ai-surface-hover)';
         });
 
         header.addEventListener('mouseleave', () => {
-            header.style.background = isOpen ? '#f1f5f9' : '#f8fafc';
+            header.style.background = isOpen ? 'var(--ai-surface-muted)' : 'var(--ai-surface-muted)';
         });
 
         container.appendChild(header);

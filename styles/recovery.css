@@ -326,14 +326,14 @@
 .recovery-buffer-observation:focus {
     outline: none;
     border-color: var(--ai-primary);
-    box-shadow: 0 0 0 3px rgba(47, 94, 168, 0.14);
+    box-shadow: var(--ai-focus);
 }
 
 .recovery-private-note {
     margin-top: 8px;
     padding: 8px 9px;
     border-radius: var(--ai-radius-sm);
-    background: rgba(255, 255, 255, 0.72);
+    background: var(--ai-surface-muted);
     border: 1px solid var(--ai-border);
     font-size: var(--ai-font-size-sm);
     color: var(--ai-text-muted);
@@ -419,3 +419,16 @@
     color: var(--ai-danger);
     font-size: var(--ai-font-size-sm);
 }
+
+/* Retain the four light tones; dark variants pair their surfaces and accents. */
+.recovery-buffer-panel[data-atendeai-theme="dark"] .recovery-buffer-item {
+  background: var(--ai-surface-muted); border-color: var(--ai-border);
+}
+.recovery-buffer-panel[data-atendeai-theme="dark"] .recovery-buffer-item[data-tone="0"] { border-left-color: var(--ai-primary); }
+.recovery-buffer-panel[data-atendeai-theme="dark"] .recovery-buffer-item[data-tone="1"] { border-left-color: var(--ai-success); }
+.recovery-buffer-panel[data-atendeai-theme="dark"] .recovery-buffer-item[data-tone="2"] { border-left-color: var(--ai-warning); }
+.recovery-buffer-panel[data-atendeai-theme="dark"] .recovery-buffer-item[data-tone="3"] { border-left-color: var(--ai-text-muted); }
+.recovery-buffer-panel[data-atendeai-theme="dark"] .recovery-buffer-item[data-tone="0"] .recovery-buffer-avatar { background: var(--ai-primary-soft); color: var(--ai-primary); }
+.recovery-buffer-panel[data-atendeai-theme="dark"] .recovery-buffer-item[data-tone="1"] .recovery-buffer-avatar { background: var(--ai-success-soft); color: var(--ai-success); }
+.recovery-buffer-panel[data-atendeai-theme="dark"] .recovery-buffer-item[data-tone="2"] .recovery-buffer-avatar { background: var(--ai-warning-soft); color: var(--ai-warning); }
+.recovery-buffer-panel[data-atendeai-theme="dark"] .recovery-buffer-item[data-tone="3"] .recovery-buffer-avatar { background: var(--ai-surface-hover); color: var(--ai-text-secondary); }

@@ -354,7 +354,7 @@ function ensureConfigRequiredModal() {
     width: 520px;
     max-width: 92vw;
     border-radius: 16px;
-    background: #fff;
+    background: var(--ai-surface);
     box-shadow: 0 18px 50px rgba(0,0,0,0.28);
     overflow: hidden;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -363,8 +363,8 @@ function ensureConfigRequiredModal() {
   modal.innerHTML = `
     <div style="
       padding: 16px 18px;
-      background: linear-gradient(135deg, #1a73e8, #4285F4);
-      color: #fff;
+      background: var(--ai-primary-soft);
+      color: var(--ai-primary);
     ">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
         <div>
@@ -377,8 +377,8 @@ function ensureConfigRequiredModal() {
         <button id="atendeai-config-modal-close" type="button" aria-label="Fechar" style="
           appearance:none;
           border:none;
-          background: rgba(255,255,255,0.18);
-          color:#fff;
+          background: var(--ai-surface-hover);
+          color:var(--ai-text-secondary);
           width:34px;
           height:34px;
           border-radius:10px;
@@ -391,15 +391,15 @@ function ensureConfigRequiredModal() {
       </div>
     </div>
 
-    <div style="padding: 16px 18px; color:#0f172a;">
+    <div style="padding: 16px 18px; color:var(--ai-text);">
       <div style="
         padding: 12px 12px;
         border-radius: 12px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: var(--ai-surface-muted);
+        border: 1px solid var(--ai-border);
         font-size: 13px;
         font-weight: 700;
-        color: #334155;
+        color: var(--ai-text-secondary);
         line-height: 1.45;
       ">
         • Nome/Login: usado para personalizar mensagens</b>)<br/>
@@ -408,8 +408,8 @@ function ensureConfigRequiredModal() {
 
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px; flex-wrap:wrap;">
         <button id="atendeai-config-modal-cancel" type="button" style="
-          background:#e5e7eb;
-          color:#111827;
+          background:var(--ai-surface-muted);
+          color:var(--ai-text);
           font-weight:900;
           border:none;
           border-radius:12px;
@@ -418,8 +418,8 @@ function ensureConfigRequiredModal() {
         ">Agora não</button>
 
         <button id="atendeai-config-modal-open-portal" type="button" style="
-          background:#1a73e8;
-          color:#fff;
+          background:var(--ai-primary);
+          color:var(--ai-on-primary);
           font-weight:900;
           border:none;
           border-radius:12px;
@@ -432,6 +432,7 @@ function ensureConfigRequiredModal() {
 
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
+  globalThis.ThemeModule?.apply?.(overlay);
 
   const close = () => { overlay.style.display = "none"; };
 

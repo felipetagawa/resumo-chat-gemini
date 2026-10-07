@@ -185,14 +185,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       try {
         const conversation = typeof request.conversation === "string" ? request.conversation.trim() : "";
         const promptComplement = typeof request.promptComplement === "string" ? request.promptComplement.trim() : "";
+        const styleInstruction = typeof request.styleInstruction === "string" ? request.styleInstruction.trim() : "";
         if (!conversation || conversation.length > 16000 || promptComplement.length > 2000
-          || !["DIRECT", "EMPATHETIC", "DIDACTIC"].includes(request.profile)
+          || !["DIRECT", "EMPATHETIC", "DIDACTIC", "CUSTOM"].includes(request.profile)
+          || (request.styleInstruction != null && typeof request.styleInstruction !== "string")
+          || (typeof request.styleInstruction === "string" && request.styleInstruction.length > 600)
+          || (request.profile === "CUSTOM" && !styleInstruction)
           || (request.regenerate != null && typeof request.regenerate !== "boolean")) {
           safeSend({ success: false, erro: "Contexto ou perfil inválido para sugerir resposta." });
           return;
         }
         const payload = { conversation, profile: request.profile, regenerate: request.regenerate === true };
         if (promptComplement) payload.promptComplement = promptComplement;
+        if (request.profile === "CUSTOM") payload.styleInstruction = styleInstruction;
         const apiBaseUrl = await getApiBaseUrl();
         const result = await apiFetchJson(`${apiBaseUrl}/api/gemini/responder`, {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),

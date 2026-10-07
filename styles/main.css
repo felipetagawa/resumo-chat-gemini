@@ -89,7 +89,7 @@
   padding: 2px 6px;
   border-radius: 999px;
   background: var(--ai-primary, #2f5ea8);
-  color: #ffffff;
+  color: var(--ai-on-primary);
   font-size: 10px;
   font-weight: 650;
   letter-spacing: 0.02em;
@@ -268,3 +268,9 @@
 #atendeai-observations-save-status[data-tone="error"] {
   color: var(--ai-danger, #b42318);
 }
+
+.atendeai-observations-help { color: var(--ai-text-secondary); font-size: var(--ai-font-size-sm); line-height: 1.4; margin-bottom: 6px; }
+.atendeai-observations-body .atendeai-observations-label:not(:first-child) { margin-top: 12px; }
+.atendeai-observations-footer-row [data-tone="pending"] { color: var(--ai-warning); }
+.atendeai-observations-footer-row [data-tone="success"] { color: var(--ai-success); }
+.atendeai-observations-footer-row [data-tone="error"] { color: var(--ai-danger); }

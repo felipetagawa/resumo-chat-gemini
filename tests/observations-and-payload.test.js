@@ -466,6 +466,7 @@ test("snapshot de observacao separa nota privada e complemento do resumo", () =>
   const { module, document } = loadObservationsModule();
   document.elements.set("atendeai-observation-text", { value: "nota privada" });
   document.elements.set("atendeai-prompt-complement", { value: "  observacao do resumo  " });
+  document.elements.set("atendeai-reply-addendum", { value: "REPLY_ONLY_SECRET" });
 
   assert.deepEqual(JSON.parse(JSON.stringify(module.getCurrentObservationSnapshot())), {
     summaryObservation: "observacao do resumo",
@@ -511,6 +512,47 @@ test('Smart Reply envia somente contrato dedicado sem privateNote, recovery ou h
   assert.equal(calls, 1); assert.deepEqual(background.persisted.history, persisted.history);
 });
 
+test('wire contracts whitelist summary, reply, product and documentation data independently', async () => {
+  const requests = [];
+  const background = loadBackground({ fetchImpl: async (url, options) => {
+    requests.push({ url: String(url), body: JSON.parse(options.body) });
+    return { ok: true, async json() { return { reply: 'OK', resumo: 'OK', suggestions: [] }; }, async text() { return ''; } };
+  } });
+  const forbidden = { privateNote: 'PRIVATE_ONLY', replyAddendum: 'REPLY_ONLY', summaryObservation: 'SUMMARY_ONLY' };
+  await background.dispatch({ ...forbidden, action: 'gerarResumo', texto: 'CHAT', promptComplement: 'SUMMARY_ONLY' });
+  await background.dispatch({ ...forbidden, action: 'gerarResposta', conversation: 'CHAT', profile: 'DIRECT', promptComplement: 'REPLY_ONLY' });
+  await background.dispatch({ ...forbidden, action: 'classificarProduto', conversation: 'CHAT' });
+  await background.dispatch({ ...forbidden, action: 'classificarDocumentacao', context: 'CHAT', candidates: [{ id: '1', label: 'Documento' }] });
+  assert.equal(requests.length, 4);
+  assert.equal(requests[0].body.promptComplement, 'SUMMARY_ONLY');
+  assert.equal(requests[1].body.promptComplement, 'REPLY_ONLY');
+  assert.match(requests[1].url, /\/api\/gemini\/responder$/);
+  for (const [i, request] of requests.entries()) {
+    const body = JSON.stringify(request.body);
+    assert.equal(body.includes('PRIVATE_ONLY'), false);
+    if (i !== 0) assert.equal(body.includes('SUMMARY_ONLY'), false);
+    if (i !== 1) assert.equal(body.includes('REPLY_ONLY'), false);
+    assert.equal(Object.hasOwn(request.body, 'privateNote'), false);
+  }
+});
+
+test('observations drawer exposes three compact sections with a dedicated bounded addendum', () => {
+  const { module, document } = loadObservationsModule();
+  const created = [];
+  const original = document.createElement;
+  document.createElement = () => {
+    const node = original(); node.querySelector = selector => selector === '.atendeai-observations-client' ? { textContent: '' } : null;
+    created.push(node); return node;
+  };
+  module.openDrawer();
+  const markup = created.find(n => n.id === 'atendeai-observations-drawer').innerHTML;
+  for (const label of ['Notas privadas', 'Observações para o resumo', 'Adendo para resposta']) assert.ok(markup.includes(label));
+  assert.match(markup, /id="atendeai-reply-addendum" rows="3" maxlength="2000" disabled/);
+  assert.ok(markup.includes('atendeai-reply-addendum-count'));
+  assert.ok(markup.includes('É usado somente em Sugerir resposta.'));
+  assert.doesNotMatch(markup, /Contexto para IA|rows="[67]"/);
+});
+
 test('Smart Reply valida localmente e propaga erro sem afetar composer', async () => {
   let calls = 0;
   const background = loadBackground({ fetchImpl: async () => { calls++; return { ok: false, status: 429, async json() { return { erro: 'Limite de sugestões' }; } }; } });
@@ -524,4 +566,21 @@ test('Smart Reply valida localmente e propaga erro sem afetar composer', async (
   assert.equal(calls, 0);
   const response = await background.dispatch({ action: 'gerarResposta', conversation: 'oi', profile: 'DIRECT' });
   assert.match(response.erro, /Limite de sugestões/); assert.equal(calls, 1);
+});
+
+test('CUSTOM wire uses only styleInstruction while native requests omit it', async () => {
+  const payloads = [];
+  const background = loadBackground({ fetchImpl: async (url, options) => {
+    payloads.push(JSON.parse(options.body)); return { ok: true, async json() { return { reply: 'OK' }; } };
+  } });
+  for (const styleInstruction of [undefined, '', ' ', 'x'.repeat(601), 3, {}, true]) {
+    const response = await background.dispatch({ action: 'gerarResposta', conversation: 'CHAT', profile: 'CUSTOM', styleInstruction });
+    assert.equal(response.success, false);
+  }
+  assert.equal(payloads.length, 0);
+  await background.dispatch({ action: 'gerarResposta', conversation: 'CHAT', promptComplement: 'ADDENDUM', profile: 'CUSTOM',
+    styleInstruction: 'x'.repeat(600), profileName: 'LOCAL_NAME', profileId: 'LOCAL_ID', privateNote: 'PRIVATE', summaryObservation: 'SUMMARY' });
+  assert.deepEqual(payloads[0], { conversation: 'CHAT', promptComplement: 'ADDENDUM', profile: 'CUSTOM', styleInstruction: 'x'.repeat(600), regenerate: false });
+  await background.dispatch({ action: 'gerarResposta', conversation: 'CHAT', profile: 'DIRECT', styleInstruction: 'IGNORED' });
+  assert.equal(Object.hasOwn(payloads[1], 'styleInstruction'), false);
 });

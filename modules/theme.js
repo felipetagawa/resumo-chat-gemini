@@ -13,6 +13,8 @@ const ThemeModule = (() => {
     "geminiDicaPopup",
     "geminiDocsPopup",
     "gemini-notification-toast",
+    "gemini-overdue-toast",
+    "atendeai-options",
     "atendeai-onboarding-overlay",
     "atendeai-config-modal-overlay",
     "chamadoManualPopup",

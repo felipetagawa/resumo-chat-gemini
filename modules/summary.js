@@ -79,8 +79,8 @@ const SummaryModule = (() => {
       bottom:130px;
       right:20px;
       z-index:999999;
-      background:#fff;
-      border:1px solid #dadce0;
+      background:var(--ai-surface);
+      border:1px solid var(--ai-border-strong);
       border-radius:8px;
       padding:16px;
       width:380px;
@@ -95,30 +95,30 @@ const SummaryModule = (() => {
 
     popup.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <b style="font-size:16px; color:#3c4043;">${titulo}</b>
-        <button id="fecharResumoFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
+        <b style="font-size:16px; color:var(--ai-text);">${titulo}</b>
+        <button id="fecharResumoFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ai-text-secondary);">&times;</button>
       </div>
       <div id="conteudoResumo" style="
         padding: 12px;
-        background: #f9f9f9;
-        border: 1px solid #eee;
+        background: var(--ai-surface-muted);
+        border: 1px solid var(--ai-border);
         border-radius: 4px;
         font-family: 'Segoe UI', sans-serif;
         flex: 1;
         overflow-y: auto;
         margin-bottom: 12px;
         line-height: 1.5;
-        color: #333;
+        color: var(--ai-text);
       "></div>
 
       <div style="display:flex; gap:8px;">
         <button id="copiarResumoFlutuante" style="
-          flex: 1; padding: 8px; background: #fff;
-          color: #3c4043; border: 1px solid #dadce0; border-radius: 6px; cursor: pointer; font-weight:500; font-family: 'Segoe UI', sans-serif;
+          flex: 1; padding: 8px; background: var(--ai-surface);
+          color: var(--ai-text); border: 1px solid var(--ai-border-strong); border-radius: 6px; cursor: pointer; font-weight:500; font-family: 'Segoe UI', sans-serif;
         ">📋 Copiar</button>
         <button id="exportarResumo" style="
-          flex: 1; padding: 8px; background: #fff;
-          color: #3c4043; border: 1px solid #dadce0; border-radius: 6px; cursor: pointer; font-weight:500; font-family: 'Segoe UI', sans-serif;
+          flex: 1; padding: 8px; background: var(--ai-surface);
+          color: var(--ai-text); border: 1px solid var(--ai-border-strong); border-radius: 6px; cursor: pointer; font-weight:500; font-family: 'Segoe UI', sans-serif;
         ">💾 Salvar .txt</button>
       </div>
     `;
@@ -135,10 +135,12 @@ const SummaryModule = (() => {
       const btn = popup.querySelector("#copiarResumoFlutuante");
       const original = btn.textContent;
       btn.textContent = "✅ Copiado!";
-      btn.style.background = "#34A853";
+      btn.style.background = "var(--ai-success-soft)";
+      btn.style.color = "var(--ai-success)";
       setTimeout(() => {
         btn.textContent = original;
-        btn.style.background = "#4285F4";
+        btn.style.background = "var(--ai-surface)";
+        btn.style.color = "var(--ai-text)";
       }, 2000);
     });
 
@@ -203,8 +205,8 @@ const SummaryModule = (() => {
       bottom:130px;
       right:20px;
       z-index:999999;
-      background:#fff;
-      border:1px solid #dadce0;
+      background:var(--ai-surface);
+      border:1px solid var(--ai-border-strong);
       border-radius:8px;
       padding:16px;
       width:400px;
@@ -219,13 +221,13 @@ const SummaryModule = (() => {
 
     popup.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <b style="font-size:16px; color:#3c4043;">💡 Dicas Inteligentes</b>
-        <button id="fecharDicaFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer; color:#5f6368;">&times;</button>
+        <b style="font-size:16px; color:var(--ai-text);">💡 Dicas Inteligentes</b>
+        <button id="fecharDicaFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ai-text-muted);">&times;</button>
       </div>
       <div id="conteudoDica" style="
         padding: 10px;
-        background: #f8f9fa;
-        border: 1px solid #eee;
+        background: var(--ai-surface-muted);
+        border: 1px solid var(--ai-border);
         border-radius: 4px;
         font-family: 'Segoe UI', sans-serif;
         flex: 1;
@@ -233,7 +235,7 @@ const SummaryModule = (() => {
         margin-bottom: 12px;
         white-space: pre-wrap;
         line-height: 1.4;
-        color: #333;
+        color: var(--ai-text);
       "></div>
     `;
 
