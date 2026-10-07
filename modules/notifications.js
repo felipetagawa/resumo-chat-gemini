@@ -50,7 +50,7 @@ const NotificationsModule = (() => {
         const toast = document.createElement('div');
         toast.id = 'gemini-notification-toast';
         toast.style = `
-      position: fixed; top: 90px; right: 20px; background: #fff;
+      position: fixed; top: 90px; right: 20px; background: var(--ai-surface);
       border-left: 6px solid #1a73e8; padding: 16px 20px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.15); border-radius: 6px;
       z-index: 1000000; font-family: 'Segoe UI', sans-serif;
@@ -71,18 +71,19 @@ const NotificationsModule = (() => {
         toast.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:start;">
          <div style="flex:1;">
-           <div style="font-weight:700; color:#1a73e8; margin-bottom:4px; font-size:14px;">📌 Informações do Cliente</div>
-           <div style="color:#555; font-size:13px;">Cliente: <strong>${clientName}</strong></div>
+           <div style="font-weight:700; color:var(--ai-primary); margin-bottom:4px; font-size:14px;">📌 Informações do Cliente</div>
+           <div style="color:var(--ai-text-secondary); font-size:13px;">Cliente: <strong>${clientName}</strong></div>
            ${detailsHtml}
          </div>
-         <button id="closeToast" style="background:none; border:none; cursor:pointer; color:#999; font-size:18px; margin-left:10px;">&times;</button>
+         <button id="closeToast" style="background:none; border:none; cursor:pointer; color:var(--ai-text-muted); font-size:18px; margin-left:10px;">&times;</button>
       </div>
       <div style="margin-top:12px; text-align:right;">
-          <button id="btnVerAgenda" style="background:#1a73e8; color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:12px;">Ver Agenda</button>
+          <button id="btnVerAgenda" style="background:var(--ai-primary); color:var(--ai-on-primary); border:none; padding:8px 14px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:12px;">Ver Agenda</button>
       </div>
     `;
 
         document.body.appendChild(toast);
+        globalThis.ThemeModule?.apply?.(toast);
 
         toast.querySelector('#closeToast').addEventListener('click', () => toast.remove());
         toast.querySelector('#btnVerAgenda').addEventListener('click', () => {
@@ -143,7 +144,7 @@ const NotificationsModule = (() => {
         const toast = document.createElement('div');
         toast.id = 'gemini-overdue-toast';
         toast.style = `
-      position: fixed; top: 90px; right: 20px; background: #fff;
+      position: fixed; top: 90px; right: 20px; background: var(--ai-surface);
       border-left: 6px solid #d32f2f; padding: 16px 20px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.15); border-radius: 6px;
       z-index: 1000000; font-family: 'Segoe UI', sans-serif;
@@ -154,7 +155,7 @@ const NotificationsModule = (() => {
 
         if (calendarEvents.length > 0) {
             detailsHtml += `<div style="margin-top: 8px;">
-        <strong style="color:#d32f2f;">📅 Calendário (${calendarEvents.length}):</strong>
+        <strong style="color:var(--ai-danger);">📅 Calendário (${calendarEvents.length}):</strong>
         <ul style="margin: 4px 0 0 20px; padding: 0; font-size: 12px;">
           ${calendarEvents.slice(0, 3).map(evt =>
                 `<li>${evt.title} ${evt.date ? '- ' + UIBuilder.formatarDataEvento(evt.date) : ''}</li>`
@@ -166,7 +167,7 @@ const NotificationsModule = (() => {
 
         if (crmEvents.length > 0) {
             detailsHtml += `<div style="margin-top: 8px;">
-        <strong style="color:#d32f2f;">📋 CRM (${crmEvents.length}):</strong>
+        <strong style="color:var(--ai-danger);">📋 CRM (${crmEvents.length}):</strong>
         <ul style="margin: 4px 0 0 20px; padding: 0; font-size: 12px;">
           ${crmEvents.slice(0, 3).map(item =>
                 `<li>${item.cliente} - ${item.assunto}</li>`
@@ -179,18 +180,19 @@ const NotificationsModule = (() => {
         toast.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:start;">
          <div style="flex:1;">
-           <div style="font-weight:700; color:#d32f2f; margin-bottom:4px; font-size:14px;">⚠️ Eventos Vencidos</div>
-           <div style="color:#555; font-size:13px; margin-bottom:2px;">Você tem ${total} evento(s) com data vencida</div>
+           <div style="font-weight:700; color:var(--ai-danger); margin-bottom:4px; font-size:14px;">⚠️ Eventos Vencidos</div>
+           <div style="color:var(--ai-text-secondary); font-size:13px; margin-bottom:2px;">Você tem ${total} evento(s) com data vencida</div>
            ${detailsHtml}
          </div>
-         <button id="closeOverdueToast" style="background:none; border:none; cursor:pointer; color:#999; font-size:18px; margin-left:10px;">&times;</button>
+         <button id="closeOverdueToast" style="background:none; border:none; cursor:pointer; color:var(--ai-text-muted); font-size:18px; margin-left:10px;">&times;</button>
       </div>
       <div style="margin-top:12px; text-align:right;">
-          <button id="btnVerAgendaOverdue" style="background:#d32f2f; color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:12px;">Ver Agenda</button>
+          <button id="btnVerAgendaOverdue" style="background:var(--ai-danger-soft); color:var(--ai-danger); border:none; padding:8px 14px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:12px;">Ver Agenda</button>
       </div>
     `;
 
         document.body.appendChild(toast);
+        globalThis.ThemeModule?.apply?.(toast);
 
         toast.querySelector('#closeOverdueToast').addEventListener('click', () => {
             toast.remove();

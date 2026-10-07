@@ -38,6 +38,8 @@ function inicializarModulos() {
 
   PreControlModule.init();
   ObservationsModule.init();
+  RecoveryBufferModule.init();
+  void globalThis.ThemeModule?.init?.();
 
   modulosInicializados = true;
 }
@@ -237,11 +239,10 @@ function createOnboardingModal() {
     const newVisibility = {
       btnAgenda: true,
       btnMessages: true,
-      btnAssistenteIA: true,
+      btnSmartReply: true,
       btnConsultarDocsLoop: true,
       btnResumoGemini: !isPre,
       btnChamadoManual: !isPre,
-      btnDica: !isPre,
       btnProductClassifier: isPre
     };
 
@@ -353,7 +354,7 @@ function ensureConfigRequiredModal() {
     width: 520px;
     max-width: 92vw;
     border-radius: 16px;
-    background: #fff;
+    background: var(--ai-surface);
     box-shadow: 0 18px 50px rgba(0,0,0,0.28);
     overflow: hidden;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -362,8 +363,8 @@ function ensureConfigRequiredModal() {
   modal.innerHTML = `
     <div style="
       padding: 16px 18px;
-      background: linear-gradient(135deg, #1a73e8, #4285F4);
-      color: #fff;
+      background: var(--ai-primary-soft);
+      color: var(--ai-primary);
     ">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
         <div>
@@ -376,8 +377,8 @@ function ensureConfigRequiredModal() {
         <button id="atendeai-config-modal-close" type="button" aria-label="Fechar" style="
           appearance:none;
           border:none;
-          background: rgba(255,255,255,0.18);
-          color:#fff;
+          background: var(--ai-surface-hover);
+          color:var(--ai-text-secondary);
           width:34px;
           height:34px;
           border-radius:10px;
@@ -390,15 +391,15 @@ function ensureConfigRequiredModal() {
       </div>
     </div>
 
-    <div style="padding: 16px 18px; color:#0f172a;">
+    <div style="padding: 16px 18px; color:var(--ai-text);">
       <div style="
         padding: 12px 12px;
         border-radius: 12px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: var(--ai-surface-muted);
+        border: 1px solid var(--ai-border);
         font-size: 13px;
         font-weight: 700;
-        color: #334155;
+        color: var(--ai-text-secondary);
         line-height: 1.45;
       ">
         • Nome/Login: usado para personalizar mensagens</b>)<br/>
@@ -407,8 +408,8 @@ function ensureConfigRequiredModal() {
 
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px; flex-wrap:wrap;">
         <button id="atendeai-config-modal-cancel" type="button" style="
-          background:#e5e7eb;
-          color:#111827;
+          background:var(--ai-surface-muted);
+          color:var(--ai-text);
           font-weight:900;
           border:none;
           border-radius:12px;
@@ -417,8 +418,8 @@ function ensureConfigRequiredModal() {
         ">Agora não</button>
 
         <button id="atendeai-config-modal-open-portal" type="button" style="
-          background:#1a73e8;
-          color:#fff;
+          background:var(--ai-primary);
+          color:var(--ai-on-primary);
           font-weight:900;
           border:none;
           border-radius:12px;
@@ -431,6 +432,7 @@ function ensureConfigRequiredModal() {
 
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
+  globalThis.ThemeModule?.apply?.(overlay);
 
   const close = () => { overlay.style.display = "none"; };
 
@@ -459,8 +461,120 @@ function openConfigRequiredModal() {
   overlay.style.display = "flex";
 }
 
+async function initializeExtensionDock(container) {
+  const key = "atendeai_dock_preferences";
+  const scales = { compact: 0.85, normal: 1, large: 1.15 };
+  const saved = await new Promise((resolve) => {
+    try {
+      chrome.storage.local.get([key], (data) => {
+        resolve(chrome.runtime.lastError ? {} : data?.[key] || {});
+      });
+    } catch { resolve({}); }
+  });
+  if (document.getElementById("containerBotoesGemini") !== container) return;
+  let size = Object.hasOwn(scales, saved.size) ? saved.size : "normal";
+  let minimized = saved.minimized === true;
+  let position = saved.position;
+  let drag = null;
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "gemini-dock-toolbar";
+  const handle = document.createElement("button");
+  handle.type = "button";
+  handle.className = "gemini-dock-handle";
+  handle.textContent = "⠿";
+  handle.setAttribute("aria-label", "Arrastar dock");
+  handle.title = "Arrastar dock";
+  const sizeButton = document.createElement("button");
+  sizeButton.type = "button";
+  sizeButton.className = "gemini-dock-size";
+  const toggleButton = document.createElement("button");
+  toggleButton.type = "button";
+  toggleButton.className = "gemini-dock-toggle";
+  toolbar.appendChild(handle);
+  toolbar.appendChild(sizeButton);
+  toolbar.appendChild(toggleButton);
+  container.prepend(toolbar);
+
+  function clampPosition(next) {
+    const rect = container.getBoundingClientRect();
+    const x = Number.isFinite(next?.x) ? next.x : rect.left;
+    const y = Number.isFinite(next?.y) ? next.y : rect.top;
+    position = {
+      x: Math.max(8, Math.min(x, window.innerWidth - rect.width - 8)),
+      y: Math.max(8, Math.min(y, window.innerHeight - rect.height - 8))
+    };
+    // CSS zoom scales coordinates too; store and clamp viewport pixels.
+    container.style.left = `${position.x / scales[size]}px`;
+    container.style.top = `${position.y / scales[size]}px`;
+    container.style.right = "auto";
+    container.style.bottom = "auto";
+  }
+
+  function persist() {
+    chrome.storage.local.set({ [key]: { position, size, minimized } }, () => {
+      if (chrome.runtime.lastError) console.error("Não foi possível salvar a posição do dock.");
+    });
+  }
+
+  function applySize() {
+    container.setAttribute("data-minimized", String(minimized));
+    sizeButton.textContent = `${Math.round(scales[size] * 100)}%`;
+    sizeButton.setAttribute("aria-label", `Tamanho do dock: ${sizeButton.textContent}. Clique para alternar.`);
+    sizeButton.title = "Alternar tamanho: 85%, 100%, 115%";
+    sizeButton.hidden = minimized;
+    toggleButton.textContent = minimized ? "▣" : "−";
+    toggleButton.setAttribute("aria-label", minimized ? "Restaurar dock" : "Minimizar dock");
+    toggleButton.setAttribute("aria-expanded", String(!minimized));
+    toggleButton.title = minimized ? "Restaurar dock" : "Minimizar dock";
+    container.style.zoom = String(scales[size]);
+    container.style.maxWidth = `${Math.max(1, window.innerWidth - 16) / scales[size]}px`;
+    container.style.maxHeight = `${Math.max(1, window.innerHeight - 16) / scales[size]}px`;
+    container.style.overflow = container.scrollHeight > container.clientHeight
+      || container.scrollWidth > container.clientWidth ? "auto" : "visible";
+    clampPosition(position);
+  }
+
+  sizeButton.addEventListener("click", () => {
+    const sizes = ["compact", "normal", "large"];
+    size = sizes[(sizes.indexOf(size) + 1) % sizes.length];
+    applySize();
+    persist();
+  });
+  toggleButton.addEventListener("click", () => {
+    minimized = !minimized;
+    applySize();
+    persist();
+  });
+  handle.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    drag = { id: event.pointerId, x: event.clientX, y: event.clientY, startX: position.x, startY: position.y };
+    handle.setPointerCapture(event.pointerId);
+  });
+  handle.addEventListener("pointermove", (event) => {
+    if (!drag || event.pointerId !== drag.id) return;
+    clampPosition({ x: drag.startX + event.clientX - drag.x, y: drag.startY + event.clientY - drag.y });
+  });
+  const finishDrag = () => {
+    if (!drag) return;
+    drag = null;
+    persist();
+  };
+  handle.addEventListener("pointerup", finishDrag);
+  handle.addEventListener("pointercancel", finishDrag);
+  handle.addEventListener("lostpointercapture", finishDrag);
+  const onResize = () => { applySize(); persist(); };
+  window.addEventListener("resize", onResize);
+  const observer = typeof ResizeObserver === "function" ? new ResizeObserver(() => clampPosition(position)) : null;
+  observer?.observe(container);
+  container.dockCleanup = () => { window.removeEventListener("resize", onResize); observer?.disconnect(); };
+  applySize();
+}
+
 function criarBotoesFlutuantes(visibility, userSector) {
   if (DOMHelpers.exists("containerBotoesGemini")) {
+    document.getElementById("containerBotoesGemini")?.dockCleanup?.();
     DOMHelpers.removeElement("containerBotoesGemini");
   }
 
@@ -631,18 +745,16 @@ function criarBotoesFlutuantes(visibility, userSector) {
   const botaoResumo = createButton("btnResumoGemini", "Gerar Relatório", "relatorio.png",
     guardFeature(async () => {
       const btn = document.getElementById("btnResumoGemini");
-      btn.disabled = true;
-      btn.innerHTML = `<span class="icon">⏳</span> Gerando...`;
-
       const texto = ChatCaptureModule.capturarTextoChat();
       const clientName = ChatCaptureModule.capturarNomeCliente(); // Captura nome para histórico
 
       if (!texto) {
-        alert("Não foi possível capturar o texto do chat.");
-        btn.disabled = false;
-        btn.innerHTML = `${getIconHTML("relatorio.png", "Gerar Relatório")} Gerar Relatório`;
+        await RecoveryBufferModule.openReportFallback();
         return;
       }
+
+      btn.disabled = true;
+      btn.innerHTML = `<span class="icon">⏳</span> Gerando...`;
 
       try {
         const summaryObservation = ObservationsModule.getPromptComplementForCurrentChat();
@@ -671,78 +783,23 @@ function criarBotoesFlutuantes(visibility, userSector) {
     })
   );
 
-  const containerDropdown = document.createElement("div");
-  containerDropdown.className = "gemini-dropdown";
+  const botaoConversasPreservadas = document.createElement("button");
+  botaoConversasPreservadas.id = "btnConversasPreservadas";
+  botaoConversasPreservadas.type = "button";
+  botaoConversasPreservadas.className = "gemini-preserved-link";
+  botaoConversasPreservadas.textContent = "Conversas preservadas";
+  botaoConversasPreservadas.addEventListener("click", guardFeature(() => {
+    return RecoveryBufferModule.openPreservedBuffers();
+  }));
 
-  const botaoMain = createButton("btnAssistenteIA", "Assistente IA", "icon48.png", (e) => {
-    e.stopPropagation();
-    containerDropdown.classList.toggle("active");
-  });
-  botaoMain.onclick = null;
-
-  const dropdownContent = document.createElement("div");
-  dropdownContent.className = "gemini-dropdown-content";
-
-  document.addEventListener("click", () => {
-    containerDropdown.classList.remove("active");
-  });
-
-  const itemDocs = document.createElement("button");
-  itemDocs.className = "gemini-dropdown-item";
-  itemDocs.id = "btnConsultarDocsLoop";
-  itemDocs.innerHTML = `${getIconHTML("docs.png", "Consultar Docs")} Consultar Docs`;
-  itemDocs.onclick = guardFeature(() => DocsModule.exibirPainelConsultaDocs());
-
-  const itemDica = document.createElement("button");
-  itemDica.className = "gemini-dropdown-item";
-  itemDica.id = "btnDica";
-  itemDica.innerHTML = `${getIconHTML("dicas-inteligentes.png", "Dicas Inteligentes")} Dicas Inteligentes`;
-
-  itemDica.onclick = guardFeature(async () => {
-    const btn = document.getElementById("btnDica");
-    btn.disabled = true;
-    const textoOriginal = btn.innerHTML;
-    btn.innerHTML = `<span class="icon">⏳</span> Pensando...`;
-
-    const texto = ChatCaptureModule.capturarTextoChat();
-    if (!texto) {
-      alert("Não foi possível capturar o texto do chat.");
-      btn.disabled = false;
-      btn.innerHTML = textoOriginal;
-      return;
-    }
-
-    try {
-      const summaryObservation = ObservationsModule.getPromptComplementForCurrentChat();
-      const validatedPromptComplement = summaryObservation;
-
-      if (validatedPromptComplement.length > MAX_PROMPT_COMPLEMENT_CHARS) {
-        alert(`O campo "Observações para o resumo" excede o limite de ${MAX_PROMPT_COMPLEMENT_CHARS} caracteres.`);
-        return;
-      }
-
-      const payload = {
-        action: "gerarDica",
-        texto
-      };
-      if (summaryObservation) payload.promptComplement = summaryObservation;
-
-      const response = await MessagingHelper.send(payload);
-      if (response && response.dica) SummaryModule.exibirDica(response.dica);
-      else if (response && response.erro) alert("Erro ao gerar dica: " + response.erro);
-    } catch (error) {
-      alert("Erro de comunicação: " + error.message);
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = `${getIconHTML("dicas-inteligentes.png", "Dicas Inteligentes")} Dicas Inteligentes`;
-    }
-  });
-
-  if (isVisible("btnConsultarDocsLoop")) dropdownContent.appendChild(itemDocs);
-  if (isVisible("btnDica")) dropdownContent.appendChild(itemDica);
-
-  containerDropdown.appendChild(botaoMain);
-  containerDropdown.appendChild(dropdownContent);
+  const botaoSmartReply = createButton('btnSmartReply', 'Sugerir resposta', '',
+    guardFeature(() => SmartReplyModule.open()));
+  botaoSmartReply.type = 'button';
+  botaoSmartReply.className += ' atendeai-focus-primary';
+  botaoSmartReply.innerHTML = '<svg class="atendeai-focus-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14v10H8l-5 4V3Z"/><path d="M6 7h8M6 10h5"/></svg> Sugerir resposta';
+  botaoDocs.id = 'btnConsultarDocsLoop';
+  botaoDocs.className = 'gemini-preserved-link';
+  botaoDocs.textContent = 'Consultar Docs';
 
   const botaoMessages = createButton(
     "btnMessages",
@@ -789,15 +846,31 @@ function criarBotoesFlutuantes(visibility, userSector) {
     container.appendChild(productClassifierResult);
   }
 
-  if (isVisible("btnResumoGemini")) container.appendChild(botaoResumo);
+  const showSmartReply = visibility?.btnSmartReply ?? visibility?.btnAssistenteIA ?? true;
+  if (showSmartReply || isVisible('btnConsultarDocsLoop')) {
+    const replyGroup = document.createElement('div');
+    replyGroup.className = 'gemini-report-group';
+    if (showSmartReply) replyGroup.appendChild(botaoSmartReply);
+    if (isVisible('btnConsultarDocsLoop')) replyGroup.appendChild(botaoDocs);
+    container.appendChild(replyGroup);
+  }
+  if (isVisible("btnResumoGemini")) {
+    const reportGroup = document.createElement("div");
+    reportGroup.className = "gemini-report-group";
+    reportGroup.appendChild(botaoResumo);
+    reportGroup.appendChild(botaoConversasPreservadas);
+    container.appendChild(reportGroup);
+  }
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);
   if (isVisible("btnAgenda")) container.appendChild(botaoAgenda);
   container.appendChild(botaoObservacoes);
   container.appendChild(botaoConfiguracoes); // Sempre mostra Configurações
 
-  if (isVisible("btnAssistenteIA")) container.appendChild(containerDropdown);
-
   document.body.appendChild(container);
+  globalThis.ThemeModule?.apply?.(container);
+  void globalThis.ThemeModule?.init?.()?.then?.(() => globalThis.ThemeModule.apply(container));
+  void SupportFocusModule.mount(container);
+  void initializeExtensionDock(container);
 }
 
 MessagingHelper.addListener((request, sender, sendResponse) => {

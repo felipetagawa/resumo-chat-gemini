@@ -16,6 +16,9 @@ const ObservationsModule = (() => {
     promptComplement: ""
   };
   let saveTimer = null;
+  let pendingSave = null;
+  let valuesReady = true;
+  const readyListeners = new Set();
   let mutationObserver = null;
   let pollTimer = null;
   let lastIdentityHash = "";
@@ -186,54 +189,65 @@ const ObservationsModule = (() => {
     status.dataset.tone = tone;
   }
 
+  function captureCurrentInputs() {
+    if (!currentChatKey || !observationsAreReady()) return null;
+    const obsInput = document.getElementById(OBS_FIELD_ID);
+    const complementInput = document.getElementById(COMPLEMENT_FIELD_ID);
+    if (!obsInput || !complementInput) return null;
+    return {
+      chatKey: currentChatKey,
+      meta: { ...currentMeta },
+      observationText: String(obsInput.value || ""),
+      promptComplement: String(complementInput.value || "")
+    };
+  }
+
   function scheduleSave() {
+    const edit = captureCurrentInputs();
+    if (!edit) return;
+    pendingSave = edit;
+    currentValues = { observationText: edit.observationText, promptComplement: edit.promptComplement };
     setStatus("Salvando...", "pending");
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      persistCurrentInputs().catch((err) => {
+      pendingSave = null;
+      return persistCurrentInputs(edit).catch((err) => {
         console.error("Observations save error:", err);
-        setStatus("Erro ao salvar", "error");
+        if (edit.chatKey === currentChatKey) setStatus("Erro ao salvar", "error");
       });
     }, SAVE_DEBOUNCE_MS);
   }
 
-  async function persistCurrentInputs() {
-    if (!currentChatKey) {
-      setStatus("Selecione um chat", "error");
-      return;
+  async function persistCurrentInputs(edit = captureCurrentInputs()) {
+    if (!edit) return;
+    const { chatKey, meta, observationText, promptComplement } = edit;
+    if (chatKey === currentChatKey && valuesReady) {
+      currentValues = { observationText, promptComplement };
     }
-
-    const obsInput = document.getElementById(OBS_FIELD_ID);
-    const complementInput = document.getElementById(COMPLEMENT_FIELD_ID);
-    if (!obsInput || !complementInput) return;
-
-    const observationText = String(obsInput.value || "");
-    const promptComplement = String(complementInput.value || "");
-
-    currentValues = { observationText, promptComplement };
 
     const map = await readStorageMap();
     const isEmpty = !observationText.trim() && !promptComplement.trim();
-
     if (isEmpty) {
-      delete map[currentChatKey];
+      delete map[chatKey];
     } else {
-      map[currentChatKey] = {
+      map[chatKey] = {
         observationText,
         promptComplement,
         updatedAt: Date.now(),
-        contactName: currentMeta.contactName || "",
-        phone: currentMeta.phone || "",
-        protocol: currentMeta.protocol || ""
+        contactName: meta.contactName || "",
+        phone: meta.phone || "",
+        protocol: meta.protocol || ""
       };
     }
-
     await writeStorageMap(map);
-    setStatus("Salvo", "success");
-    updateButtonState();
+    if (chatKey === currentChatKey && valuesReady) {
+      setStatus("Salvo", "success");
+      updateButtonState();
+    }
   }
 
   async function loadCurrentValues() {
+    const chatKey = currentChatKey;
     if (!currentChatKey) {
       currentValues = { observationText: "", promptComplement: "" };
       applyValuesToInputs();
@@ -242,7 +256,7 @@ const ObservationsModule = (() => {
     }
 
     const map = await readStorageMap();
-    const item = map[currentChatKey] || {};
+    const item = map[chatKey] || {};
     currentValues = {
       observationText: String(item.observationText || ""),
       promptComplement: String(item.promptComplement || "")
@@ -262,6 +276,7 @@ const ObservationsModule = (() => {
   }
 
   async function syncChatContext() {
+    void globalThis.SmartReplyContextModule?.sync?.();
     if (syncInProgress) return;
     syncInProgress = true;
     try {
@@ -270,10 +285,25 @@ const ObservationsModule = (() => {
       const identityHash = `${chatKey}|${meta.contactName}|${meta.phone}|${meta.protocol}`;
       if (identityHash === lastIdentityHash) return;
 
+      // Invalidate before any await: no field from the previous chat is readable.
+      valuesReady = false;
+      currentValues = { observationText: "", promptComplement: "" };
+      applyValuesToInputs();
+      updateButtonState();
+      const edit = pendingSave;
+      pendingSave = null;
+      clearTimeout(saveTimer);
       currentMeta = meta;
       currentChatKey = chatKey;
       lastIdentityHash = identityHash;
+      if (edit) {
+        await persistCurrentInputs(edit).catch((err) => console.error("Observations switch save error:", err));
+      }
       await loadCurrentValues();
+      valuesReady = true;
+      // Internal callback contract: re-evaluate captures after the async load,
+      // without sharing Observations storage or adding polling.
+      readyListeners.forEach((listener) => listener());
     } finally {
       syncInProgress = false;
     }
@@ -286,7 +316,9 @@ const ObservationsModule = (() => {
 
   function closeDrawer() {
     clearTimeout(saveTimer);
-    persistCurrentInputs()
+    const edit = pendingSave || captureCurrentInputs();
+    pendingSave = null;
+    Promise.all([persistCurrentInputs(edit), globalThis.SmartReplyContextModule?.flush?.()])
       .catch((err) => console.error("Observations close save error:", err))
       .finally(removeDrawerElements);
   }
@@ -315,27 +347,39 @@ const ObservationsModule = (() => {
 
       <div class="atendeai-observations-body">
         <label class="atendeai-observations-label" for="${OBS_FIELD_ID}">Notas privadas</label>
-        <textarea id="${OBS_FIELD_ID}" rows="7" placeholder="Notas privadas deste atendimento. Ficam somente no navegador e não são enviadas para a IA."></textarea>
+        <div class="atendeai-observations-help">Ficam somente no navegador e nunca são enviadas para a IA.</div>
+        <textarea id="${OBS_FIELD_ID}" rows="3" placeholder="Notas privadas deste atendimento. Ficam somente no navegador e não são enviadas para a IA."></textarea>
 
         <label class="atendeai-observations-label" for="${COMPLEMENT_FIELD_ID}">Observações para o resumo</label>
-        <div class="atendeai-observations-section-title">Complementam o histórico principal do chat e são enviadas automaticamente para a IA quando preenchidas.</div>
-        <textarea id="${COMPLEMENT_FIELD_ID}" rows="6" maxlength="${MAX_COMPLEMENT_CHARS}" placeholder="Adicione contexto do atendimento, ações feitas fora do chat, conclusões ou informações importantes que devem complementar o resumo."></textarea>
+        <div class="atendeai-observations-help">Complementam o relatório do atendimento.</div>
+        <textarea id="${COMPLEMENT_FIELD_ID}" rows="3" maxlength="${MAX_COMPLEMENT_CHARS}" placeholder="Adicione contexto do atendimento, ações feitas fora do chat, conclusões ou informações importantes que devem complementar o resumo."></textarea>
 
         <div class="atendeai-observations-footer-row">
           <span id="${SAVE_STATUS_ID}" data-tone="neutral">Salvo</span>
           <span id="atendeai-prompt-complement-count">0/${MAX_COMPLEMENT_CHARS}</span>
+        </div>
+        <label class="atendeai-observations-label" for="atendeai-reply-addendum">Adendo para resposta</label>
+        <div class="atendeai-observations-help">Use para informações que não aparecem no chat, como áudio, ligação, acesso remoto ou algo verificado pelo suporte. É usado somente em Sugerir resposta.</div>
+        <textarea id="atendeai-reply-addendum" rows="3" maxlength="2000" disabled placeholder="Informações adicionais somente para esta resposta"></textarea>
+        <div class="atendeai-observations-footer-row">
+          <span id="atendeai-reply-addendum-status" role="status">Carregando…</span>
+          <span id="atendeai-reply-addendum-count">0/2000</span>
         </div>
       </div>
     `;
 
     document.body.appendChild(overlay);
     document.body.appendChild(drawer);
+    globalThis.ThemeModule?.apply?.(overlay);
+    globalThis.ThemeModule?.apply?.(drawer);
 
     const client = drawer.querySelector(".atendeai-observations-client");
     client.textContent = currentMeta.contactName || currentMeta.phone || currentMeta.protocol || "Chat atual";
 
     drawer.querySelector(".atendeai-observations-close")?.addEventListener("click", closeDrawer);
     bindDrawerEvents();
+    globalThis.SmartReplyContextModule?.bind?.();
+    void globalThis.SmartReplyContextModule?.sync?.();
     applyValuesToInputs();
     drawer.querySelector(`#${OBS_FIELD_ID}`)?.focus();
   }
@@ -367,7 +411,14 @@ const ObservationsModule = (() => {
     }, 1200);
   }
 
+  function observationsAreReady() {
+    const meta = detectChatMeta();
+    const identityHash = `${buildChatKey(meta)}|${meta.contactName}|${meta.phone}|${meta.protocol}`;
+    return valuesReady && (!lastIdentityHash || identityHash === lastIdentityHash);
+  }
+
   function getPromptComplementForCurrentChat() {
+    if (!observationsAreReady()) return "";
     const complementInput = document.getElementById(COMPLEMENT_FIELD_ID);
 
     const promptComplement = complementInput
@@ -376,6 +427,25 @@ const ObservationsModule = (() => {
 
     if (!promptComplement.trim()) return "";
     return promptComplement.trim();
+  }
+
+  function readFieldValue(elementId, fallback) {
+    const field = document.getElementById(elementId);
+    const value = field ? String(field.value || "") : String(fallback || "");
+    return value.trim();
+  }
+
+  function getCurrentObservationSnapshot() {
+    if (!observationsAreReady()) return { summaryObservation: "", privateNote: "" };
+    return {
+      summaryObservation: readFieldValue(COMPLEMENT_FIELD_ID, currentValues.promptComplement),
+      privateNote: readFieldValue(OBS_FIELD_ID, currentValues.observationText)
+    };
+  }
+
+  function onCurrentObservationsReady(listener) {
+    readyListeners.add(listener);
+    return () => readyListeners.delete(listener);
   }
 
   function getCurrentChatMeta() {
@@ -392,7 +462,9 @@ const ObservationsModule = (() => {
     init,
     openDrawer,
     getPromptComplementForCurrentChat,
-    getCurrentChatMeta
+    getCurrentChatMeta,
+    getCurrentObservationSnapshot,
+    onCurrentObservationsReady
   };
 })();
 

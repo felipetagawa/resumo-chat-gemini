@@ -7,17 +7,20 @@
 
   <style>
     body {
-      font-family: "Segoe UI", Arial, sans-serif;
+      font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
       width: 380px;
       padding: 14px;
-      background: #ffffff;
-      color: #1f1f1f;
+      background: #f4f6f8;
+      color: #1f2937;
+      font-size: 13px;
+      line-height: 1.45;
     }
 
     h1 {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 12px;
+      font-size: 16px;
+      font-weight: 650;
+      margin: 0 0 12px;
+      letter-spacing: -0.02em;
     }
 
     .accordion {
@@ -28,25 +31,25 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px 12px;
-      background: #f8f9fa;
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
+      padding: 9px 12px;
+      background: #ffffff;
+      border: 1px solid #e4e7ec;
+      border-radius: 8px;
       cursor: pointer;
       user-select: none;
       font-weight: 600;
-      font-size: 14px;
-      color: #333;
-      transition: all 0.2s ease;
+      font-size: 13px;
+      color: #1f2937;
+      transition: background 0.15s ease;
     }
 
     .accordion-header:hover {
-      background: #f1f3f4;
+      background: #eef1f5;
     }
 
     .accordion-header.open {
-      background: #f1f3f4;
-      border-radius: 6px 6px 0 0;
+      background: #f7f8fa;
+      border-radius: 8px 8px 0 0;
       border-bottom: none;
     }
 
@@ -83,26 +86,26 @@
 
     .card-resumo {
       background: #fff;
-      color: #4285F4;
-      border: 1px solid #4285F4;
+      color: #2f5ea8;
+      border: 1px solid #c5d4e8;
     }
 
     .card-dicas {
-      background: #FEF7E0;
-      color: #B06000;
-      border: 1px solid #e08002ff;
+      background: #fffaf5;
+      color: #9a3412;
+      border: 1px solid #f0d0b4;
     }
 
     .card-mensagens {
       background: #fff;
-      color: #555453ff;
-      border: 1px solid #555453ff;
+      color: #4b5563;
+      border: 1px solid #e4e7ec;
     }
 
     .card-docs {
       background: #fff;
-      color: #d93025;
-      border: 1px solid #d93025;
+      color: #b42318;
+      border: 1px solid #f0c7c3;
     }
 
     .alerta {
@@ -121,7 +124,7 @@
     }
 
     .config a {
-      color: #4285F4;
+      color: #2f5ea8;
       text-decoration: none;
     }
 

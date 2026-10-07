@@ -1,0 +1,295 @@
+/* AtendeAI — design tokens (scoped to exclusive extension roots, never :root).
+   Isolation uses unique IDs/classes, not the mere presence of --ai-* variables. */
+#containerBotoesGemini,
+#atendeai-recovery-report-fallback,
+#atendeai-recovery-overlay,
+#atendeai-smart-reply,
+#geminiAgendaModal,
+#geminiResumoPopup,
+#geminiDicaPopup,
+#geminiDocsPopup,
+#gemini-notification-toast,
+#gemini-overdue-toast,
+#atendeai-options,
+#atendeai-onboarding-overlay,
+#atendeai-config-modal-overlay,
+#chamadoManualPopup,
+#productClassifierResult,
+#popupMensagensPadrao,
+.atendeai-modal-overlay,
+.atendeai-observations-drawer,
+.atendeai-observations-overlay,
+.atendeai-observations-button,
+.recovery-buffer-panel,
+.smart-reply-preview {
+  color-scheme: light;
+  --ai-font: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --ai-font-size: 13px;
+  --ai-font-size-sm: 12px;
+  --ai-font-size-xs: 11px;
+  --ai-font-size-md: 14px;
+  --ai-font-size-lg: 16px;
+  --ai-line: 1.45;
+  --ai-letter: 0;
+  --ai-weight-regular: 400;
+  --ai-weight-medium: 600;
+  --ai-weight-bold: 650;
+
+  --ai-bg: #f5f6f8;
+  --ai-surface: #ffffff;
+  --ai-surface-muted: #f7f8fa;
+  --ai-surface-hover: #eef1f5;
+  --ai-surface-active: #e7ebf0;
+  --ai-border: #e4e7ec;
+  --ai-border-strong: #d0d5dd;
+  --ai-border-hover: #b8c0cc;
+  --ai-text: #1f2937;
+  --ai-text-secondary: #4b5563;
+  --ai-text-muted: #626b79;
+  --ai-primary: #2f5ea8;
+  --ai-on-primary: #ffffff;
+  --ai-danger-soft-hover: #fce9e7;
+  --ai-danger-soft-active: #f8d7d3;
+  --ai-primary-hover: #264d8c;
+  --ai-primary-active: #1f3f73;
+  --ai-primary-soft: #eef3f9;
+  --ai-primary-border: #c5d4e8;
+  --ai-danger: #b42318;
+  --ai-danger-hover: #912018;
+  --ai-danger-soft: #fef3f2;
+  --ai-danger-border: #f0c7c3;
+  --ai-warning: #9a3412;
+  --ai-warning-soft: #fff7ed;
+  --ai-success: #17663a;
+  --ai-success-soft: #f0fdf4;
+
+  --ai-radius-sm: 6px;
+  --ai-radius-md: 8px;
+  --ai-radius-lg: 12px;
+  --ai-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --ai-shadow-md: 0 8px 24px rgba(16, 24, 40, 0.10);
+  --ai-overlay: rgba(15, 23, 42, 0.18);
+  --ai-focus: 0 0 0 2px #ffffff, 0 0 0 4px rgba(47, 94, 168, 0.45);
+  --ai-space-1: 4px;
+  --ai-space-2: 8px;
+  --ai-space-3: 12px;
+  --ai-space-4: 16px;
+  --ai-control-h: 32px;
+  --ai-dock-width: 188px;
+
+  font-family: var(--ai-font);
+  color: var(--ai-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+#containerBotoesGemini[data-atendeai-theme="dark"],
+#atendeai-recovery-report-fallback[data-atendeai-theme="dark"],
+#atendeai-recovery-overlay[data-atendeai-theme="dark"],
+#atendeai-smart-reply[data-atendeai-theme="dark"],
+#geminiAgendaModal[data-atendeai-theme="dark"],
+#geminiResumoPopup[data-atendeai-theme="dark"],
+#geminiDicaPopup[data-atendeai-theme="dark"],
+#geminiDocsPopup[data-atendeai-theme="dark"],
+#gemini-notification-toast[data-atendeai-theme="dark"],
+#gemini-overdue-toast[data-atendeai-theme="dark"],
+#atendeai-options[data-atendeai-theme="dark"],
+#atendeai-onboarding-overlay[data-atendeai-theme="dark"],
+#atendeai-config-modal-overlay[data-atendeai-theme="dark"],
+#chamadoManualPopup[data-atendeai-theme="dark"],
+#productClassifierResult[data-atendeai-theme="dark"],
+#popupMensagensPadrao[data-atendeai-theme="dark"],
+.atendeai-modal-overlay[data-atendeai-theme="dark"],
+.atendeai-observations-drawer[data-atendeai-theme="dark"],
+.atendeai-observations-overlay[data-atendeai-theme="dark"],
+.atendeai-observations-button[data-atendeai-theme="dark"],
+.recovery-buffer-panel[data-atendeai-theme="dark"],
+.smart-reply-preview[data-atendeai-theme="dark"] {
+  color-scheme: dark;
+  --ai-bg: #1b2433;
+  --ai-surface: #243044;
+  --ai-surface-muted: #1e2a3c;
+  --ai-surface-hover: #2c3a50;
+  --ai-surface-active: #33465f;
+  --ai-border: #3d4d63;
+  --ai-border-strong: #4a5d75;
+  --ai-border-hover: #6b7c94;
+  --ai-text: #f3f4f6;
+  --ai-text-secondary: #d1d5db;
+  --ai-text-muted: #b0bac9;
+  --ai-primary: #8db1fa;
+  --ai-on-primary: #101b2b;
+  --ai-danger-soft-hover: #502626;
+  --ai-danger-soft-active: #613030;
+  --ai-primary-hover: #7aa2f2;
+  --ai-primary-active: #79a0f2;
+  --ai-primary-soft: #2a3f66;
+  --ai-primary-border: #3d5a8c;
+  --ai-danger: #f87171;
+  --ai-danger-hover: #fca5a5;
+  --ai-danger-soft: #3f1d1d;
+  --ai-danger-border: #7f1d1d;
+  --ai-warning: #fbbf24;
+  --ai-warning-soft: #3f2f12;
+  --ai-success: #4ade80;
+  --ai-success-soft: #163226;
+  --ai-shadow-sm: 0 1px 2px rgba(8, 12, 20, 0.28);
+  --ai-shadow-md: 0 8px 24px rgba(8, 12, 20, 0.38);
+  --ai-overlay: rgba(8, 12, 20, 0.55);
+  --ai-focus: 0 0 0 2px #243044, 0 0 0 4px rgba(91, 141, 239, 0.55);
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, #chamadoManualPopup, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(.ai-btn, .btn-primary, .btn-secondary, .btn-danger),
+.recovery-buffer-generate,
+.recovery-buffer-delete,
+.recovery-buffer-view,
+.smart-reply-preview button {
+  font-family: var(--ai-font);
+  font-size: 13px;
+  font-weight: var(--ai-weight-medium);
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  border-radius: var(--ai-radius-sm);
+  min-height: var(--ai-control-h);
+  padding: 6px 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, #chamadoManualPopup, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(.ai-btn, .btn-primary, .btn-secondary, .btn-danger):focus-visible,
+.recovery-buffer-generate:focus-visible,
+.recovery-buffer-delete:focus-visible,
+.recovery-buffer-view:focus-visible,
+.recovery-buffer-back:focus-visible,
+.smart-reply-preview button:focus-visible,
+.smart-reply-preview select:focus-visible,
+.gemini-floating-btn:focus-visible,
+.gemini-preserved-link:focus-visible,
+.gemini-dock-size:focus-visible,
+.gemini-dock-toggle:focus-visible,
+.gemini-dock-handle:focus-visible,
+.gemini-dropdown-item:focus-visible,
+:where(.atendeai-modal-overlay) .modal-close-btn:focus-visible,
+.recovery-buffer-close:focus-visible,
+.smart-reply-close:focus-visible {
+  outline: none;
+  box-shadow: var(--ai-focus);
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, #chamadoManualPopup, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(.ai-btn, .btn-primary, .btn-secondary, .btn-danger):disabled,
+.recovery-buffer-generate:disabled,
+.recovery-buffer-delete:disabled,
+.recovery-buffer-view:disabled,
+.smart-reply-preview button:disabled,
+.gemini-floating-btn:disabled {
+  opacity: 1;
+  filter: saturate(0.35);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-primary, .btn-primary),
+.recovery-buffer-generate,
+.smart-reply-insert,
+.smart-reply-choice-primary {
+  background: var(--ai-primary);
+  color: var(--ai-on-primary);
+  border: 1px solid var(--ai-primary);
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-primary, .btn-primary):hover:not(:disabled),
+.recovery-buffer-generate:hover:not(:disabled),
+.smart-reply-insert:hover:not(:disabled),
+.smart-reply-choice-primary:hover:not(:disabled) {
+  background: var(--ai-primary-hover);
+  border-color: var(--ai-primary-hover);
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-primary, .btn-primary):active:not(:disabled),
+.recovery-buffer-generate:active:not(:disabled),
+.smart-reply-insert:active:not(:disabled),
+.smart-reply-choice-primary:active:not(:disabled) {
+  background: var(--ai-primary-active);
+  border-color: var(--ai-primary-active);
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-secondary, .btn-secondary),
+.smart-reply-regenerate,
+.smart-reply-choice,
+.recovery-buffer-view {
+  background: var(--ai-surface);
+  color: var(--ai-text);
+  border: 1px solid var(--ai-border-strong);
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-secondary, .btn-secondary):hover:not(:disabled),
+.smart-reply-regenerate:hover:not(:disabled),
+.smart-reply-choice:hover:not(:disabled),
+.recovery-buffer-view:hover:not(:disabled) {
+  background: var(--ai-surface-hover);
+  border-color: var(--ai-border-hover);
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-secondary, .btn-secondary):active:not(:disabled) {
+  background: var(--ai-surface-active);
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) .ai-btn-ghost,
+.smart-reply-close,
+.recovery-buffer-close,
+.recovery-buffer-back,
+.smart-reply-choice-ghost {
+  background: transparent;
+  color: var(--ai-text-secondary);
+  border: 1px solid transparent;
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) .ai-btn-ghost:hover:not(:disabled),
+.smart-reply-close:hover:not(:disabled),
+.recovery-buffer-close:hover:not(:disabled),
+.recovery-buffer-back:hover:not(:disabled),
+.smart-reply-choice-ghost:hover:not(:disabled) {
+  background: var(--ai-surface-hover);
+  color: var(--ai-text);
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-danger, .btn-danger),
+.recovery-buffer-delete {
+  background: var(--ai-danger-soft);
+  color: var(--ai-danger);
+  border: 1px solid var(--ai-danger-border);
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-danger, .btn-danger):hover:not(:disabled),
+.recovery-buffer-delete:hover:not(:disabled) {
+  background: var(--ai-danger-soft-hover);
+  border-color: var(--ai-danger);
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) .ai-btn-danger:active:not(:disabled),
+.recovery-buffer-delete:active:not(:disabled) {
+  background: var(--ai-danger-soft-active);
+}
+
+/* Explicit controls stop native host styles from supplying foregrounds/placeholders. */
+:where(#containerBotoesGemini, #geminiDocsPopup, #geminiResumoPopup, #geminiDicaPopup, #geminiAgendaModal, #chamadoManualPopup, #popupMensagensPadrao, .recovery-buffer-panel, .smart-reply-preview, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(input, textarea, select) {
+  color: var(--ai-text);
+  background-color: var(--ai-surface);
+  caret-color: var(--ai-text);
+  border-color: var(--ai-border-strong);
+}
+:where(#containerBotoesGemini, #geminiDocsPopup, #geminiResumoPopup, #geminiDicaPopup, #geminiAgendaModal, #chamadoManualPopup, #popupMensagensPadrao, .recovery-buffer-panel, .smart-reply-preview, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(input, textarea)::placeholder {
+  color: var(--ai-text-muted);
+  opacity: 1;
+}
+:where(#geminiDocsPopup, #geminiResumoPopup, #geminiDicaPopup, #geminiAgendaModal, #chamadoManualPopup, #popupMensagensPadrao, .recovery-buffer-panel, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(input, textarea, select, button):focus-visible {
+  outline: none; box-shadow: var(--ai-focus);
+}
+:where(#geminiDocsPopup, #geminiResumoPopup, #geminiDicaPopup, #geminiAgendaModal, #chamadoManualPopup, #popupMensagensPadrao, .recovery-buffer-panel, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(input, textarea, select, button):disabled {
+  cursor: not-allowed; opacity: 1; filter: saturate(0.35);
+}

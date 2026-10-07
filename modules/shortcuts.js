@@ -206,6 +206,7 @@ const ShortcutsModule = (() => {
     } else {
       // Filtrar comandos que começam com a query
       const matches = commandsCache.filter(cmd => cmd.shortcutNorm.startsWith(queryNorm));
+      matches.sort((a, b) => Number(b.shortcutNorm === queryNorm) - Number(a.shortcutNorm === queryNorm));
       currentFiltered = matches.map(cmd => ({ type: 'cmd', data: cmd }));
 
       // Adicionar opção de criar novo atalho APENAS para suporte
@@ -424,11 +425,7 @@ const ShortcutsModule = (() => {
   function findLastValidSlashIndex(text) {
     for (let i = text.length - 1; i >= 0; i--) {
       if (text[i] !== "/") continue;
-
-      if (text[i - 1] === "/") continue;
-
-      const tail = text.slice(Math.max(0, i - 10), i + 1).toLowerCase();
-      if (tail.includes("http://") || tail.includes("https://")) continue;
+      if (i > 0 && !/\s/.test(text[i - 1])) continue;
 
       return i;
     }
@@ -578,27 +575,10 @@ const ShortcutsModule = (() => {
     const active = findActiveSlashQuery(before);
 
     if (active) {
-      const queryNorm = normForMatch(active.query);
-
-      // Verificar se existe match exato para expansão imediata
-      // Regra:
-      // 1. Deve haver um match exato.
-      // 2. Não deve haver OUTROS matches que comecem com o mesmo prefixo (para não impedir de digitar atalhos mais longos).
-      // Ex: se tenho "bom" e "bomdia", digitar "bom" não deve expandir "bom" imediatamente.
-
-      const exactMatch = commandsCache.find(cmd => cmd.shortcutNorm === queryNorm);
-      const potentialMatches = commandsCache.filter(cmd => cmd.shortcutNorm.startsWith(queryNorm));
-
-      // Se match único e exato, expande agora.
-      if (exactMatch && potentialMatches.length === 1) {
-        inserirMensagemSubstituindoSlashQuery(el, exactMatch.message);
-        closeDropdown();
-        return;
-      }
-
       if (!isOpen || activeInputEl !== el) {
         openDropdown(el, active.query);
       } else {
+        if (currentQuery !== active.query) selectedIndex = 0;
         currentQuery = active.query;
         renderDropdown();
         positionDropdownNearInput(el, dropdownEl);
@@ -609,19 +589,29 @@ const ShortcutsModule = (() => {
   }
 
   function handleKeyDown(e) {
-    if (!isOpen || !activeInputEl) return;
+    if (!isOpen || !activeInputEl || e.isComposing || resolveInputEl(e.target) !== activeInputEl) return;
+    const active = findActiveSlashQuery(getTextBeforeCaret(activeInputEl));
+    if (!active) { closeDropdown(); return; }
+    if (active.query !== currentQuery) {
+      currentQuery = active.query;
+      selectedIndex = 0;
+      renderDropdown();
+    }
+    const commandIndices = currentFiltered.flatMap((item, index) => item.type === 'cmd' ? [index] : []);
 
-    // Passar navegação
-    if (e.key === 'ArrowDown') {
+    if (e.key === 'Escape') {
+      closeDropdown();
+    } else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && commandIndices.length) {
       e.preventDefault();
-      selectedIndex++;
+      e.stopImmediatePropagation();
+      const index = commandIndices.indexOf(selectedIndex);
+      const next = index + (e.key === 'ArrowDown' ? 1 : -1);
+      selectedIndex = commandIndices[(next + commandIndices.length) % commandIndices.length];
       renderDropdown();
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey
+      && currentFiltered[selectedIndex]?.type === 'cmd') {
       e.preventDefault();
-      selectedIndex--;
-      renderDropdown();
-    } else if (e.key === 'Enter' || e.key === 'Tab') {
-      e.preventDefault();
+      e.stopImmediatePropagation();
       executarAcaoSelecionada();
     }
   }
@@ -637,38 +627,11 @@ const ShortcutsModule = (() => {
     });
 
     document.addEventListener("input", (event) => handleTyping(event.target));
-    document.addEventListener("keyup", (event) => handleTyping(event.target));
-
-    // Novo: Keydown para navegação
-    document.addEventListener("keydown", (event) => {
-      // Auto-expansão com Espaço
-      if (event.key === ' ' && activeInputEl) {
-        const before = getTextBeforeCaret(activeInputEl);
-        const active = findActiveSlashQuery(before);
-        if (active) {
-          const queryNorm = normForMatch(active.query);
-          const exactMatch = commandsCache.find(cmd => cmd.shortcutNorm === queryNorm);
-          if (exactMatch) {
-            event.preventDefault(); // Evitar o espaço extra
-            inserirMensagemSubstituindoSlashQuery(activeInputEl, exactMatch.message);
-            closeDropdown();
-            return;
-          }
-        }
-      }
-
-      if (isOpen) {
-        // Se dropdown aberto, verificar se é navegação
-        if (['ArrowUp', 'ArrowDown', 'Enter', 'Tab', 'Escape'].includes(event.key)) {
-          if (event.key === 'Escape') {
-            closeDropdown();
-            return;
-          }
-          handleKeyDown(event);
-          return;
-        }
-      }
+    document.addEventListener("keyup", (event) => {
+      if (!['ArrowUp', 'ArrowDown', 'Enter', 'Tab', 'Escape'].includes(event.key)) return handleTyping(event.target);
     });
+    // Capture reaches a valid extension command before SZ's composer handlers.
+    document.addEventListener("keydown", handleKeyDown, true);
 
     document.addEventListener("focusin", (event) => handleTyping(event.target));
 

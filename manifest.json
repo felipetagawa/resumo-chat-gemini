@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AtendeAI Manager",
-  "version": "1.5.0",
+  "version": "1.5.2",
   "description": "Gera resumos estruturados de atendimentos usando Gemini.",
   "permissions": [
     "storage"
@@ -29,8 +29,12 @@
         "https://softeninformatica.sz.chat/*"
       ],
       "css": [
+        "styles/tokens.css",
         "styles/main.css",
         "styles/buttons.css",
+        "styles/recovery.css",
+        "styles/smart-reply.css",
+        "styles/support-focus.css",
         "styles/modals.css",
         "styles/calendar.css",
         "styles/called.css"
@@ -50,6 +54,13 @@
         "modules/notifications.js",
         "modules/pre-controls.js",
         "modules/observations.js",
+        "modules/theme.js",
+        "modules/recovery-buffer.js",
+        "modules/smart-reply-context.js",
+        "modules/smart-reply-profiles.js",
+        "modules/smart-reply-profiles-ui.js",
+        "modules/smart-reply.js",
+        "modules/support-focus.js",
         "content.js"
       ],
       "run_at": "document_end"
@@ -71,6 +82,7 @@
         "https://www.sistemaempresarialweb.com.br/crm-atendimento*"
       ],
       "js": [
+        "modules/documentation-learning.js",
         "modules/documentation-suggestion.js",
         "modules/crm-automation.js"
       ],

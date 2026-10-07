@@ -87,13 +87,18 @@ Você pode configurar a extensão do seu jeito! Veja como:
 ### O que Você Pode Configurar:
 
 #### 📝 Personalizar o Tom da IA
-Você pode ensinar a IA a responder do jeito que você prefere:
-- Digite instruções no campo **"Prompt Personalizado"**
-- Exemplos:
-  - "Responda sempre de forma amigável e informal"
-  - "Foque apenas em problemas técnicos"
-  - "Seja breve e direto nas respostas"
-- Clique em **"Salvar Configurações"**
+Abra **Sugerir resposta → Perfis** para gerenciar estilos neste navegador.
+Direta, Empática e Didática permanecem disponíveis e podem ser duplicadas.
+Você pode criar até 8 perfis, com nome de até 40 caracteres e instrução de
+até 600 caracteres, somente sobre estilo, tom e forma. Após trocar ou editar
+um perfil, clique em **Outra resposta** para aplicá-lo; a sugestão exibida
+não é reescrita automaticamente.
+
+O adendo contém fatos daquele atendimento e continua separado do estilo.
+As regras de segurança e factualidade sempre se aplicam. O antigo prompt
+global foi descontinuado; seu storage permanece preservado, sem migração
+automática. Perfis personalizados exigem a API com suporte a `CUSTOM` e
+`styleInstruction`.
 
 #### ⚡ Criar Suas Próprias Mensagens Rápidas
 1. Vá até a seção **"Mensagens Personalizadas"**

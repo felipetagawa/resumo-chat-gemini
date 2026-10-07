@@ -1,703 +1,13 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" id="atendeai-options">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal AtendeAI Manager</title>
 
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      padding: 20px;
-      max-width: 900px;
-      margin: 0 auto;
-      background-color: #f4f6f8;
-      color: #333;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .app-main {
-      flex: 1 0 auto;
-    }
-
-    h1 {
-      font-size: 22px;
-      color: #4285F4;
-      margin-bottom: 25px;
-    }
-
-    h2 {
-      font-size: 17px;
-      margin-bottom: 12px;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 6px;
-    }
-
-    h3 {
-      font-size: 14px;
-      margin: 18px 0 10px;
-      color: #555;
-    }
-
-    .card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
-    }
-
-    label {
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 70px;
-      padding: 5px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-family: inherit;
-      resize: vertical;
-      margin-top: 6px;
-    }
-
-    .hint {
-      font-size: 12px;
-      color: #666;
-      margin-top: 4px;
-    }
-
-    button {
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      margin-top: 10px;
-      transition: background .2s;
-    }
-
-    .btn-primary {
-      background: #4285F4;
-      color: #fff;
-    }
-
-    .btn-primary:hover {
-      background: #3367d6;
-    }
-
-    .message-card {
-      border-radius: 10px;
-      padding: 14px;
-      margin-bottom: 12px;
-      border: 1px solid #ddd;
-      transition: all 0.2s ease;
-    }
-
-    .message-card.fixed {
-      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-      border-color: #d1d5db;
-    }
-
-    .message-card.custom {
-      background: linear-gradient(135deg, #eef4ff 0%, #dbeafe 100%);
-      border-color: #93c5fd;
-    }
-
-    .fixed {
-      background: #f9fafb;
-    }
-
-    .custom {
-      background: #eef4ff;
-      border-color: #c9ddff;
-    }
-
-    .message-text {
-      font-size: 13px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      word-break: break-word;
-      margin-bottom: 12px;
-      padding: 10px;
-      background: rgba(255, 255, 255, 0.7);
-      border-radius: 6px;
-      border: 1px solid rgba(0, 0, 0, 0.05);
-    }
-
-    .message-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }
-
-    .shortcut-config {
-      display: flex;
-      align-items: center;
-      padding: 8px;
-      background: #f8fafc;
-      border-radius: 6px;
-      border: 1px solid #e2e8f0;
-      margin-top: 8px;
-      font-size: 13px;
-    }
-
-    .btn-test-shortcut {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 6px 12px;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-test-shortcut:hover {
-      background: linear-gradient(135deg, #059669 0%, #047857 100%);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-    }
-
-    input[type="number"]::-webkit-inner-spin-button,
-    input[type="number"]::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-
-    .btn-copy {
-      background: #dbeafe;
-      color: #1e40af;
-    }
-
-    .btn-copy:hover {
-      background: #bfdbfe;
-    }
-
-    .btn-edit {
-      background: #e5e7eb;
-      color: #374151;
-    }
-
-    .btn-edit:hover {
-      background: #d1d5db;
-    }
-
-    .btn-delete {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .btn-delete:hover {
-      background: #fecaca;
-    }
-
-    .btn-backup {
-      background: #10b981;
-      color: #fff;
-      margin-top: 15px;
-    }
-
-    .btn-backup:hover {
-      background: #059669;
-    }
-
-    #historyList {
-      list-style: none;
-      padding: 0;
-    }
-
-    .history-item {
-      background: #fff;
-      padding: 12px;
-      border-radius: 10px;
-      margin-bottom: 10px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .history-preview {
-      font-size: 13px;
-      font-weight: 500;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 400px;
-    }
-
-    .history-actions button {
-      background: #eee;
-      font-size: 12px;
-      margin-left: 5px;
-    }
-
-    #limparHistorico {
-      background: #e74c3c;
-      color: #fff;
-    }
-
-    #limparHistorico:hover {
-      background: #c0392b;
-    }
-
-    .accordion {
-      margin-bottom: 15px;
-    }
-
-    .accordion-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 15px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      cursor: pointer;
-      user-select: none;
-      font-weight: 600;
-      font-size: 14px;
-      color: #334155;
-      transition: all 0.2s ease;
-    }
-
-    .accordion-header:hover {
-      background: #f1f5f9;
-    }
-
-    .accordion-header.open {
-      background: #f1f5f9;
-      border-radius: 8px 8px 0 0;
-      border-bottom: none;
-    }
-
-    .accordion-icon {
-      font-size: 18px;
-      font-weight: bold;
-      transition: transform 0.3s ease;
-    }
-
-    .accordion-content {
-      border: 1px solid #e2e8f0;
-      border-top: none;
-      border-radius: 0 0 8px 8px;
-      background: white;
-      max-height: 0;
-      overflow: hidden;
-      opacity: 0;
-      transition: all 0.3s ease;
-    }
-
-    .accordion-content.open {
-      max-height: 420px;
-      opacity: 1;
-      padding: 15px;
-      overflow-y: auto;
-      overflow-x: hidden;
-    }
-
-    .credits-log-scroll {
-      height: 120px;
-      overflow-y: scroll;
-      overflow-x: hidden;
-      padding-right: 6px;
-      scrollbar-gutter: stable;
-    }
-
-    .credits-log-scroll::-webkit-scrollbar {
-      width: 10px;
-    }
-
-    .credits-log-scroll::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .credits-log-scroll::-webkit-scrollbar-thumb {
-      background: #d1d5db;
-      border-radius: 999px;
-      border: 2px solid transparent;
-      background-clip: content-box;
-    }
-
-    .credits-log-scroll::-webkit-scrollbar-thumb:hover {
-      background: #9ca3af;
-    }
-
-    .card-header-row {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 10px;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 8px;
-    }
-
-    .card-header-row h2 {
-      margin: 0;
-      border: none;
-      padding: 0;
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .actions-menu {
-      position: relative;
-      display: inline-flex;
-    }
-
-    .actions-menu>summary::-webkit-details-marker {
-      display: none;
-    }
-
-    .actions-menu>summary {
-      list-style: none;
-    }
-
-    .actions-trigger {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 12px;
-      border-radius: 10px;
-      border: 1px solid #dbeafe;
-      background: linear-gradient(135deg, #eaf2ff, #dbeafe);
-      color: #1e40af;
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
-      margin-top: 0;
-      transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
-      box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08);
-    }
-
-    .actions-trigger:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 22px rgba(2, 6, 23, 0.12);
-    }
-
-    .actions-trigger:active {
-      transform: translateY(0);
-      box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08);
-    }
-
-    .actions-trigger .chevron {
-      font-weight: 900;
-      opacity: .9;
-    }
-
-    .actions-dropdown {
-      position: absolute;
-      right: 0;
-      top: calc(100% + 8px);
-      min-width: 240px;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.14);
-      padding: 6px;
-      z-index: 9999;
-      display: none;
-    }
-
-    .actions-menu[open] .actions-dropdown {
-      display: block;
-    }
-
-    .actions-item {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 10px;
-      border-radius: 10px;
-      border: 1px solid transparent;
-      background: transparent;
-      cursor: pointer;
-      margin-top: 0;
-      text-align: left;
-      font-size: 13px;
-      color: #0f172a;
-      transition: background .12s ease, border-color .12s ease;
-    }
-
-    .actions-item:hover {
-      background: #f8fafc;
-      border-color: #e2e8f0;
-    }
-
-    .actions-item .icon {
-      width: 28px;
-      height: 28px;
-      border-radius: 10px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      color: #1e40af;
-      font-weight: 900;
-      flex: 0 0 auto;
-    }
-
-    .actions-item.danger .icon {
-      background: #fee2e2;
-      border-color: #fecaca;
-      color: #991b1b;
-    }
-
-    .actions-item .text {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      line-height: 1.15;
-    }
-
-    .actions-item .title {
-      font-weight: 800;
-      font-size: 12.8px;
-    }
-
-    .actions-item .desc {
-      font-size: 11.2px;
-      font-weight: 600;
-      color: #64748b;
-    }
-
-    .add-message-row {
-      margin-top: 24px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 10px;
-    }
-
-    .add-message-row textarea {
-      width: 100%;
-      min-height: 100px;
-      max-height: 160px;
-    }
-
-    .add-message-row button {
-      margin-top: 0;
-      width: fit-content;
-    }
-
-    .top-nav {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 14px;
-      margin-bottom: 14px;
-    }
-
-    .nav-brand .sys-name {
-      font-size: 13px;
-      font-weight: 700;
-      color: #0f172a;
-    }
-
-    .nav-brand .sys-sub {
-      font-size: 12px;
-      font-weight: 600;
-      color: #64748b;
-      margin-top: 2px;
-    }
-
-    .nav-tabs {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .nav-tab {
-      margin-top: 0;
-      padding: 8px 12px;
-      border-radius: 10px;
-      border: 1px solid #e2e8f0;
-      background: #f8fafc;
-      color: #334155;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background .15s ease, border-color .15s ease, transform .12s ease;
-    }
-
-    .nav-tab:hover {
-      background: #f1f5f9;
-    }
-
-    .nav-tab.active {
-      background: #eaf2ff;
-      border-color: #bfdbfe;
-      color: #1e40af;
-    }
-
-    .home-hero {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 16px 18px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
-      margin-bottom: 20px;
-    }
-
-    .home-hero .title {
-      margin: 0 0 6px 0;
-      font-weight: 800;
-      color: #0f172a;
-    }
-
-    .home-hero .desc {
-      margin: 0;
-      font-weight: 600;
-      color: #64748b;
-    }
-
-    .page-section {
-      display: none;
-    }
-
-    .page-section.active {
-      display: block;
-    }
-
-    .app-footer {
-      margin-top: auto;
-      padding-top: 14px;
-      border-top: 1px solid #e5e7eb;
-      display: flex;
-      justify-content: center;
-    }
-
-    .footer-link {
-      font-size: 13px;
-      color: #4285F4;
-      text-decoration: none;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .footer-link:hover {
-      text-decoration: underline;
-    }
-
-    .name-chip {
-      font-weight: 900;
-      font-size: 22px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      cursor: pointer;
-      color: #06349e;
-      text-decoration: underline;
-      background: none;
-      line-height: 1;
-      margin-left: 2px;
-    }
-
-    .name-chip:hover {
-      background: #dbeafe;
-    }
-
-    .leader-filters {
-      display: grid;
-      gap: 12px;
-      margin-bottom: 12px;
-      align-items: center;
-      grid-template-columns: minmax(220px, 1.2fr) minmax(180px, .8fr) 180px 180px;
-    }
-
-    .leader-filters input,
-    .leader-filters select {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      background: #fff;
-      box-sizing: border-box;
-      min-width: 0;
-    }
-
-    .leader-actions-row {
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 12px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-
-    .leader-status-inline {
-      font-size: 12px;
-      font-weight: 800;
-      color: #16a34a;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      min-height: 18px;
-      margin-top: 0;
-    }
-
-    @media (max-width: 860px) {
-      .leader-filters {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    @media (max-width: 520px) {
-      .leader-filters {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .leader-pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      margin-top: 12px;
-    }
-
-    .leader-page-btn {
-      margin-top: 0;
-      width: 44px;
-      height: 40px;
-      border-radius: 12px;
-      font-weight: 900;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      line-height: 1;
-    }
-
-    .leader-page-number {
-      font-size: 13px;
-      font-weight: 900;
-      color: #0f172a;
-      min-width: 36px;
-      text-align: center;
-      padding: 0 6px;
-      user-select: none;
-    }
-
-    .leader-page-btn:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-  </style>
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/options.css">
 
   <dialog id="creditsDialog" style="
     border: none;
@@ -706,13 +16,14 @@
     width: 520px;
     max-width: 92vw;
     box-shadow: 0 18px 40px rgba(0,0,0,0.28);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--ai-font);
     overflow: hidden;
   ">
     <div style="
       padding: 18px 20px;
-      background: linear-gradient(135deg, #1a73e8, #4285F4);
-      color: #fff;
+      background: var(--ai-surface-muted);
+      color: var(--ai-text);
+      border-bottom: 1px solid var(--ai-border);
     ">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
         <div>
@@ -725,27 +36,28 @@
         </div>
 
         <div class="app-version" style="
-          background: rgba(255,255,255,0.18);
-          border: 1px solid rgba(255,255,255,0.22);
-          padding: 6px 10px;
+          background: var(--ai-primary-soft);
+          border: 1px solid var(--ai-primary-border);
+          padding: 4px 9px;
           border-radius: 999px;
           font-size: 12px;
-          font-weight: 700;
+          font-weight: 650;
           letter-spacing: .2px;
           white-space: nowrap;
+          color: var(--ai-primary);
         ">
           v1.4.7
         </div>
       </div>
     </div>
 
-    <div style="padding: 18px 18px 16px; background:#fff;">
+    <div style="padding: 18px 18px 16px; background:var(--ai-surface);">
       <div style="display:grid; grid-template-columns: 1fr; gap: 10px;">
         <div style="
           padding: 14px;
           border-radius: 12px;
-          background: #f9fafb;
-          border: 1px solid #e5e7eb;
+          background: var(--ai-surface-muted);
+          border: 1px solid var(--ai-border);
         ">
           <div style="
             display:flex;
@@ -754,21 +66,21 @@
             gap:10px;
             margin-bottom: 8px;
           ">
-            <div style="font-size:13px; color:#6b7280; font-weight:600;">
+            <div style="font-size:13px; color:var(--ai-text-muted); font-weight:600;">
               Idealizador e Proprietário
             </div>
             <span style="
               font-size: 11px;
               padding: 4px 8px;
               border-radius: 999px;
-              background: #eef2ff;
-              border: 1px solid #e0e7ff;
-              color: #3730a3;
+              background: var(--ai-primary-soft);
+              border: 1px solid var(--ai-primary-border);
+              color: var(--ai-primary);
               font-weight: 700;
               white-space: nowrap;
             ">Owner</span>
           </div>
-          <div style="font-size:15px; font-weight:700; color:#111827;">
+          <div style="font-size:15px; font-weight:700; color:var(--ai-text);">
             Felipe Okamoto
           </div>
         </div>
@@ -776,8 +88,8 @@
         <div style="
           padding: 14px;
           border-radius: 12px;
-          background: #f8fbff;
-          border: 1px solid #dbeafe;
+          background: var(--ai-surface-muted);
+          border: 1px solid var(--ai-primary-soft);
         ">
           <div style="
             display:flex;
@@ -786,7 +98,7 @@
             gap:10px;
             margin-bottom: 10px;
           ">
-            <div style="font-size:13px; color:#1e40af; font-weight:700;">
+            <div style="font-size:13px; color:var(--ai-primary); font-weight:700;">
               Desenvolvimento
             </div>
             <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
@@ -794,18 +106,18 @@
                 font-size: 11px;
                 padding: 4px 8px;
                 border-radius: 999px;
-                background: #eff6ff;
-                border: 1px solid #bfdbfe;
-                color: #1e40af;
+                background: var(--ai-primary-soft);
+                border: 1px solid var(--ai-primary-border);
+                color: var(--ai-primary);
                 font-weight: 700;
               ">Front-end</span>
               <span style="
                 font-size: 11px;
                 padding: 4px 8px;
                 border-radius: 999px;
-                background: #eff6ff;
-                border: 1px solid #bfdbfe;
-                color: #1e40af;
+                background: var(--ai-primary-soft);
+                border: 1px solid var(--ai-primary-border);
+                color: var(--ai-primary);
                 font-weight: 700;
               ">Back-end</span>
             </div>
@@ -815,13 +127,13 @@
             <div style="
               padding: 10px 12px;
               border-radius: 10px;
-              background: #ffffff;
-              border: 1px solid #e5e7eb;
+              background: var(--ai-surface);
+              border: 1px solid var(--ai-border);
             ">
-              <div style="font-size:12px; color:#6b7280; font-weight:600; margin-bottom:4px;">
+              <div style="font-size:12px; color:var(--ai-text-muted); font-weight:600; margin-bottom:4px;">
                 Diego Martins
               </div>
-              <div style="font-size:13px; color:#111827;">
+              <div style="font-size:13px; color:var(--ai-text);">
                 Front-end • Back-end
               </div>
             </div>
@@ -829,13 +141,13 @@
             <div style="
               padding: 10px 12px;
               border-radius: 10px;
-              background: #ffffff;
-              border: 1px solid #e5e7eb;
+              background: var(--ai-surface);
+              border: 1px solid var(--ai-border);
             ">
-              <div style="font-size:12px; color:#6b7280; font-weight:600; margin-bottom:4px;">
+              <div style="font-size:12px; color:var(--ai-text-muted); font-weight:600; margin-bottom:4px;">
                 Felipe Okamoto
               </div>
-              <div style="font-size:13px; color:#111827;">
+              <div style="font-size:13px; color:var(--ai-text);">
                 Front-end • Back-end
               </div>
             </div>
@@ -843,25 +155,25 @@
         </div>
       </div>
 
-      <div style="height:1px; background:#eef2f7; margin: 14px 0;"></div>
+      <div style="height:1px; background:var(--ai-border); margin: 14px 0;"></div>
 
       <div style="
         padding: 14px;
         border-radius: 12px;
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
+        background: var(--ai-surface);
+        border: 1px solid var(--ai-border);
       ">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom: 10px;">
-          <div style="font-size:13px; color:#111827; font-weight:800;">
+          <div style="font-size:13px; color:var(--ai-text); font-weight:800;">
             Log de Atualizações
           </div>
           <span style="
             font-size: 11px;
             padding: 4px 8px;
             border-radius: 999px;
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
-            color: #374151;
+            background: var(--ai-surface-muted);
+            border: 1px solid var(--ai-border);
+            color: var(--ai-text-secondary);
             font-weight: 700;
             white-space: nowrap;
           ">Changelog</span>
@@ -871,23 +183,23 @@
 
           <div style="display:flex; gap:10px;">
             <div style="width:10px; display:flex; justify-content:center;">
-              <div style="width:8px; height:8px; border-radius:50%; background:#34a853; margin-top:6px;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:var(--ai-success); margin-top:6px;"></div>
             </div>
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span class="app-version" style="font-size:12px; font-weight:800; color:#111827;">v1.4.7</span>
-                <span style="font-size:12px; color:#6b7280;">Melhorias</span>
+                <span class="app-version" style="font-size:12px; font-weight:800; color:var(--ai-text);">v1.4.7</span>
+                <span style="font-size:12px; color:var(--ai-text-muted);">Melhorias</span>
                 <span style="
                   font-size: 11px;
                   padding: 3px 8px;
                   border-radius: 999px;
-                  background: #ecfdf5;
-                  border: 1px solid #a7f3d0;
-                  color: #065f46;
+                  background: var(--ai-success-soft);
+                  border: 1px solid var(--ai-border-strong);
+                  color: var(--ai-success);
                   font-weight: 800;
                 ">Atual</span>
               </div>
-              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+              <div style="font-size:13px; color:var(--ai-text-secondary); margin-top:4px; line-height:1.35;">
                 Melhorias na paginação e exportação do painel Líder; Ajustes na leitura de Upsell.
               </div>
             </div>
@@ -895,14 +207,14 @@
 
           <div style="display:flex; gap:10px;">
             <div style="width:10px; display:flex; justify-content:center;">
-              <div style="width:8px; height:8px; border-radius:50%; background:#1a73e8; margin-top:6px;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:var(--ai-primary); margin-top:6px;"></div>
             </div>
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-size:12px; font-weight:800; color:#111827;">v1.4.5</span>
-                <span style="font-size:12px; color:#6b7280;">Melhorias e Correções</span>
+                <span style="font-size:12px; font-weight:800; color:var(--ai-text);">v1.4.5</span>
+                <span style="font-size:12px; color:var(--ai-text-muted);">Melhorias e Correções</span>
               </div>
-              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+              <div style="font-size:13px; color:var(--ai-text-secondary); margin-top:4px; line-height:1.35;">
                 Correções no fluxo de edição de mensagens padrão, restauração do histórico do branch main com merge
                 adequado da branch fix/fluxopre.
               </div>
@@ -911,14 +223,14 @@
 
           <div style="display:flex; gap:10px;">
             <div style="width:10px; display:flex; justify-content:center;">
-              <div style="width:8px; height:8px; border-radius:50%; background:#1a73e8; margin-top:6px;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:var(--ai-primary); margin-top:6px;"></div>
             </div>
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-size:12px; font-weight:800; color:#111827;">v1.4.3</span>
-                <span style="font-size:12px; color:#6b7280;">Melhorias e Correções</span>
+                <span style="font-size:12px; font-weight:800; color:var(--ai-text);">v1.4.3</span>
+                <span style="font-size:12px; color:var(--ai-text-muted);">Melhorias e Correções</span>
               </div>
-              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+              <div style="font-size:13px; color:var(--ai-text-secondary); margin-top:4px; line-height:1.35;">
                 Correções no fluxo de edição de mensagens padrão, restauração do histórico do branch main com merge
                 adequado da branch fix/fluxopre.
               </div>
@@ -927,15 +239,15 @@
 
           <div style="display:flex; gap:10px;">
             <div style="width:10px; display:flex; justify-content:center;">
-              <div style="width:8px; height:8px; border-radius:50%; background:#1a73e8; margin-top:6px;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:var(--ai-primary); margin-top:6px;"></div>
             </div>
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-size:12px; font-weight:800; color:#111827;">v1.2</span>
-                <span style="font-size:12px; color:#6b7280;">Mensagens Padrão, Dicas inteligentes com IA e Agenda &
+                <span style="font-size:12px; font-weight:800; color:var(--ai-text);">v1.2</span>
+                <span style="font-size:12px; color:var(--ai-text-muted);">Mensagens Padrão, Dicas inteligentes com IA e Agenda &
                   Gestão</span>
               </div>
-              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+              <div style="font-size:13px; color:var(--ai-text-secondary); margin-top:4px; line-height:1.35;">
                 Adicionadas mensagens padrão, Dicas inteligentes com IA, Área Agenda & Gestão com Kanban, Calendário e
                 área para Anotações.
               </div>
@@ -944,14 +256,14 @@
 
           <div style="display:flex; gap:10px;">
             <div style="width:10px; display:flex; justify-content:center;">
-              <div style="width:8px; height:8px; border-radius:50%; background:#1a73e8; margin-top:6px;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:var(--ai-primary); margin-top:6px;"></div>
             </div>
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-size:12px; font-weight:800; color:#111827;">v1.1</span>
-                <span style="font-size:12px; color:#6b7280;">Resumo de atendimentos com IA</span>
+                <span style="font-size:12px; font-weight:800; color:var(--ai-text);">v1.1</span>
+                <span style="font-size:12px; color:var(--ai-text-muted);">Resumo de atendimentos com IA</span>
               </div>
-              <div style="font-size:13px; color:#374151; margin-top:4px; line-height:1.35;">
+              <div style="font-size:13px; color:var(--ai-text-secondary); margin-top:4px; line-height:1.35;">
                 Ferramenta gerar o resumo conforme os parâmetros definidos pela gerência.
               </div>
             </div>
@@ -972,8 +284,7 @@
           padding: 10px 14px;
           font-weight: 800;
           cursor: pointer;
-          background: #1a73e8;
-          color: #fff;
+          background:var(--ai-primary); color:var(--ai-on-primary);
         ">
           Fechar
         </button>
@@ -986,24 +297,13 @@
 
   <main class="app-main">
 
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
-      <h1 style="margin:0;">Painel de Configurações</h1>
-    </div>
-
     <div class="top-nav" role="navigation" aria-label="Navegação de Configurações">
       <div class="nav-brand">
-        <div class="sys-name" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <h1 style="margin:0 0 4px;">Painel de Configurações</h1>
+        <div class="sys-name" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span class="atendeai-mark" aria-hidden="true">A</span>
           <span>AtendeAI Manager</span>
-          <span id="sectorBadge" style="
-          display:none;
-          font-size:12px;
-          font-weight:800;
-          padding:4px 10px;
-          border-radius:999px;
-          border:1px solid #e2e8f0;
-          background:#f8fafc;
-          color:#0f172a;
-        "></span>
+          <span id="sectorBadge"></span>
         </div>
       </div>
 
@@ -1017,74 +317,133 @@
     </div>
 
     <section id="sec-home" class="page-section active">
-      <div class="home-hero" style="display:flex; flex-direction:column; gap:14px;">
-        <div>
-          <div style="font-size:22px; font-weight:900; color:#0f172a; line-height:1.15;">
-            <span id="homeGreetingPrefix">Olá</span><span id="homeGreetingComma">,</span>
-            <button id="editNameTrigger" type="button" class="name-chip" aria-label="Editar nome" hidden></button>
-          </div>
-
-          <div style="margin-top:6px; font-size:13px; color:#64748b; font-weight:600;">
-            Centralize configurações e atalhos para acelerar seu atendimento e padronizar respostas.
-          </div>
+      <div class="home-hero">
+        <div class="title">
+          <span id="homeGreetingPrefix">Olá</span><span id="homeGreetingComma">,</span>
+          <button id="editNameTrigger" type="button" class="name-chip" aria-label="Editar nome" hidden></button>
         </div>
+        <p class="desc">Ajustes do atendimento, mensagens padrão e visibilidade dos botões.</p>
+      </div>
 
-        <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
-          <div class="card" style="margin-bottom:0;">
-            <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
-              Mensagens Padrão - Suporte e Pré Atendimento
-            </div>
-            <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
-              Cadastre respostas frequentes e use atalhos para colar mensagens com um clique, mantendo consistência no
-              atendimento.
+      <div class="home-grid">
+        <div class="home-feature">
+          <strong>Mensagens Padrão</strong>
+          <p>Cadastre respostas frequentes e atalhos para colar mensagens com um clique.</p>
+        </div>
+        <div class="home-feature">
+          <strong>Configuração IA</strong>
+          <p>Defina o tom, o formato e o perfil padrão das sugestões de resposta.</p>
+        </div>
+        <div class="home-feature">
+          <strong>Histórico</strong>
+          <p>Consulte resumos e chamados manuais anteriores quando precisar de contexto.</p>
+        </div>
+      </div>
+
+      <div class="card news-card" style="margin-top:16px;">
+        <h2><span class="atendeai-mark" aria-hidden="true">A</span> Novidades</h2>
+        <p class="hint">Atualizações recentes desta extensão.</p>
+        <div id="changelogList" class="changelog-list" hidden></div>
+        <div class="changelog-static">
+          <div class="changelog-item">
+            <span class="changelog-dot current" aria-hidden="true"></span>
+            <div>
+              <div class="changelog-meta">
+                <strong class="app-version">v1.5.1</strong>
+                <span>AtendeAI 1.5.1</span>
+                <span class="changelog-badge">Atual</span>
+              </div>
+              <div class="changelog-body">
+                Estado e próximo passo por atendimento no dock;
+                Sugerir resposta como ação principal; dark mode do AtendeAI;
+                correção do travamento do Smart Reply.
+              </div>
             </div>
           </div>
-
-          <div class="card" style="margin-bottom:0;">
-            <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
-              Configuração IA - Suporte
-            </div>
-            <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
-              Defina instruções para a IA gerar resumos no padrão da sua operação (tom, formato e foco do atendimento).
+          <div class="changelog-item">
+            <span class="changelog-dot" aria-hidden="true"></span>
+            <div>
+              <div class="changelog-meta">
+                <strong>v1.4.7</strong>
+                <span>Melhorias</span>
+              </div>
+              <div class="changelog-body">Melhorias na paginação e exportação do painel Líder; ajustes na leitura de Upsell.</div>
             </div>
           </div>
-
-          <div class="card" style="margin-bottom:0;">
-            <div style="font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px;">
-              Histórico - Suporte
+          <div class="changelog-item">
+            <span class="changelog-dot" aria-hidden="true"></span>
+            <div>
+              <div class="changelog-meta">
+                <strong>v1.4.5</strong>
+                <span>Melhorias e correções</span>
+              </div>
+              <div class="changelog-body">Correções no fluxo de edição de mensagens padrão e restauração do histórico.</div>
             </div>
-            <div style="font-size:13px; color:#475569; margin-top:6px; line-height:1.5;">
-              Consulte resumos gerados e chamados manuais anteriores para recuperar contexto rapidamente.
+          </div>
+          <div class="changelog-item">
+            <span class="changelog-dot" aria-hidden="true"></span>
+            <div>
+              <div class="changelog-meta">
+                <strong>v1.2</strong>
+                <span>Mensagens, dicas e Agenda</span>
+              </div>
+              <div class="changelog-body">Mensagens padrão, dicas com IA e área Agenda &amp; Gestão.</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div id="nameSetupBlock" style="margin-top: 16px;">
-        <label style="display:block; margin-bottom:6px; font-weight:800;">Nome</label>
-
+      <div id="nameSetupBlock" class="card">
+        <label for="nameInput" style="display:block; margin-bottom:6px;">Nome</label>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <input id="nameInput" type="text" placeholder="Digite seu nome"
-            style="flex:1; min-width:260px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; outline:none;" />
+          <input id="nameInput" type="text" placeholder="Digite seu nome" style="flex:1; min-width:260px; margin-top:0;" />
           <button id="saveNameBtn" class="btn-primary" type="button" style="margin-top:0;">Salvar</button>
         </div>
-
-        <div class="hint" style="margin-top:8px;">
-          Obrigatório na primeira configuração. Depois, você altera clicando no seu nome acima.
-        </div>
-
-        <div id="nameStatus" style="font-size:12px; margin-top:8px; min-height:18px; color:#64748b;"></div>
+        <div class="hint">Obrigatório na primeira configuração. Depois, altere clicando no seu nome acima.</div>
+        <div id="nameStatus"></div>
       </div>
 
-      <div class="card" style="margin-top: 20px;">
-        <div style="font-weight:900; color:#0f172a; margin-bottom: 10px;">👁️ Visibilidade dos Botões</div>
-        <div style="font-size:13px; color:#475569; margin-bottom: 14px;">
-          Selecione quais botões devem aparecer na interface.
+      <div class="card">
+        <div class="visibility-title">Aparência</div>
+        <p class="hint" style="margin-bottom:12px;">Tema das superfícies AtendeAI. O SZ permanece nativo.</p>
+        <div class="appearance-options" role="radiogroup" aria-label="Aparência">
+          <label>
+            <input type="radio" name="atendeai_theme" id="themeDark" value="dark" checked>
+            Escuro
+          </label>
+          <label>
+            <input type="radio" name="atendeai_theme" id="themeLight" value="light">
+            Claro
+          </label>
+          <label>
+            <input type="radio" name="atendeai_theme" id="themeSystem" value="system">
+            Sistema
+          </label>
         </div>
+      </div>
 
+<div class="card">
+        <div class="visibility-title">Sugestão de documentação</div>
+        <p class="hint" style="margin-bottom:12px;">Aprendizado fica somente neste navegador e não envia dados extras à API.</p>
+        <label class="setting-check">
+          <input type="checkbox" id="documentationAutofillEnabled" checked>
+          Preencher automaticamente sugestões de alta confiança
+        </label>
+        <label class="setting-check">
+          <input type="checkbox" id="documentationLearningEnabled" checked>
+          Aprender com minhas escolhas
+        </label>
+        <p class="hint" id="documentationLearningCount" style="margin-top:12px; white-space:pre-line;">Aprendizado local
+0 documentações aprendidas</p>
+        <button id="clearDocumentationLearning" type="button">Limpar aprendizado</button>
+      </div>
+
+      <div class="card">
+        <div class="visibility-title">Visibilidade dos botões</div>
+        <p class="hint" style="margin-bottom:12px;">Escolha quais botões aparecem no painel flutuante do atendimento.</p>
         <div id="visibilityOptions" style="display:flex; flex-direction:column; gap:8px;"></div>
-        <button id="saveVisibilityBtn" class="btn-primary" style="margin-top:14px;">Salvar Visibilidade</button>
-        <div id="visStatus" style="font-size:12px; margin-top:8px; min-height:18px;"></div>
+        <button id="saveVisibilityBtn" class="btn-primary">Salvar visibilidade</button>
+        <div id="visStatus"></div>
       </div>
     </section>
 
@@ -1138,17 +497,19 @@
 
     <section id="sec-ia" class="page-section">
       <div class="card">
-        <h2>Instruções da IA</h2>
+        <h2>Estilo de Sugerir resposta</h2>
 
-        <label for="customInstructions">Prompt Personalizado</label>
-        <textarea id="customInstructions"></textarea>
+        <label for="smartReplyProfile">Perfil padrão de Sugerir resposta</label>
+        <select id="smartReplyProfile">
+          <option value="DIRECT">Direta</option>
+          <option value="EMPATHETIC">Empática</option>
+          <option value="DIDACTIC">Didática</option>
+        </select>
+        <div class="hint">Salvo neste navegador. A resposta sempre passa por preview antes da inserção.</div>
 
-        <div class="hint">
-          Essas instruções serão enviadas junto com o chat para guiar o comportamento da IA.
-        </div>
-
-        <button id="salvar" class="btn-primary">Salvar Configurações</button>
-        <div id="status"></div>
+        <div class="hint">Para criar, editar ou duplicar estilos, abra Sugerir resposta e clique em Perfis.</div>
+        <div class="hint">O antigo prompt global foi descontinuado. Seu conteúdo salvo permanece no navegador e não é usado nem convertido automaticamente.</div>
+        <div id="status" role="status"></div>
       </div>
     </section>
 
@@ -1156,13 +517,13 @@
       <div class="card">
         <h2>Histórico de Resumos</h2>
         <ul id="historyList"></ul>
-        <button id="limparHistorico" style="background: #e74c3c; color: #fff;">Limpar Histórico de Resumos</button>
+        <button id="limparHistorico" style="background: var(--ai-danger-soft); color: var(--ai-danger);">Limpar Histórico de Resumos</button>
       </div>
 
       <div class="card">
         <h2>Histórico de Chamados Manuais</h2>
         <ul id="manualCallHistoryList"></ul>
-        <button id="limparHistoricoManual" style="background: #e74c3c; color: #fff;">Limpar Histórico de
+        <button id="limparHistoricoManual" style="background: var(--ai-danger-soft); color: var(--ai-danger);">Limpar Histórico de
           Chamados</button>
       </div>
     </section>
@@ -1224,19 +585,19 @@
         </div>
 
         <div id="leaderAvgBox" style="
-          padding:12px; border:1px solid #e2e8f0; border-radius:12px;
-          background:#f8fafc; margin-bottom:12px; font-size:13px;
+          padding:12px; border:1px solid var(--ai-border); border-radius:12px;
+          background:var(--ai-surface-muted); margin-bottom:12px; font-size:13px;
         "></div>
 
-        <div style="overflow:auto; border:1px solid #e2e8f0; border-radius:12px;">
+        <div style="overflow:auto; border:1px solid var(--ai-border); border-radius:12px;">
           <table style="width:100%; border-collapse:collapse; font-size:13px;">
             <thead>
-              <tr style="background:#f1f5f9;">
-                <th style="text-align:left; padding:10px; border-bottom:1px solid #e2e8f0;">Data</th>
-                <th style="text-align:left; padding:10px; border-bottom:1px solid #e2e8f0;">Pré</th>
-                <th style="text-align:left; padding:10px; border-bottom:1px solid #e2e8f0;">Cliente</th>
-                <th style="text-align:left; padding:10px; border-bottom:1px solid #e2e8f0;">Tempo</th>
-                <th style="text-align:left; padding:10px; border-bottom:1px solid #e2e8f0;">Negociação</th>
+              <tr style="background:var(--ai-surface-muted);">
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Data</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Pré</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Cliente</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Tempo</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Negociação</th>
               </tr>
             </thead>
             <tbody id="leaderTableBody"></tbody>
@@ -1259,6 +620,8 @@
 
   </main>
 
+  <script src="modules/theme.js"></script>
+  <script src="modules/smart-reply-profiles.js"></script>
   <script src="options.js"></script>
 
   <footer class="app-footer">
@@ -1275,20 +638,18 @@
     overflow:hidden;
     font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   ">
-    <div style="padding:16px 18px; background: linear-gradient(135deg, #1a73e8, #4285F4); color:#fff;">
-      <div style="font-size:16px; font-weight:900;">Configuração inicial</div>
-      <div style="margin-top:6px; font-size:12.8px; opacity:.95; font-weight:600;">
-        Para continuar, informe seu nome e selecione seu setor.
-      </div>
+    <div class="dialog-header">
+      <div style="font-size:15px; font-weight:650;">Configuração inicial</div>
+      <div class="kicker">Informe seu nome e selecione seu setor para continuar.</div>
     </div>
 
-    <div style="padding:16px 18px; background:#fff;">
+    <div style="padding:16px 18px; background:var(--ai-surface);">
       <label style="font-weight:800; font-size:13px; display:block;">Nome</label>
       <input id="onboardingNameInput" type="text" placeholder="Digite seu Nome" style="
           width: 90%;
           margin-top:8px;
           padding:10px 12px;
-          border:1px solid #cbd5e1;
+          border:1px solid var(--ai-border-strong);
           border-radius:10px;
           font-size:14px;
           outline:none;
@@ -1300,8 +661,8 @@
       <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
         <label style="
           display:flex; align-items:center; gap:8px; cursor:pointer;
-          padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;
-          font-weight:800; font-size:13px; color:#0f172a;
+          padding:10px 12px; border:1px solid var(--ai-border); border-radius:12px; background:var(--ai-surface-muted);
+          font-weight:800; font-size:13px; color:var(--ai-text);
         ">
           <input type="radio" name="onboardingSector" value="suporte" />
           Suporte
@@ -1309,8 +670,8 @@
 
         <label style="
           display:flex; align-items:center; gap:8px; cursor:pointer;
-          padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;
-          font-weight:800; font-size:13px; color:#0f172a;
+          padding:10px 12px; border:1px solid var(--ai-border); border-radius:12px; background:var(--ai-surface-muted);
+          font-weight:800; font-size:13px; color:var(--ai-text);
         ">
           <input type="radio" name="onboardingSector" value="preatendimento" />
           Pré-atendimento
@@ -1318,8 +679,8 @@
 
         <label style="
           display:flex; align-items:center; gap:8px; cursor:pointer;
-          padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;
-          font-weight:800; font-size:13px; color:#0f172a;
+          padding:10px 12px; border:1px solid var(--ai-border); border-radius:12px; background:var(--ai-surface-muted);
+          font-weight:800; font-size:13px; color:var(--ai-text);
         ">
           <input type="radio" name="onboardingSector" value="lider" />
           Líder
@@ -1332,7 +693,7 @@
             width: 90%;
             margin-top:8px;
             padding:10px 12px;
-            border:1px solid #cbd5e1;
+            border:1px solid var(--ai-border-strong);
             border-radius:10px;
             font-size:14px;
             outline:none;
@@ -1347,7 +708,7 @@
       </div>
 
       <div id="onboardingStatus"
-        style="font-size:12px; margin-top:10px; min-height:18px; color:#b45309; font-weight:700;"></div>
+        style="font-size:12px; margin-top:10px; min-height:18px; color:var(--ai-warning); font-weight:700;"></div>
 
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
         <button id="onboardingSaveBtn" type="button" class="btn-primary" style="margin-top:0; font-weight:900;">
@@ -1365,13 +726,9 @@
   max-width:92vw;
   box-shadow:0 18px 40px rgba(0,0,0,0.28);
   overflow:hidden;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--ai-font);
 ">
-    <div style="
-    padding:16px 18px;
-    background: linear-gradient(135deg, #1a73e8, #4285F4);
-    color:#fff;
-  ">
+    <div class="dialog-header">
       <div style="
       display:flex;
       align-items:center;
@@ -1382,14 +739,14 @@
 
         <button id="editCloseNameDialog" type="button" aria-label="Fechar" style="
           appearance:none;
-          border:none;
-          background: rgba(255,255,255,0.18);
-          color:#fff;
-          width:34px;
-          height:34px;
-          border-radius:10px;
+          border:1px solid var(--ai-border);
+          background: var(--ai-surface);
+          color:var(--ai-text-secondary);
+          width:32px;
+          height:32px;
+          border-radius:6px;
           cursor:pointer;
-          font-weight:900;
+          font-weight:650;
           display:inline-flex;
           align-items:center;
           justify-content:center;
@@ -1397,7 +754,7 @@
       </div>
     </div>
 
-    <div style="padding:16px 18px; background:#fff;">
+    <div style="padding:16px 18px; background:var(--ai-surface);">
       <label for="editNameDialogInput" style="display:block; margin-bottom:6px; font-weight:800;">
         Nome
       </label>
@@ -1405,7 +762,7 @@
       <input id="editNameDialogInput" type="text" placeholder="Digite seu nome" autocomplete="name" style="
         width:90%;
         padding:10px 12px;
-        border:1px solid #cbd5e1;
+        border:1px solid var(--ai-border-strong);
         border-radius:10px;
         font-size:14px;
         outline:none;
@@ -1413,8 +770,8 @@
 
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
         <button id="editCancelNameDialog" type="button" style="
-          background:#e5e7eb;
-          color:#111827;
+          background:var(--ai-border);
+          color:var(--ai-text);
           font-weight:800;
           border:none;
           border-radius:10px;

@@ -16,8 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
     openCredits: document.getElementById("openCredits"),
     creditsDialog: document.getElementById("creditsDialog"),
     closeCredits: document.getElementById("closeCredits"),
-    customInstructionsInput: document.getElementById("customInstructions"),
-    btnSalvar: document.getElementById("salvar"),
+    smartReplyProfile: document.getElementById("smartReplyProfile"),
     status: document.getElementById("status"),
     historyList: document.getElementById("historyList"),
     btnLimpar: document.getElementById("limparHistorico"),
@@ -52,6 +51,14 @@ document.addEventListener("DOMContentLoaded", () => {
     visibilityOptions: document.getElementById("visibilityOptions"),
     saveVisibilityBtn: document.getElementById("saveVisibilityBtn"),
     visStatus: document.getElementById("visStatus"),
+    changelogList: document.getElementById("changelogList"),
+    themeDark: document.getElementById("themeDark"),
+    themeLight: document.getElementById("themeLight"),
+    themeSystem: document.getElementById("themeSystem"),
+    documentationAutofillEnabled: document.getElementById("documentationAutofillEnabled"),
+    documentationLearningEnabled: document.getElementById("documentationLearningEnabled"),
+    documentationLearningCount: document.getElementById("documentationLearningCount"),
+    clearDocumentationLearning: document.getElementById("clearDocumentationLearning"),
     leaderPasswordWrap: document.getElementById("leaderPasswordWrap"),
     leaderPasswordInput: document.getElementById("leaderPasswordInput"),
     leaderFilterName: document.getElementById("leaderFilterName"),
@@ -81,9 +88,8 @@ document.addEventListener("DOMContentLoaded", () => {
     { id: "btnMessages", label: "Mensagens Padrão", defaultSupport: true, defaultPre: true },
     { id: "btnResumoGemini", label: "Gerar Relatório (IA)", defaultSupport: true, defaultPre: false },
     { id: "btnChamadoManual", label: "Chamado Manual", defaultSupport: true, defaultPre: false },
-    { id: "btnAssistenteIA", label: "Botão Assistente IA (Dropdown)", defaultSupport: true, defaultPre: true },
-    { id: "btnConsultarDocsLoop", label: "↳ Consultar Docs (no Menu)", defaultSupport: true, defaultPre: true },
-    { id: "btnDica", label: "↳ Dicas Inteligentes (no Menu)", defaultSupport: true, defaultPre: false }
+    { id: "btnSmartReply", label: "Sugerir resposta", defaultSupport: true, defaultPre: true },
+    { id: "btnConsultarDocsLoop", label: "↳ Consultar Docs", defaultSupport: true, defaultPre: true }
   ];
 
   const FIXED_MESSAGES = [
@@ -438,7 +444,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function flashNameStatus(text, color = "#64748b", ms = 2000) {
+  function flashNameStatus(text, color = "var(--ai-text-muted)", ms = 2000) {
     if (!el.nameStatus) return;
     el.nameStatus.textContent = text;
     el.nameStatus.style.color = color;
@@ -483,14 +489,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     if (!currentName) {
-      flashNameStatus("⚠️ Defina seu nome para continuar.", "#b45309", 2500);
+      flashNameStatus("⚠️ Defina seu nome para continuar.", "var(--ai-warning)", 2500);
       el.nameInput?.focus();
     }
 
     el.saveNameBtn?.addEventListener("click", async () => {
       const name = sanitizeName(el.nameInput?.value);
       if (!name) {
-        flashNameStatus("⚠️ Informe um nome para continuar.", "#b45309", 2200);
+        flashNameStatus("⚠️ Informe um nome para continuar.", "var(--ai-warning)", 2200);
         el.nameInput?.focus();
         return;
       }
@@ -597,18 +603,18 @@ document.addEventListener("DOMContentLoaded", () => {
       wrap.style.cssText = "margin-top:12px; display:none;";
 
       wrap.innerHTML = `
-        <label style="display:block; font-size:12px; font-weight:800; color:#334155; margin-bottom:6px;">
+        <label style="display:block; font-size:12px; font-weight:800; color:var(--ai-text-secondary); margin-bottom:6px;">
           Senha do Líder
         </label>
         <input id="leaderPasswordInput" type="password" placeholder="Digite a senha" style="
           width: 100%;
           padding: 10px 12px;
-          border: 2px solid #e2e8f0;
+          border: 2px solid var(--ai-border);
           border-radius: 12px;
           font-size: 14px;
           outline: none;
         "/>
-        <div style="margin-top:6px; font-size:12px; color:#64748b; font-weight:600;">
+        <div style="margin-top:6px; font-size:12px; color:var(--ai-text-muted); font-weight:600;">
           Necessário para habilitar o painel Líder.
         </div>
       `;
@@ -699,7 +705,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       li.innerHTML = `
         <div class="history-info" style="flex: 1; min-width: 0;">
-          <div class="history-date" style="font-size: 11px; color: #666;">${dateStr}</div>
+          <div class="history-date" style="font-size: 11px; color: var(--ai-text-muted);">${dateStr}</div>
           <div class="history-preview" title="${safeSummary.replace(/"/g, "&quot;")}" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${safeSummary}</div>
         </div>
         <div class="history-actions" style="margin-left: 10px;">
@@ -758,7 +764,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const pageNextBtn = document.getElementById("leaderPageNext");
     const pageInfoEl = document.getElementById("leaderPageInfo");
 
-    const setStatus = (text, color = "#64748b") => {
+    const setStatus = (text, color = "var(--ai-text-muted)") => {
       if (!el.leaderStatus) return;
       el.leaderStatus.textContent = text || "";
       el.leaderStatus.style.color = color;
@@ -927,7 +933,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!pageRows.length) {
         el.leaderTableBody.innerHTML = `
           <tr>
-            <td colspan="5" style="padding:12px; color:#64748b; font-weight:700;">
+            <td colspan="5" style="padding:12px; color:var(--ai-text-muted); font-weight:700;">
               Nenhum registro encontrado.
             </td>
           </tr>
@@ -940,13 +946,13 @@ document.addEventListener("DOMContentLoaded", () => {
       pageRows.forEach((r) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td style="padding:10px; border-bottom:1px solid #e2e8f0;">${safe(r.date)}</td>
-          <td style="padding:10px; border-bottom:1px solid #e2e8f0; font-weight:800;">${safe(r.pre)}</td>
-          <td style="padding:10px; border-bottom:1px solid #e2e8f0;">${safe(r.client)}</td>
-          <td style="padding:10px; border-bottom:1px solid #e2e8f0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-weight:800;">
+          <td style="padding:10px; border-bottom:1px solid var(--ai-border);">${safe(r.date)}</td>
+          <td style="padding:10px; border-bottom:1px solid var(--ai-border); font-weight:800;">${safe(r.pre)}</td>
+          <td style="padding:10px; border-bottom:1px solid var(--ai-border);">${safe(r.client)}</td>
+          <td style="padding:10px; border-bottom:1px solid var(--ai-border); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-weight:800;">
             ${formatDuration(r.ms)}
           </td>
-          <td style="padding:10px; border-bottom:1px solid #e2e8f0; font-weight:900;">
+          <td style="padding:10px; border-bottom:1px solid var(--ai-border); font-weight:900;">
             ${r.negociation ? "Sim" : "Não"}
           </td>
         `;
@@ -964,8 +970,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!all.length) {
         el.leaderAvgBox.innerHTML = `
-          <div style="font-weight:900; color:#0f172a;">Sem dados</div>
-          <div style="margin-top:6px; color:#64748b; font-weight:700;">
+          <div style="font-weight:900; color:var(--ai-text);">Sem dados</div>
+          <div style="margin-top:6px; color:var(--ai-text-muted); font-weight:700;">
             Faça uma consulta para ver métricas.
           </div>
         `;
@@ -978,18 +984,18 @@ document.addEventListener("DOMContentLoaded", () => {
       el.leaderAvgBox.innerHTML = `
         <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
           <div>
-            <div style="font-weight:900; color:#0f172a;">Registros</div>
-            <div style="margin-top:4px; color:#334155; font-weight:800;">${all.length}</div>
+            <div style="font-weight:900; color:var(--ai-text);">Registros</div>
+            <div style="margin-top:4px; color:var(--ai-text-secondary); font-weight:800;">${all.length}</div>
           </div>
           <div>
-            <div style="font-weight:900; color:#0f172a;">Média (tempos válidos)</div>
-            <div style="margin-top:4px; color:#334155; font-weight:900; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;">
+            <div style="font-weight:900; color:var(--ai-text);">Média (tempos válidos)</div>
+            <div style="margin-top:4px; color:var(--ai-text-secondary); font-weight:900; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;">
               ${formatDuration(avgMs)}
             </div>
           </div>
           <div>
-            <div style="font-weight:900; color:#0f172a;">Total (tempos válidos)</div>
-            <div style="margin-top:4px; color:#334155; font-weight:900; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;">
+            <div style="font-weight:900; color:var(--ai-text);">Total (tempos válidos)</div>
+            <div style="margin-top:4px; color:var(--ai-text-secondary); font-weight:900; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;">
               ${formatDuration(totalMs)}
             </div>
           </div>
@@ -1011,7 +1017,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function exportTxt() {
       if (!filteredRows.length) {
-        setStatus("⚠️ Nada para exportar.", "#b45309");
+        setStatus("⚠️ Nada para exportar.", "var(--ai-warning)");
         return;
       }
 
@@ -1026,7 +1032,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function exportCsvForExcel() {
       if (!filteredRows.length) {
-        setStatus("Nada para exportar.", "#b45309");
+        setStatus("Nada para exportar.", "var(--ai-warning)");
         return;
       }
 
@@ -1112,9 +1118,9 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.type = "button";
         btn.textContent = text || String(pageNum + 1);
         btn.style.cssText = `
-          border: 1px solid ${isActive ? "#bfdbfe" : "transparent"};
-          background: ${isActive ? "#eef2ff" : "transparent"};
-          color: ${isActive ? "#1e40af" : "#334155"};
+          border: 1px solid ${isActive ? "var(--ai-primary-border)" : "transparent"};
+          background: ${isActive ? "var(--ai-primary-soft)" : "transparent"};
+          color: ${isActive ? "var(--ai-primary)" : "var(--ai-text-secondary)"};
           font-weight: 800;
           font-size: 13px;
           min-width: 32px;
@@ -1130,7 +1136,7 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
         if (!isActive) {
-          btn.onmouseenter = () => btn.style.background = "#f1f5f9";
+          btn.onmouseenter = () => btn.style.background = "var(--ai-surface-muted)";
           btn.onmouseleave = () => btn.style.background = "transparent";
           btn.onclick = () => {
             query(currentFilters, pageNum);
@@ -1174,7 +1180,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (startPage > 1) {
           const dot = document.createElement("span");
           dot.textContent = "...";
-          dot.style.color = "#94a3b8";
+          dot.style.color = "var(--ai-text-muted)";
           dot.style.fontSize = "12px";
           pageInfoEl.appendChild(dot);
         }
@@ -1188,7 +1194,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (endPage < totalPages - 2) {
           const dot = document.createElement("span");
           dot.textContent = "...";
-          dot.style.color = "#94a3b8";
+          dot.style.color = "var(--ai-text-muted)";
           dot.style.fontSize = "12px";
           pageInfoEl.appendChild(dot);
         }
@@ -1230,7 +1236,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function query(filters = {}, pageIndex = 0) {
       disableUI(true);
-      setStatus("Consultando...", "#64748b");
+      setStatus("Consultando...", "var(--ai-text-muted)");
 
       if (pageIndex === 0) {
         currentFilters = filters;
@@ -1288,7 +1294,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (err) {
         console.error(err);
         renderTable([]);
-        setStatus(`Erro: ${err.message}`, "#b91c1c");
+        setStatus(`Erro: ${err.message}`, "var(--ai-danger)");
       } finally {
         disableUI(false);
       }
@@ -1334,21 +1340,25 @@ document.addEventListener("DOMContentLoaded", () => {
     el.changelogList.innerHTML = "";
 
     if (!history || history.length === 0) {
-      el.changelogList.innerHTML = "<div style='font-size:12px; color:#666; font-style:italic;'>Nenhum registro de atualização.</div>";
+      el.changelogList.hidden = true;
       return;
     }
 
     const sorted = [...history].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    el.changelogList.hidden = false;
 
     sorted.forEach(item => {
       const div = document.createElement("div");
-      div.style.cssText = "display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:6px;";
-
+      div.className = "changelog-item";
       const dateStr = new Date(item.timestamp).toLocaleString("pt-BR");
-
       div.innerHTML = `
-        <div style="font-size:13px; font-weight:700; color:#333;">v${item.version}</div>
-        <div style="font-size:11px; color:#888;">${dateStr}</div>
+        <span class="changelog-dot" aria-hidden="true"></span>
+        <div>
+          <div class="changelog-meta">
+            <strong>v${item.version}</strong>
+            <span>${dateStr}</span>
+          </div>
+        </div>
       `;
       el.changelogList.appendChild(div);
     });
@@ -1375,7 +1385,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       li.innerHTML = `
         <div class="history-info" style="flex: 1; min-width: 0;">
-          <div class="history-date" style="font-size: 11px; color: #666;">${dateStr}</div>
+          <div class="history-date" style="font-size: 11px; color: var(--ai-text-muted);">${dateStr}</div>
           <div class="history-preview" title="${fullText.replace(/"/g, "&quot;")}" style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${preview}</div>
         </div>
         <div class="history-actions" style="margin-left: 10px;">
@@ -1445,7 +1455,7 @@ document.addEventListener("DOMContentLoaded", () => {
       gap:12px;
       margin-top:10px;
       padding-top:10px;
-      border-top:1px solid #eee;
+      border-top:1px solid var(--ai-border);
       flex-wrap:wrap;
     `;
 
@@ -1456,7 +1466,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btnCopy.className = "btn-copy";
     btnCopy.textContent = "Copiar";
     btnCopy.style.cssText = `
-      background:#dbeafe; color:#1e40af;
+      background:var(--ai-primary-soft); color:var(--ai-primary);
       border:none; border-radius:4px;
       padding:6px 12px; font-size:12px;
       cursor:pointer; min-width:70px;
@@ -1465,12 +1475,12 @@ document.addEventListener("DOMContentLoaded", () => {
       navigator.clipboard.writeText(text);
       const original = btnCopy.textContent;
       btnCopy.textContent = "Copiado!";
-      btnCopy.style.background = "#34A853";
-      btnCopy.style.color = "#fff";
+      btnCopy.style.background = "var(--ai-success-soft)";
+      btnCopy.style.color = "var(--ai-success)";
       setTimeout(() => {
         btnCopy.textContent = original;
-        btnCopy.style.background = "#dbeafe";
-        btnCopy.style.color = "#1e40af";
+        btnCopy.style.background = "var(--ai-primary-soft)";
+        btnCopy.style.color = "var(--ai-primary)";
       }, 1500);
     });
     buttons.appendChild(btnCopy);
@@ -1480,7 +1490,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btnEdit.className = "btn-edit";
       btnEdit.textContent = "Editar";
       btnEdit.style.cssText = `
-        background:#e0f2fe; color:#0369a1;
+        background:var(--ai-primary-soft); color:var(--ai-primary);
         border:none; border-radius:4px;
         padding:6px 12px; font-size:12px;
         cursor:pointer; min-width:70px;
@@ -1500,7 +1510,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btnDelete.className = "btn-delete";
       btnDelete.textContent = "Excluir";
       btnDelete.style.cssText = `
-        background:#fee2e2; color:#dc2626;
+        background:var(--ai-danger-soft); color:var(--ai-danger);
         border:none; border-radius:4px;
         padding:6px 12px; font-size:12px;
         cursor:pointer; min-width:70px;
@@ -1541,7 +1551,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const shortcutLabel = document.createElement("span");
     shortcutLabel.textContent = "Atalho: /";
-    shortcutLabel.style.cssText = "color:#666; font-size:12px; font-weight:700;";
+    shortcutLabel.style.cssText = "color:var(--ai-text-muted); font-size:12px; font-weight:700;";
 
     const shortcutInput = document.createElement("input");
     shortcutInput.type = "text";
@@ -1552,7 +1562,7 @@ document.addEventListener("DOMContentLoaded", () => {
     shortcutInput.style.cssText = `
       width:180px;
       padding:6px 8px;
-      border:1px solid #ccc;
+      border:1px solid var(--ai-border-strong);
       border-radius:6px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-weight:800;
@@ -1662,6 +1672,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const sector = data[SECTOR_KEY] || "";
       settings = getDefaultVisibility(sector);
     }
+    if (settings.btnSmartReply === undefined) {
+      settings = { ...settings, btnSmartReply: settings.btnAssistenteIA ?? true };
+    }
     return settings;
   }
 
@@ -1678,7 +1691,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function saveVisibilitySettings() {
-    const settings = {};
+    const settings = { ...(await loadVisibilitySettings()) };
     const checkboxes = el.visibilityOptions.querySelectorAll("input[type='checkbox']");
     checkboxes.forEach(cb => {
       settings[cb.value] = cb.checked;
@@ -1720,6 +1733,55 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  const THEME_KEY = "atendeai_theme";
+  const DOC_AUTOFILL_KEY = "atendeai_documentation_autofill_enabled";
+  const DOC_LEARNING_ENABLED_KEY = "atendeai_documentation_learning_enabled";
+  const DOC_LEARNING_KEY = "atendeai_documentation_learning_v1";
+
+  async function initAppearanceSettings() {
+    await globalThis.ThemeModule?.init?.();
+    const radios = [el.themeDark, el.themeLight, el.themeSystem].filter(Boolean);
+    if (!radios.length) return;
+    const data = await storageGet([THEME_KEY]);
+    const value = ["dark", "light", "system"].includes(data[THEME_KEY]) ? data[THEME_KEY] : "dark";
+    radios.forEach(radio => { radio.checked = radio.value === value; });
+    radios.forEach(radio => {
+      radio.addEventListener("change", async () => {
+        if (!radio.checked || !["dark", "light", "system"].includes(radio.value)) return;
+        await storageSet({ [THEME_KEY]: radio.value });
+      });
+    });
+  }
+
+  function renderDocumentationLearningCount(memory) {
+    if (!el.documentationLearningCount) return;
+    const total = Object.keys(memory?.docs || {}).length;
+    el.documentationLearningCount.textContent = `Aprendizado local\n${total} documentações aprendidas`;
+  }
+
+  async function initDocumentationSettings() {
+    if (!el.documentationAutofillEnabled || !el.documentationLearningEnabled) return;
+
+    const data = await storageGet([DOC_AUTOFILL_KEY, DOC_LEARNING_ENABLED_KEY, DOC_LEARNING_KEY]);
+    el.documentationAutofillEnabled.checked = data[DOC_AUTOFILL_KEY] !== false;
+    el.documentationLearningEnabled.checked = data[DOC_LEARNING_ENABLED_KEY] !== false;
+    renderDocumentationLearningCount(data[DOC_LEARNING_KEY]);
+
+    el.documentationAutofillEnabled.addEventListener("change", async () => {
+      await storageSet({ [DOC_AUTOFILL_KEY]: el.documentationAutofillEnabled.checked });
+    });
+
+    el.documentationLearningEnabled.addEventListener("change", async () => {
+      await storageSet({ [DOC_LEARNING_ENABLED_KEY]: el.documentationLearningEnabled.checked });
+    });
+
+    el.clearDocumentationLearning?.addEventListener("click", async () => {
+      if (!confirm("Remover o aprendizado local de documentações?")) return;
+      await storageRemove(DOC_LEARNING_KEY);
+      renderDocumentationLearningCount({ docs: {} });
+    });
+  }
+
   async function initApp() {
     updateVersionDisplay();
 
@@ -1731,11 +1793,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderVisibilityUI();
     applyPreAtendimentoMessagesUI();
+    await initAppearanceSettings();
+    await initDocumentationSettings();
 
     const name = await loadUserName();
     setNameUI(name);
 
-    const base = await storageGet(["customInstructions", "history", "chamado_manual_history", "customMessages", "versionHistory"]);
+    const base = await storageGet(["history", "chamado_manual_history", "customMessages", "versionHistory"]);
+    if (el.smartReplyProfile) {
+      await SmartReplyProfilesModule.load();
+      Array.from(el.smartReplyProfile.children).forEach(option => option.remove());
+      for (const profile of SmartReplyProfilesModule.list()) {
+        const option = document.createElement("option"); option.value = profile.id;
+        option.textContent = profile.builtin ? profile.name : `Meu: ${profile.name}`;
+        el.smartReplyProfile.appendChild(option);
+      }
+      el.smartReplyProfile.value = SmartReplyProfilesModule.defaultId();
+      el.smartReplyProfile.addEventListener("change", async () => {
+        const profile = el.smartReplyProfile.value;
+        if (!SmartReplyProfilesModule.get(profile)) { el.smartReplyProfile.value = SmartReplyProfilesModule.defaultId(); return; }
+        try { await SmartReplyProfilesModule.setDefault(profile); }
+        catch (err) { if (el.status) el.status.textContent = err.message; }
+      });
+    }
 
     renderHistory(base.history || []);
     renderManualCallHistory(base.chamado_manual_history || []);
@@ -1749,19 +1829,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (el.customMessagesContainer) el.customMessagesContainer.innerHTML = "";
       if (el.customCount) el.customCount.textContent = "0";
     }
-
-    el.btnSalvar?.addEventListener("click", async () => {
-      const instructions = String(el.customInstructionsInput?.value || "").trim();
-      await storageSet({ customInstructions: instructions });
-
-      if (el.status) {
-        el.status.textContent = "✅ Configurações salvas!";
-        el.status.style.color = "green";
-        setTimeout(() => {
-          if (el.status) el.status.textContent = "";
-        }, 2000);
-      }
-    });
 
     el.btnLimpar?.addEventListener("click", async () => {
       if (!confirm("Tem certeza que deseja apagar todo o histórico de resumos?")) return;
