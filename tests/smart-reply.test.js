@@ -24,7 +24,7 @@ class Node {
 const all = n => [n, ...n.children.flatMap(all)];
 function harness(store = {}, realContext = false) {
   const body = new Node('body'), composer = new Node('textarea');
-  const live = { conversation: 'Gabriel: preciso de ajuda', complement: 'verificação em andamento', name: 'Gabriel', platform: 'webchat', time: '06/10/26 08:14', explicit: '', messages: [] };
+  const live = { conversation: 'Gabriel: preciso de ajuda', complement: 'verificação em andamento', name: 'Gabriel', platform: 'webchat', time: '06/10/26 08:14', explicit: '' };
   const card = new Node();
   card.querySelector = selector => {
     if (selector === '.contact-name') return { textContent: live.name };
@@ -36,6 +36,19 @@ function harness(store = {}, realContext = false) {
   const listeners = {}, observers = [], sent = [], pendingMutations = [];
   let resolveReply, rejectReply;
   let deferred = false, fail = false;
+  let messageSource, messageNodes = [];
+  function replyMessages() {
+    if (messageSource !== live.conversation) {
+      messageSource = live.conversation;
+      messageNodes = live.conversation.split('\n').filter(line => line.trim()).map(line => {
+        const match = line.trim().match(/^([^:]+):\s*([\s\S]*)$/);
+        const name = match ? match[1] : '', value = match ? match[2] : line.trim();
+        return { classList: { contains: cls => cls === 'sent' && /^Técnico/.test(name) },
+          querySelector: selector => ({ innerText: selector === '.name' ? name : value }) };
+      });
+    }
+    return messageNodes;
+  }
   const document = { body, createElement: tag => {
     const n = new Node(tag);
     n.onAttribute = target => {
@@ -45,7 +58,7 @@ function harness(store = {}, realContext = false) {
   },
     getElementById: id => all(body).find(n => n.id === id) || null,
     querySelector: sel => sel === '.sz_contact.active' ? card : null,
-    querySelectorAll: sel => sel === '.msg' ? live.messages : [composer],
+    querySelectorAll: sel => sel === '.msg' ? replyMessages() : sel === '.sz_contact.active' ? [card] : [composer],
     addEventListener(k, fn) { (listeners[k] ||= []).push(fn); },
     createRange() { return { selectNodeContents() {}, collapse() {} }; }
   };
@@ -60,7 +73,6 @@ function harness(store = {}, realContext = false) {
     Event: class { constructor(type) { this.type = type; } },
     MutationObserver: class { constructor(fn) { this.fn = fn; observers.push(this); } observe() { this.observing = true; } disconnect() { this.disconnected = true; } },
     StorageHelper: { async get() { return store; }, async set(data) { Object.assign(store, data); } },
-    ChatCaptureModule: { capturarTextoChat: () => live.conversation },
     SmartReplyContextModule: { async sync() {}, getForCurrentChat: () => live.complement, onChanged: () => () => {} },
     ObservationsModule: { getPromptComplementForCurrentChat: () => live.summary || 'SUMMARY_ONLY',
       getCurrentObservationSnapshot() { assert.fail('private-note snapshot must never be read'); } },
@@ -73,6 +85,7 @@ function harness(store = {}, realContext = false) {
     } }
   };
   vm.createContext(context);
+  vm.runInContext(fs.readFileSync('modules/chat-capture.js', 'utf8'), context);
   vm.runInContext(fs.readFileSync('modules/smart-reply-profiles.js', 'utf8'), context);
   vm.runInContext(fs.readFileSync('modules/smart-reply-profiles-ui.js', 'utf8'), context);
   if (realContext) {
@@ -181,9 +194,8 @@ test('falha nao perde rascunho, permite retry manual; fechar cancela resposta ta
 test('contexto longo preserva inicio, fim e ultima fala do cliente em uma chamada', async () => {
   const h = harness();
   h.live.conversation = 'INICIO\n' + 'x'.repeat(5000) + '\nGabriel: ÚLTIMA FALA DO CLIENTE\n' + 'Técnico: '.repeat(5000) + '\nRECENTE';
-  h.live.messages = [{ classList: { contains: () => false }, querySelector: s => ({ innerText: s === '.name' ? 'Gabriel' : 'ÚLTIMA FALA DO CLIENTE' }) }];
-  await h.module.open(); const conversation = h.sent[0].conversation;
-  assert.ok(conversation.length <= 16000); assert.ok(conversation.startsWith('INICIO'));
+  await h.module.open('AVAILABLE'); const conversation = h.sent[0].conversation;
+  assert.ok(conversation.length <= 16000); assert.ok(conversation.includes('INICIO'));
   assert.ok(conversation.endsWith('RECENTE')); assert.ok(conversation.includes('ÚLTIMA FALA DO CLIENTE'));
   assert.equal(h.sent.length, 1);
 });
@@ -288,7 +300,7 @@ test('whitespace irrelevante preserva freshness e regeneracao usa exatamente o s
 });
 
 test('freshness considera transcript completo inclusive trecho omitido do payload', async () => {
-  const h = harness(); h.live.conversation = 'a'.repeat(10000) + 'b'.repeat(10000);
+  const h = harness(); h.live.conversation = 'Gabriel: ' + 'a'.repeat(10000) + 'b'.repeat(10000);
   await h.module.open(); const payload = h.sent[0].conversation;
   h.live.conversation = h.live.conversation.slice(0, 7000) + 'novo detalhe' + h.live.conversation.slice(7012);
   h.notify(); assert.equal(h.button('Inserir').disabled, true);
@@ -481,4 +493,72 @@ test('manager prioritizes create and resets scroll for reachable editor actions'
  assert.ok(body.contains(h.button('Salvar perfil')));assert.ok(all(body).some(n=>n.tagName==='button'&&n.textContent==='Cancelar'));
  await h.button('Perfis').emit('click');assert.equal(root.getAttribute('data-profiles-open'),'false');
  assert.equal(all(root).find(n=>n.className==='smart-reply-text').textContent,'Pode informar o erro exibido?');
+});
+
+test('default generation sends only last 12 messages; old omitted messages still invalidate freshness', async () => {
+  const h = harness(); h.live.conversation = Array.from({ length: 15 }, (_, i) => `Gabriel: fala ${i + 1}`).join('\n');
+  await h.module.open();
+  assert.equal(h.sent.length, 1); assert.ok(h.sent[0].conversation.startsWith('Gabriel: fala 4\n'));
+  assert.ok(h.sent[0].conversation.endsWith('Gabriel: fala 15'));
+  assert.ok(all(h.panel()).some(n => n.textContent === 'Contexto: Recentes'));
+  h.live.conversation = h.live.conversation.replace('fala 1\n', 'antiga alterada\n'); h.notify();
+  await h.button('↻ Outra resposta').emit('click'); await h.button('Inserir').emit('click');
+  assert.equal(h.sent.length, 1); assert.equal(h.composer.value, ''); assert.match(h.status(), /Gere uma nova resposta/);
+});
+
+test('last customer generation ignores later technician text and regenerates the same snapshot and addendum', async () => {
+  const h = harness(); h.live.conversation = 'Gabriel: anterior\nGabriel: pergunta\nTécnico: retorno';
+  await h.module.open('LAST_CUSTOMER');
+  assert.equal(h.sent[0].conversation, 'Gabriel: pergunta');
+  assert.ok(all(h.panel()).some(n => n.textContent === 'Contexto: Última mensagem'));
+  h.profile().value = 'EMPATHETIC'; await h.profile().emit('change');
+  assert.equal(h.sent.length, 1); await h.button('↻ Outra resposta').emit('click');
+  assert.deepEqual(h.sent[1], { ...h.sent[0], regenerate: true, profile: 'EMPATHETIC' });
+});
+
+test('last customer without valid received text shows guidance and makes no request', async () => {
+  const h = harness(); h.live.conversation = 'Técnico: apenas envio'; await h.module.open('LAST_CUSTOMER');
+  assert.equal(h.sent.length, 0); assert.equal(h.button('Inserir').disabled, true);
+  assert.match(h.status(), /mensagem textual.*cliente/);
+});
+
+test('context selector never calls API, affects only the next generation and resets to Recentes', async () => {
+  const h = harness(); let control;
+  const primary = h.document.createElement('button'); primary.textContent = 'Sugerir resposta';
+  primary.addEventListener('click', () => h.module.open(control.consumeMode()));
+  control = h.module.mountContextControl(primary); h.document.body.appendChild(control.element);
+  const select = all(control.element).find(n => n.tagName === 'select');
+  assert.equal(select.getAttribute('aria-label'), 'Contexto para a próxima resposta');
+  for (const mode of ['LAST_CUSTOMER', 'AVAILABLE', 'RECENT', 'LAST_CUSTOMER']) {
+    select.value = mode; await select.emit('change'); assert.equal(h.sent.length, 0);
+  }
+  h.live.conversation = 'Gabriel: pergunta\nTécnico: retorno'; await primary.emit('click');
+  assert.equal(h.sent.length, 1); assert.equal(h.sent[0].conversation, 'Gabriel: pergunta');
+  assert.equal(select.value, 'RECENT');
+  await primary.emit('click'); assert.equal(h.sent.length, 2);
+  assert.equal(h.sent[1].conversation, 'Gabriel: pergunta\nTécnico: retorno');
+});
+
+test('all modes reject chat switches and changed messages while a request is pending', async () => {
+  for (const mode of ['RECENT', 'LAST_CUSTOMER', 'AVAILABLE']) {
+    for (const change of ['chat', 'text']) {
+      const h = harness(); h.defer(); const pending = h.module.open(mode); await new Promise(setImmediate);
+      if (change === 'chat') h.live.name = 'Maria'; else h.live.conversation += '\nTécnico: nova informação';
+      h.notify(); h.respond(); await pending;
+      await h.button('Inserir').emit('click'); await h.button('↻ Outra resposta').emit('click');
+      assert.equal(h.sent.length, 1); assert.equal(h.composer.value, ''); assert.ok(h.status().trim());
+    }
+  }
+});
+
+test('custom style and independent addendum work in all modes without leaking private fields', async () => {
+  for (const mode of ['RECENT', 'LAST_CUSTOMER', 'AVAILABLE']) {
+    const h = harness({ privateNote: 'PRIVATE_SECRET', summaryObservation: 'REPORT_SECRET' });
+    const profiles = h.context.window.SmartReplyProfilesModule;
+    const p = await profiles.save({ name: 'Meu tom', instruction: 'STYLE_CUSTOM' }); await profiles.setDefault(p.id);
+    await h.module.open(mode); await h.button('↻ Outra resposta').emit('click');
+    assert.equal(h.sent.length, 2); assert.equal(h.sent[0].profile, 'CUSTOM');
+    assert.equal(h.sent[0].styleInstruction, 'STYLE_CUSTOM'); assert.equal(h.sent[0].promptComplement, 'verificação em andamento');
+    assert.deepEqual(h.sent[1], { ...h.sent[0], regenerate: true }); assert.doesNotMatch(JSON.stringify(h.sent), /PRIVATE_SECRET|REPORT_SECRET/);
+  }
 });

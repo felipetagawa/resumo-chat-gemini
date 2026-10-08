@@ -143,7 +143,6 @@ test('F13/F14: saved Focus stays out of actual report and direct Smart Reply req
   Object.assign(h.context, {
     DOMHelpers: { exists: () => false, createElement: tag => el(tag, { id: 'containerBotoesGemini' }) },
     getIconHTML: () => '', guardFeature: fn => fn, initializeExtensionDock: () => {},
-    ChatCaptureModule: { capturarTextoChat: () => 'Lucia: ajuda', capturarNomeCliente: () => 'Lucia' },
     ObservationsModule: { getPromptComplementForCurrentChat: () => 'Observação técnica' },
     SummaryModule: { exibirResumo() {} }, MAX_PROMPT_COMPLEMENT_CHARS: 2000,
     MessagingHelper: { async send(payload) { sent.push(JSON.parse(JSON.stringify(payload))); return { success: true, reply: 'Resposta', resumo: 'Resumo' }; } },
@@ -151,6 +150,8 @@ test('F13/F14: saved Focus stays out of actual report and direct Smart Reply req
   });
   const create = h.document.createElement;
   h.document.createElement = tag => { const n = create(tag); n.insertAdjacentHTML = () => {}; return n; };
+  h.addMessage({ text: 'ajuda' });
+  vm.runInContext(fs.readFileSync('modules/chat-capture.js', 'utf8'), h.context);
   vm.runInContext(fs.readFileSync('modules/smart-reply-context.js', 'utf8'), h.context);
   vm.runInContext(fs.readFileSync('modules/smart-reply-profiles.js', 'utf8'), h.context);
   vm.runInContext(fs.readFileSync('modules/smart-reply-profiles-ui.js', 'utf8'), h.context);
@@ -164,12 +165,12 @@ test('F13/F14: saved Focus stays out of actual report and direct Smart Reply req
   const docs = h.document.getElementById('btnConsultarDocsLoop');
   const report = h.document.getElementById('btnResumoGemini');
   const preserved = h.document.getElementById('btnConversasPreservadas');
-  assert.equal(smart.parentElement, docs.parentElement);
+  assert.equal(smart.parentElement.parentElement, docs.parentElement);
   assert.equal(report.parentElement, preserved.parentElement);
   assert.equal(h.document.getElementById('btnAssistenteIA'), null);
   assert.equal(h.document.getElementById('btnDica'), null);
   const dock = h.document.getElementById('containerBotoesGemini');
-  assert.ok(dock.children.indexOf(smart.parentElement) < dock.children.indexOf(report.parentElement));
+  assert.ok(dock.children.indexOf(smart.parentElement.parentElement) < dock.children.indexOf(report.parentElement));
   await Promise.all(smart.click()); await Promise.all(report.click());
   assert.deepEqual(sent, [
     { action: 'gerarResposta', conversation: 'Lucia: ajuda', profile: 'DIRECT', regenerate: false },

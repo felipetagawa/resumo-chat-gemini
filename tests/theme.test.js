@@ -77,6 +77,25 @@ test('UX8: Tema não altera elemento nativo do SZ', async () => {
   assert.equal(sz.getAttribute('data-atendeai-theme'), null);
 });
 
+test('late message popup and shared form roots update live without touching SZ or their contents', async () => {
+  const h = themeHarness({ store: { atendeai_theme: 'system' }, dark: false });
+  const native = el('div', { class: 'sz_contact' }); h.document.body.appendChild(native);
+  await h.module.init();
+  const popup = el('div', { id: 'popupMensagensPadrao' });
+  const input = el('input'); input.value = 'rascunho'; popup.appendChild(input);
+  const modal = el('div', { class: 'modal-overlay atendeai-modal-overlay', 'data-atendeai-messages-form': '' });
+  h.document.body.appendChild(popup); h.document.body.appendChild(modal);
+  h.observers[0].fn([{ addedNodes: [popup, modal] }]);
+  for (const root of [popup, modal]) assert.equal(root.getAttribute('data-atendeai-theme'), 'light');
+  h.media.matches = true; h.media.listener();
+  for (const root of [popup, modal]) assert.equal(root.getAttribute('data-atendeai-theme'), 'dark');
+  h.changeListeners[0]({ atendeai_theme: { newValue: 'light' } }, 'local');
+  h.media.listener();
+  for (const root of [popup, modal]) assert.equal(root.getAttribute('data-atendeai-theme'), 'light');
+  assert.equal(input.value, 'rascunho');
+  assert.equal(native.getAttribute('data-atendeai-theme'), null);
+});
+
 test('dock status follows light, dark and system without painting native cards', async () => {
   for (const preference of ['light', 'dark', 'system']) {
     const h = themeHarness({ store: { atendeai_theme: preference }, dark: true });

@@ -199,6 +199,7 @@ const UIBuilder = (() => {
             const firstInput = modalContainer.querySelector('.form-input, .form-textarea, .form-select');
             if (firstInput) firstInput.focus();
         }, 100);
+        return overlay;
     }
 
     function gerarIdUnico() {

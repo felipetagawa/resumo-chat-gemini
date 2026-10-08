@@ -1,41 +1,16 @@
 // Current-chat drafts only. No recovery storage, private notes or send actions.
 const SmartReplyModule = (() => {
   const PANEL_ID = "atendeai-smart-reply";
+  const CONTEXT_MODES = {
+    RECENT: { label: "Recentes", description: "Últimas 12 mensagens textuais" },
+    LAST_CUSTOMER: { label: "Última mensagem", description: "Última mensagem textual do cliente" },
+    AVAILABLE: { label: "Conversa disponível", description: "Todo o texto disponível, até 16.000 caracteres" }
+  };
+  const contextMode = mode => Object.hasOwn(CONTEXT_MODES, mode) ? mode : "RECENT";
   let session = null;
   const text = value => String(value || "").replace(/\s+/g, " ").trim();
 
-  function chatToken() {
-    const card = document.querySelector(".sz_contact.active");
-    if (!card) return "";
-    for (const attr of ["data-chat-id", "data-contact-id", "data-id"]) {
-      const value = text(card.getAttribute(attr));
-      const digits = value.replace(/\D/g, "");
-      if (value && !(/^[\d\s()+.-]+$/.test(value) && digits.length >= 10 && digits.length <= 15)) return `${attr}:${value}`;
-    }
-    const src = card.querySelector('img[alt="platform"]')?.getAttribute("src") || "";
-    const platform = src.match(/\/assets\/img\/platform\/mini\/([\w-]+)\.svg(?:[?#].*)?$/i)?.[1]?.toLowerCase();
-    const name = text(card.querySelector(".contact-name")?.textContent).toLowerCase();
-    const time = card.querySelector('.contact-times[phase="attendance"] .times');
-    const timestamp = text(time?.getAttribute("title") || time?.textContent);
-    if (!platform || !name || !/^\d{2}\/\d{2}\/\d{2}(?:\d{2})? \d{2}:\d{2}(?::\d{2})?$/.test(timestamp)) return "";
-    return `attendance:${platform}|${name.replace(/%/g, "%25").replace(/\|/g, "%7C")}|${timestamp}`;
-  }
-
-  function boundedConversation(conversation) {
-    if (conversation.length <= 16000) return conversation;
-    const latest = Array.from(document.querySelectorAll(".msg")).reverse().find(msg => {
-      const name = text(msg.querySelector(".name")?.innerText);
-      return !msg.classList.contains("sent") && !/^autom[aá]tico$/i.test(name)
-        && text(msg.querySelector(".message span")?.innerText);
-    });
-    const name = latest?.querySelector(".name")?.innerText?.trim() || "";
-    const message = latest?.querySelector(".message span")?.innerText?.trim() || "";
-    const lastCustomer = message ? `${name ? name + ": " : ""}${message}` : "";
-    const marker = "\n[trecho intermediário omitido]\n";
-    if (!lastCustomer) return conversation.slice(0, 4000) + marker + conversation.slice(-11900);
-    return conversation.slice(0, 2000) + marker + "Última interação do cliente:\n"
-      + lastCustomer.slice(-6000) + marker + conversation.slice(-7800);
-  }
+  const chatToken = () => ChatCaptureModule.identificarAtendimentoResposta();
 
   function composer() {
     const candidates = Array.from(document.querySelectorAll('textarea[placeholder*="Digite"], div[contenteditable="true"][role="textbox"], div[contenteditable="true"][placeholder*="Digite"], #twemoji-textarea'))
@@ -68,12 +43,40 @@ const SmartReplyModule = (() => {
     if (className) el.className = className;
     return el;
   }
+  function mountContextControl(button) {
+    ChatCaptureModule.observarAtendimentoResposta();
+    const element = node("div", "", "atendeai-reply-control");
+    const select = node("select", "", "atendeai-reply-context-select");
+    select.id = "atendeai-reply-context-mode";
+    select.setAttribute("aria-label", "Contexto para a próxima resposta");
+    for (const [value, mode] of Object.entries(CONTEXT_MODES)) {
+      const option = node("option", `${mode.label} — ${mode.description}`);
+      option.value = value; select.appendChild(option);
+    }
+    const arrow = node("span", "▾", "atendeai-reply-context-arrow");
+    arrow.setAttribute("aria-hidden", "true");
+    function paint() {
+      const mode = contextMode(select.value), label = CONTEXT_MODES[mode];
+      select.title = `Contexto: ${label.label}. ${label.description}. Escolha e clique em Sugerir resposta.`;
+      button.title = `Sugerir resposta · ${label.label}`;
+      element.setAttribute("data-context-chosen", String(mode !== "RECENT"));
+    }
+    select.value = "RECENT"; select.addEventListener("change", paint);
+    element.appendChild(button); element.appendChild(select); element.appendChild(arrow); paint();
+    return { element, consumeMode() {
+      const mode = contextMode(select.value);
+      select.value = "RECENT"; paint(); return mode;
+    } };
+  }
   function close() {
+    const panel = document.getElementById(PANEL_ID);
+    const restoreFocus = panel && document.activeElement && panel.contains(document.activeElement);
     session?.observer?.disconnect();
     session?.unsubscribe?.();
     session?.profilesUnsubscribe?.();
     session = null;
     document.getElementById(PANEL_ID)?.remove();
+    if (restoreFocus) document.getElementById("btnSmartReply")?.focus();
   }
   function current(s) { return session === s && s.token && chatToken() === s.token; }
   function setDisabled(el, value) {
@@ -86,7 +89,7 @@ const SmartReplyModule = (() => {
     // Compare the full capture, including any text omitted from the API payload.
     // Once stale, only an explicit new suggestion can capture a new snapshot.
     if (!changed && s.freshness && !s.stale) {
-      s.stale = text(ChatCaptureModule.capturarTextoChat()) !== s.freshness.conversation
+      s.stale = text(ChatCaptureModule.capturarContextoResposta(s.mode).fullConversation) !== s.freshness.conversation
         || text(SmartReplyContextModule.getForCurrentChat()) !== s.freshness.promptComplement;
     }
     const warning = changed ? "O atendimento ativo mudou. Volte à conversa original ou clique em Sugerir resposta no atendimento desejado."
@@ -132,7 +135,7 @@ const SmartReplyModule = (() => {
     syncChat(s);
     if (!current(s) || s.stale || s.busy || !s.reply || s.profileChanged) return;
     const el = composer();
-    if (!el || !ChatCaptureModule.capturarTextoChat().trim()) {
+    if (!el || !ChatCaptureModule.capturarContextoResposta(s.mode).conversation.trim()) {
       s.status.textContent = "Não foi possível localizar com segurança o campo de mensagem deste atendimento.";
       return;
     }
@@ -163,18 +166,22 @@ const SmartReplyModule = (() => {
     }
     syncChat(s);
   }
-  async function open() {
+  async function open(mode = "RECENT") {
     close();
-    const s = { token: chatToken(), reply: "", busy: true, profileChanged: false, stale: false };
+    const s = { token: chatToken(), mode: contextMode(mode), reply: "", busy: true, profileChanged: false, stale: false };
     session = s;
     const panel = node("section", "", "smart-reply-preview");
     panel.id = PANEL_ID;
     panel.setAttribute("aria-label", "Resposta sugerida");
+    panel.setAttribute("tabindex", "-1");
     s.panel = panel;
     const header = node("div", "", "smart-reply-header");
     const heading = node("div", "", "smart-reply-heading");
     heading.appendChild(node("strong", "Resposta sugerida"));
     heading.appendChild(node("span", "Revise antes de inserir no campo de mensagem.", "smart-reply-kicker"));
+    const contextBadge = node("span", `Contexto: ${CONTEXT_MODES[s.mode].label}`, "atendeai-reply-context-badge");
+    contextBadge.title = CONTEXT_MODES[s.mode].description;
+    heading.appendChild(contextBadge);
     header.appendChild(heading);
     const x = node("button", "×", "smart-reply-close"); x.type = "button"; x.setAttribute("aria-label", "Fechar resposta sugerida");
     x.addEventListener("click", close); header.appendChild(x);
@@ -212,6 +219,7 @@ const SmartReplyModule = (() => {
     for (const el of [s.insert, s.regenerate, s.profile, s.manageProfiles]) actions.appendChild(el);
     for (const el of [header, s.warning, s.preview, s.status, actions, s.choices]) panel.appendChild(el);
     document.body.appendChild(panel);
+    panel.focus();
     globalThis.ThemeModule?.apply?.(panel);
     const manager = SmartReplyProfilesUI.mount(panel);
     s.manageProfiles.addEventListener("click", () => s.manageProfiles.setAttribute("aria-expanded", String(manager.toggle())));
@@ -219,19 +227,22 @@ const SmartReplyModule = (() => {
     await SmartReplyContextModule.sync();
     if (session !== s) return;
     if (s.token && chatToken() !== s.token) { s.busy = false; syncChat(s); return; }
-    const conversation = String(ChatCaptureModule.capturarTextoChat() || "").trim();
+    const capture = ChatCaptureModule.capturarContextoResposta(s.mode);
+    const conversation = capture.conversation;
     const promptComplement = SmartReplyContextModule.getForCurrentChat();
     if (!conversation || !s.token || promptComplement.length > 2000) {
       s.busy = false;
-      s.status.textContent = !conversation ? "Abra uma conversa com mensagens para sugerir uma resposta."
+      s.status.textContent = !conversation ? s.mode === "LAST_CUSTOMER"
+        ? "Não há mensagem textual válida do cliente neste atendimento. Escolha outro contexto ou aguarde uma mensagem."
+        : "Abra uma conversa com mensagens para sugerir uma resposta."
         : !s.token ? "Não foi possível identificar com segurança o atendimento ativo. Reabra a conversa."
           : "O adendo excede o limite de 2.000 caracteres.";
       syncChat(s); return;
     }
-    s.snapshot = { conversation: boundedConversation(conversation), promptComplement };
+    s.snapshot = { conversation, promptComplement };
     if (promptComplement) heading.appendChild(node("span", "Usando adendo para resposta", "smart-reply-kicker"));
     s.unsubscribe = SmartReplyContextModule.onChanged(() => syncChat(s));
-    s.freshness = { conversation: text(conversation), promptComplement: text(promptComplement) };
+    s.freshness = { conversation: text(capture.fullConversation), promptComplement: text(promptComplement) };
     s.observer = new MutationObserver(records => {
       if (records.some(record => !s.panel.contains(record.target))) syncChat(s);
     });
@@ -251,6 +262,6 @@ const SmartReplyModule = (() => {
   document.addEventListener("keydown", event => { if (event.key === "Escape") close(); });
   // Textarea value edits do not create DOM mutations; capture input without intercepting it.
   document.addEventListener("input", () => { if (session) syncChat(session); }, true);
-  return { open };
+  return { open, mountContextControl };
 })();
 window.SmartReplyModule = SmartReplyModule;

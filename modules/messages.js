@@ -12,6 +12,7 @@ const MessagesModule = (() => {
     async function carregarEMostrarMensagens() {
         const popup = criarPopupMensagens();
         document.body.appendChild(popup);
+        window.ThemeModule?.apply(popup);
 
         const data = await StorageHelper.get(["customMessages", "messageShortcuts", "atendeai_user_sector", "atendeai_user_name"]);
         const customMessagesList = data.customMessages || [];
@@ -25,34 +26,24 @@ const MessagesModule = (() => {
     function criarPopupMensagens() {
         const popup = document.createElement("div");
         popup.id = "popupMensagensPadrao";
-        popup.style = `
-      position: fixed;
-      bottom: 130px;
-      right: 20px;
-      z-index: 999999;
-      background: #fff;
-      border: 1px solid #dadce0;
-      border-radius: 8px;
-      padding: 0;
-      width: 450px;
-      max-height: 600px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      display: flex;
-      flex-direction: column;
-    `;
 
         popup.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px solid #eee;">
-        <b style="font-size:16px; color:#3c4043;">Mensagens Padrão</b>
-        <button id="fecharMensagensFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
+      <div class="messages-header">
+        <b class="messages-title">Mensagens Padrão</b>
+        <button id="fecharMensagensFlutuante">&times;</button>
       </div>
-      <div id="conteudoMensagens" style="flex:1; overflow-y:auto; padding:16px;"></div>
+      <div id="conteudoMensagens"></div>
     `;
 
         popup.querySelector("#fecharMensagensFlutuante").addEventListener("click", () => popup.remove());
 
         return popup;
+    }
+
+    function criarFormularioMensagem(config) {
+        const overlay = UIBuilder.criarModalFormulario(config);
+        overlay.setAttribute('data-atendeai-messages-form', '');
+        window.ThemeModule?.apply(overlay);
     }
 
     function resolveTemplate(text, name) {
@@ -99,24 +90,10 @@ const MessagesModule = (() => {
             // Adicionar botão de nova mensagem no header do acordeon ou logo abaixo
             const btnAdd = document.createElement("button");
             btnAdd.innerHTML = "Nova Mensagem";
-            btnAdd.style = `
-                margin: 4px 0 10px 0;
-                background: #e8f0fe;
-                color: #1a73e8;
-                border: 1px solid #d2e3fc;
-                padding: 8px 16px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 13px;
-                font-weight: 600;
-                width: 100%;
-                transition: all 0.2s;
-            `;
-            btnAdd.onmouseover = () => btnAdd.style.background = "#d2e3fc";
-            btnAdd.onmouseout = () => btnAdd.style.background = "#e8f0fe";
+            btnAdd.className = 'messages-add';
 
             btnAdd.onclick = () => {
-                UIBuilder.criarModalFormulario({
+                criarFormularioMensagem({
                     title: 'Cadastrar Nova Mensagem',
                     fields: [
                         {
@@ -183,7 +160,7 @@ const MessagesModule = (() => {
 
             if (customMessagesList.length === 0) {
                 const emptyMsg = document.createElement("p");
-                emptyMsg.style = "color:#999; text-align:center; padding:20px; font-size:13px;";
+                emptyMsg.className = 'messages-empty';
                 emptyMsg.innerText = "Nenhuma mensagem personalizada.";
                 customAcordeon.content.appendChild(emptyMsg);
             } else {
@@ -200,53 +177,36 @@ const MessagesModule = (() => {
 
     function criarCardMensagem(text, isCustom, shortcut = null, index = -1) {
         const card = document.createElement("div");
-        card.style = `
-      background: #f8f9fa;
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      padding: 12px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-      position: relative;
-    `;
+        card.className = 'messages-card';
 
-        const shortcutBadge = shortcut ? `<span style="background:#1a73e8; padding:2px 8px; border-radius:12px; font-weight:bold; font-size:11px; margin-right:8px; color:#ffffff; box-shadow: 0 2px 4px rgba(26,115,232,0.3); border: 1px solid #1557b0;">/${shortcut}</span>` : '';
+        const shortcutBadge = shortcut ? `<span class="messages-shortcut-badge">/${shortcut}</span>` : '';
 
         card.innerHTML = `
-      <div style="font-size:13px; color:#333; line-height:1.4; padding-right: 20px;">
+      <div class="messages-text">
         ${shortcutBadge}
         ${text}
       </div>
-      <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end; align-items:center;">
-        ${isCustom ? `<button class="btn-excluir" style="background:transparent; border:none; color:#d93025; font-size:12px; cursor:pointer; margin-right:auto;">Excluir</button>` : ''}
-        <button class="btn-enviar" style="background:#1a73e8; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px;">Enviar</button>
-        <button class="btn-copiar" style="background:#f1f3f4; color:#3c4043; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px;">Copiar</button>
+      <div class="messages-actions">
+        ${isCustom ? `<button class="btn-excluir">Excluir</button>` : ''}
+        <button class="btn-enviar">Enviar</button>
+        <button class="btn-copiar">Copiar</button>
       </div>
     `;
 
         // Adicionar campo de atalho para TODAS as mensagens (fixas e personalizadas)
         const shortcutConfig = document.createElement("div");
-        shortcutConfig.style.cssText = "margin-top:10px; padding-top:10px; border-top:1px solid #e0e0e0; display:flex; align-items:center; gap:6px;";
+        shortcutConfig.className = 'messages-shortcut-config';
 
         const shortcutLabel = document.createElement("span");
         shortcutLabel.textContent = "Atalho: /";
-        shortcutLabel.style.cssText = "color:#666; font-size:12px; font-weight:700;";
+        shortcutLabel.className = 'messages-shortcut-label';
 
         const shortcutInput = document.createElement("input");
         shortcutInput.type = "text";
         shortcutInput.maxLength = 20;
         shortcutInput.placeholder = "ex: Bom dia";
         shortcutInput.value = shortcut || "";
-        shortcutInput.style.cssText = `
-            width:180px;
-            padding:6px 8px;
-            border:1px solid #ccc;
-            border-radius:6px;
-            font-family: ui-monospace, SFMono-Regular, monospace;
-            font-weight:800;
-            font-size:13px;
-        `;
+        shortcutInput.className = 'messages-shortcut-input';
 
         shortcutInput.addEventListener("change", async () => {
             const newShortcut = shortcutInput.value.trim();
@@ -290,7 +250,6 @@ const MessagesModule = (() => {
             const btnEdit = document.createElement("button");
             btnEdit.textContent = "Editar";
             btnEdit.className = "btn-editar";
-            btnEdit.style.cssText = "background:transparent; border:none; color:#1a73e8; font-size:12px; cursor:pointer; margin-right:8px;";
 
             // Inserir botão Editar ao lado do Excluir
             btnDelete.parentNode.insertBefore(btnEdit, btnDelete);
@@ -305,7 +264,7 @@ const MessagesModule = (() => {
                 const currentMessage = messages[index];
                 const currentShortcut = shortcuts[`custom_${index}`] || "";
 
-                UIBuilder.criarModalFormulario({
+                criarFormularioMensagem({
                     title: 'Editar Mensagem Personalizada',
                     fields: [
                         {
@@ -417,16 +376,6 @@ const MessagesModule = (() => {
             const original = btn.textContent;
             btn.textContent = "✅ Copiado";
             setTimeout(() => { btn.textContent = original; }, 1500);
-        });
-
-        card.addEventListener("mouseenter", () => {
-            card.style.background = "#e8f0fe";
-            card.style.borderColor = "#1a73e8";
-        });
-
-        card.addEventListener("mouseleave", () => {
-            card.style.background = "#f8f9fa";
-            card.style.borderColor = "#e0e0e0";
         });
 
         return card;

@@ -1224,11 +1224,11 @@ test('Gerar Relatorio do chat atual envia no primeiro clique sem abrir preservad
   const sent = [];
   const shown = [];
   let opened = 0;
-  const context = { document, console,
+  const context = { document, console, window: {},
     DOMHelpers: { exists: () => false, createElement(tag, attrs) { return el(tag, { id: attrs.id }); } },
     getIconHTML: () => '', guardFeature: fn => fn, initializeExtensionDock: () => {},
     SupportFocusModule: { async mount() {} },
-    ChatCaptureModule: { capturarTextoChat: () => 'CASSIA: conversa atual', capturarNomeCliente: () => 'CASSIA' },
+    ChatCaptureModule: { capturarTextoChat: () => 'CASSIA: conversa atual', capturarNomeCliente: () => 'CASSIA', observarAtendimentoResposta() {} },
     ObservationsModule: { getPromptComplementForCurrentChat: () => 'observacao atual' },
     RecoveryBufferModule: { openReportFallback() { opened++; }, openPreservedBuffers() { opened++; } },
     MessagingHelper: { async send(payload) { sent.push(JSON.parse(JSON.stringify(payload))); return { resumo: 'pronto' }; } },
@@ -1239,6 +1239,7 @@ test('Gerar Relatorio do chat atual envia no primeiro clique sem abrir preservad
   const originalCreate = document.createElement;
   document.createElement = tag => { const node = originalCreate(tag); node.insertAdjacentHTML = () => {}; return node; };
   vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(extensionRoot, 'modules/smart-reply.js'), 'utf8'), context);
   vm.runInContext(source.slice(start, end), context);
   context.criarBotoesFlutuantes({ btnResumoGemini: true }, 'suporte');
   const report = document.getElementById('btnResumoGemini');

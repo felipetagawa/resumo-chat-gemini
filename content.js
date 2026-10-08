@@ -4,6 +4,57 @@ const MAX_PROMPT_COMPLEMENT_CHARS = 2000;
 
 const NAME_KEY = "atendeai_user_name";
 const SECTOR_KEY = "atendeai_user_sector";
+let extensionContextInvalid = false;
+let checkingConfig = false;
+let onboardingSaving = false;
+
+function handleConfigError(error) {
+  if (extensionContextInvalid) return;
+  const invalid = !chrome.runtime?.id || /extension context invalidated/i.test(error?.message || "");
+  if (invalid) {
+    extensionContextInvalid = true;
+    clearInterval(initInterval);
+    document.getElementById("atendeai-onboarding-overlay")?.remove();
+    document.getElementById("atendeai-config-modal-overlay")?.remove();
+    const dock = document.getElementById("containerBotoesGemini");
+    dock?.dockCleanup?.();
+    dock?.remove();
+  }
+  let notice = document.getElementById("atendeai-context-notice");
+  if (!notice) {
+    notice = document.createElement("div");
+    notice.id = "atendeai-context-notice";
+    notice.setAttribute("role", "status");
+    document.body.appendChild(notice);
+    globalThis.ThemeModule?.apply?.(notice);
+  }
+  notice.textContent = invalid
+    ? "O AtendeAI foi atualizado. Recarregue esta página para continuar utilizando os recursos."
+    : "Não foi possível ler a configuração do AtendeAI. Tente novamente ou recarregue a página.";
+}
+
+// Callback errors must reject too: an API failure is not an empty profile.
+function configStorage(method, value) {
+  return new Promise((resolve, reject) => {
+    try {
+      if (extensionContextInvalid || !chrome.runtime?.id) throw new Error("Extension context invalidated.");
+      chrome.storage.local[method](value, data => {
+        try {
+          const error = chrome.runtime.lastError;
+          if (error) throw new Error(error.message);
+          if (extensionContextInvalid || !chrome.runtime?.id) throw new Error("Extension context invalidated.");
+          resolve(data);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+const storageGet = keys => configStorage("get", keys);
+const storageSet = data => configStorage("set", data);
 
 function getUserSectorSafe() {
   try {
@@ -53,6 +104,7 @@ const getIconHTML = (icon, text) => {
 };
 
 function createOnboardingModal() {
+  if (extensionContextInvalid) return;
   if (document.getElementById("atendeai-onboarding-overlay")) return;
 
   const LEADER_PASSWORD = "SoftengerenciamentoJB-BR";
@@ -75,7 +127,8 @@ function createOnboardingModal() {
   modal.style.cssText = `
     width: 480px;
     max-width: 90vw;
-    background: #ffffff;
+    background: var(--ai-surface);
+    color: var(--ai-text);
     border-radius: 24px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     overflow: hidden;
@@ -99,11 +152,11 @@ function createOnboardingModal() {
 
   body.innerHTML = `
     <div style="margin-bottom: 20px;">
-      <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">Nome</label>
+      <label for="onboarding-name-input" style="display: block; font-size: 13px; font-weight: 700; color: var(--ai-text-secondary); margin-bottom: 8px;">Nome</label>
       <input type="text" id="onboarding-name-input" placeholder="Digite seu nome" style="
         width: 100%;
         padding: 12px;
-        border: 2px solid #e2e8f0;
+        border: 2px solid var(--ai-border-strong);
         border-radius: 12px;
         font-size: 15px;
         outline: none;
@@ -112,48 +165,48 @@ function createOnboardingModal() {
     </div>
 
     <div style="margin-bottom: 14px;">
-      <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 12px;">Seu Setor</label>
+      <label style="display: block; font-size: 13px; font-weight: 700; color: var(--ai-text-secondary); margin-bottom: 12px;">Seu Setor</label>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <label style="cursor: pointer;">
           <input type="radio" name="onboarding-sector" value="suporte" checked style="display: none;" />
           <div class="sector-card" style="
-            border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px;
+            border: 2px solid var(--ai-border-strong); border-radius: 12px; padding: 12px;
             text-align: center; font-size: 14px; font-weight: 700;
-            color: #64748b; transition: all 0.2s;
+            color: var(--ai-text-secondary); transition: all 0.2s;
           ">Suporte</div>
         </label>
 
         <label style="cursor: pointer;">
           <input type="radio" name="onboarding-sector" value="preatendimento" style="display: none;" />
           <div class="sector-card" style="
-            border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px;
+            border: 2px solid var(--ai-border-strong); border-radius: 12px; padding: 12px;
             text-align: center; font-size: 14px; font-weight: 700;
-            color: #64748b; transition: all 0.2s;
+            color: var(--ai-text-secondary); transition: all 0.2s;
           ">Pré-atendimento</div>
         </label>
 
         <label style="cursor: pointer; grid-column: 1 / span 2;">
           <input type="radio" name="onboarding-sector" value="lider" style="display: none;" />
           <div class="sector-card" style="
-            border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px;
+            border: 2px solid var(--ai-border-strong); border-radius: 12px; padding: 12px;
             text-align: center; font-size: 14px; font-weight: 900;
-            color: #64748b; transition: all 0.2s;
+            color: var(--ai-text-secondary); transition: all 0.2s;
           ">Líder</div>
         </label>
       </div>
     </div>
 
     <div id="leader-pass-wrap" style="display:none; margin-bottom: 20px;">
-      <label style="display:block; font-size: 13px; font-weight: 800; color:#334155; margin-bottom:8px;">Senha do Líder</label>
+      <label style="display:block; font-size: 13px; font-weight: 800; color:var(--ai-text-secondary); margin-bottom:8px;">Senha do Líder</label>
       <input type="password" id="leader-pass-input" placeholder="Digite a senha" style="
         width: 100%;
         padding: 12px;
-        border: 2px solid #e2e8f0;
+        border: 2px solid var(--ai-border-strong);
         border-radius: 12px;
         font-size: 15px;
         outline: none;
       "/>
-      <div id="leader-pass-hint" style="margin-top:8px; font-size:12px; color:#b45309; font-weight:700;"></div>
+      <div id="leader-pass-hint" style="margin-top:8px; font-size:12px; color:var(--ai-danger); font-weight:700;"></div>
     </div>
 
     <button id="onboarding-save-btn" style="
@@ -168,6 +221,7 @@ function createOnboardingModal() {
       cursor: pointer;
       transition: background 0.2s;
     ">Salvar e Continuar</button>
+    <div id="onboarding-save-error" role="alert"></div>
   `;
 
   const styleRadios = () => {
@@ -175,9 +229,9 @@ function createOnboardingModal() {
     const inputs = body.querySelectorAll('input[name="onboarding-sector"]');
     inputs.forEach((input, index) => {
       const active = input.checked;
-      cards[index].style.borderColor = active ? "#2563eb" : "#e2e8f0";
-      cards[index].style.backgroundColor = active ? "#eff6ff" : "transparent";
-      cards[index].style.color = active ? "#1e40af" : "#64748b";
+      cards[index].style.borderColor = active ? "var(--ai-primary)" : "var(--ai-border-strong)";
+      cards[index].style.backgroundColor = active ? "var(--ai-primary-soft)" : "transparent";
+      cards[index].style.color = active ? "var(--ai-primary)" : "var(--ai-text-secondary)";
     });
 
     const selected = body.querySelector('input[name="onboarding-sector"]:checked')?.value;
@@ -194,6 +248,7 @@ function createOnboardingModal() {
   modal.appendChild(body);
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
+  globalThis.ThemeModule?.apply?.(overlay);
 
   const saveBtn = body.querySelector("#onboarding-save-btn");
   const nameInput = body.querySelector("#onboarding-name-input");
@@ -201,6 +256,7 @@ function createOnboardingModal() {
   const passHint = body.querySelector("#leader-pass-hint");
 
   saveBtn.addEventListener("click", async () => {
+    if (onboardingSaving || extensionContextInvalid) return;
     const name = (nameInput.value || "").trim();
     const sector = body.querySelector('input[name="onboarding-sector"]:checked')?.value;
 
@@ -229,70 +285,38 @@ function createOnboardingModal() {
       if (passHint) passHint.textContent = "";
     }
 
-    await new Promise((resolve) =>
-      chrome.storage.local.set({ [NAME_KEY]: name, [SECTOR_KEY]: sector }, resolve)
-    );
-
-    const isPre = sector === "preatendimento";
-    const isLeader = sector === "lider";
-
-    const newVisibility = {
-      btnAgenda: true,
-      btnMessages: true,
-      btnSmartReply: true,
-      btnConsultarDocsLoop: true,
-      btnResumoGemini: !isPre,
-      btnChamadoManual: !isPre,
-      btnProductClassifier: isPre
-    };
-
-    await new Promise((resolve) =>
-      chrome.storage.local.set({ atendeai_visibility: newVisibility }, resolve)
-    );
-
-    overlay.remove();
-    checkAndInit();
-  });
-}
-
-function checkAndInit() {
-  const urlAtualCorreta = window.location.href.startsWith(TARGET_URL);
-  if (!urlAtualCorreta) {
-    if (modulosInicializados) {
-      modulosInicializados = false;
-      DOMHelpers.removeElement("containerBotoesGemini");
-      DOMHelpers.removeElement("atendeai-onboarding-overlay");
-    }
-    return;
-  }
-
-  inicializarModulos();
-  NotificationsModule.verificarNotificacoesChat();
-
-  isUserConfigured().then(configured => {
-    if (!configured) {
-      createOnboardingModal();
+    const feedback = body.querySelector("#onboarding-save-error");
+    onboardingSaving = true;
+    saveBtn.disabled = true;
+    feedback.textContent = "";
+    try {
+      // A second tab/options may have configured the profile since this opened.
+      const saved = await storageGet([NAME_KEY, SECTOR_KEY, "atendeai_visibility"]);
+      if (!sanitizeName(saved[NAME_KEY]) || !isValidSector(sanitizeSector(saved[SECTOR_KEY]))) {
+        const isPre = sector === "preatendimento";
+        const data = { [NAME_KEY]: name, [SECTOR_KEY]: sector };
+        if (!Object.prototype.hasOwnProperty.call(saved, "atendeai_visibility")) {
+          data.atendeai_visibility = {
+            btnAgenda: true, btnMessages: true, btnSmartReply: true,
+            btnConsultarDocsLoop: true, btnResumoGemini: !isPre,
+            btnChamadoManual: !isPre, btnProductClassifier: isPre
+          };
+        }
+        // One confirmed write prevents partial profile/visibility success.
+        await storageSet(data);
+      }
+      overlay.remove();
+    } catch (error) {
+      feedback.textContent = "Não foi possível salvar a configuração. Tente novamente.";
+      if (!chrome.runtime?.id || /extension context invalidated/i.test(error?.message || "")) handleConfigError(error);
       return;
+    } finally {
+      onboardingSaving = false;
+      saveBtn.disabled = false;
     }
-
-    const modal = document.getElementById("atendeai-onboarding-overlay");
-    if (modal) modal.remove();
-
-    // Fetch visibility and sector directly to ensure we have the correct data for buttons
-    chrome.storage.local.get(["atendeai_visibility", SECTOR_KEY], (items) => {
-      const visibility = items.atendeai_visibility || {};
-      const rawSector = items[SECTOR_KEY];
-      const sector = String(rawSector || "").trim().toLowerCase();
-
-      console.log("DEBUG: checkAndInit direct load. Sector:", sector, "Visibility:", visibility);
-      criarBotoesFlutuantes(visibility, sector);
-    });
+    await checkAndInit();
   });
 }
-
-
-const storageGet = (keys) =>
-  new Promise((resolve) => chrome.storage.local.get(keys, (data) => resolve(data || {})));
 
 function sanitizeName(v) {
   return String(v || "").trim();
@@ -302,28 +326,23 @@ function sanitizeSector(v) {
 }
 
 async function getUserConfig() {
-  try {
-    const data = await storageGet([NAME_KEY, SECTOR_KEY]);
-    console.log("DEBUG: getUserConfig raw data:", data);
-    const name = sanitizeName(data[NAME_KEY]);
-    const sector = sanitizeSector(data[SECTOR_KEY]);
-    console.log("DEBUG: getUserConfig processed:", { name, sector });
-    return { name, sector };
-  } catch (e) {
-    console.error("DEBUG: getUserConfig error:", e);
-    return { name: "", sector: "" };
-  }
+  const data = await storageGet([NAME_KEY, SECTOR_KEY]);
+  return { name: sanitizeName(data[NAME_KEY]), sector: sanitizeSector(data[SECTOR_KEY]) };
 }
 
 function guardFeature(actionFn, opts = {}) {
   const { allowLeader = false } = opts;
 
   return async (...args) => {
-    const { sector } = await getUserConfig();
-    const ok = await isUserConfigured();
-
-    if (!ok) {
-      openConfigRequiredModal();
+    try {
+      if (extensionContextInvalid) return;
+      const ok = await isUserConfigured();
+      if (!ok) {
+        openConfigRequiredModal();
+        return;
+      }
+    } catch (error) {
+      handleConfigError(error);
       return;
     }
 
@@ -793,10 +812,11 @@ function criarBotoesFlutuantes(visibility, userSector) {
   }));
 
   const botaoSmartReply = createButton('btnSmartReply', 'Sugerir resposta', '',
-    guardFeature(() => SmartReplyModule.open()));
+    guardFeature(() => SmartReplyModule.open(smartReplyControl.consumeMode())));
   botaoSmartReply.type = 'button';
   botaoSmartReply.className += ' atendeai-focus-primary';
   botaoSmartReply.innerHTML = '<svg class="atendeai-focus-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14v10H8l-5 4V3Z"/><path d="M6 7h8M6 10h5"/></svg> Sugerir resposta';
+  const smartReplyControl = SmartReplyModule.mountContextControl(botaoSmartReply);
   botaoDocs.id = 'btnConsultarDocsLoop';
   botaoDocs.className = 'gemini-preserved-link';
   botaoDocs.textContent = 'Consultar Docs';
@@ -850,7 +870,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
   if (showSmartReply || isVisible('btnConsultarDocsLoop')) {
     const replyGroup = document.createElement('div');
     replyGroup.className = 'gemini-report-group';
-    if (showSmartReply) replyGroup.appendChild(botaoSmartReply);
+    if (showSmartReply) replyGroup.appendChild(smartReplyControl.element);
     if (isVisible('btnConsultarDocsLoop')) replyGroup.appendChild(botaoDocs);
     container.appendChild(replyGroup);
   }
@@ -905,7 +925,15 @@ MessagingHelper.addListener((request, sender, sendResponse) => {
 });
 
 console.log("✅ Main Loop: Checking...");
-function checkAndInit() {
+async function checkAndInit() {
+  if (extensionContextInvalid) return;
+  // An old callback may never complete after an update; do not let a busy
+  // check/save prevent the next cycle from noticing the lost context.
+  if (!chrome.runtime?.id) {
+    handleConfigError(new Error("Extension context invalidated."));
+    return;
+  }
+  if (checkingConfig || onboardingSaving) return;
   const currentUrl = window.location.href;
   const isTarget = currentUrl.startsWith(TARGET_URL);
 
@@ -920,10 +948,13 @@ function checkAndInit() {
     return;
   }
 
-  inicializarModulos();
-  NotificationsModule.verificarNotificacoesChat();
-
-  isUserConfigured().then(configured => {
+  checkingConfig = true;
+  try {
+    const configured = await isUserConfigured();
+    if (extensionContextInvalid || !window.location.href.startsWith(TARGET_URL)) return;
+    document.getElementById("atendeai-context-notice")?.remove();
+    inicializarModulos();
+    NotificationsModule.verificarNotificacoesChat();
     if (!configured) {
       if (!document.getElementById("atendeai-onboarding-overlay")) {
         console.log("DEBUG: Not configured, showing onboarding modal.");
@@ -938,19 +969,25 @@ function checkAndInit() {
       modal.remove();
     }
 
-    // Verificação de existência movida para dentro do callback para evitar recriação desnecessária
+    // Preserve the effective loop's behavior: create the dock only when absent.
     if (!document.getElementById("containerBotoesGemini")) {
-      storageGet(["atendeai_visibility", SECTOR_KEY]).then(items => {
+      const items = await storageGet(["atendeai_visibility", SECTOR_KEY]);
+      if (!extensionContextInvalid && window.location.href.startsWith(TARGET_URL)
+          && !document.getElementById("containerBotoesGemini")) {
         const visibility = items.atendeai_visibility || {};
         const rawSector = items[SECTOR_KEY];
         const sector = String(rawSector || "").trim().toLowerCase();
 
         criarBotoesFlutuantes(visibility, sector);
-      });
+      }
     }
-  });
+  } catch (error) {
+    handleConfigError(error);
+  } finally {
+    checkingConfig = false;
+  }
 }
 
-setInterval(checkAndInit, 2000);
+const initInterval = setInterval(checkAndInit, 2000);
 
 console.log("✅ AtendeAI Manager: Extensão carregada e modularizada!");

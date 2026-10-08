@@ -214,6 +214,37 @@ test('Docs popup uses themed surfaces, foregrounds and explicit shared placehold
   assert.match(css, /#geminiDocsPopup[^{}]+::placeholder\s*\{\s*color: var\(--ai-text-muted\);\s*opacity: 1;/);
 });
 
+test('message popup and form styles are isolated and use tokens for all visual states', () => {
+  const css = fs.readFileSync('styles/modals.css', 'utf8');
+  const messagesCss = stripComments(css.slice(css.indexOf('/* Standard messages:')));
+  const selectors = extractSelectors(messagesCss);
+  assert.ok(selectors.length > 20);
+  for (const selector of selectors) {
+    assert.match(selector, /^(?:#popupMensagensPadrao(?:\s|$)|\.atendeai-modal-overlay\[data-atendeai-messages-form\])/);
+  }
+  assert.doesNotMatch(messagesCss, /#[a-f\d]{3,8}\b|rgba?\(|:\s*(?:white|black)\b/i);
+  const declarations = selector => [...messagesCss.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter(([, group]) => splitSelectors(group.trim()).includes(selector))
+    .map(([, , body]) => body).join(';');
+  for (const [selector, token] of [
+    ['#popupMensagensPadrao', 'surface'],
+    ['#popupMensagensPadrao .messages-card', 'surface-muted'],
+    ['#popupMensagensPadrao .messages-card:hover', 'surface-hover'],
+    ['#popupMensagensPadrao .btn-enviar:hover', 'primary-hover'],
+    ['#popupMensagensPadrao .btn-editar:hover', 'primary-soft'],
+    ['#popupMensagensPadrao .btn-excluir:hover', 'danger-soft']
+  ]) assert.ok(declarations(selector).includes(`background: var(--ai-${token})`), selector);
+  for (const selector of ['#popupMensagensPadrao .btn-enviar', '#popupMensagensPadrao .messages-shortcut-badge']) {
+    assert.match(declarations(selector), /color:\s*var\(--ai-on-primary\)/);
+  }
+  assert.match(declarations('#popupMensagensPadrao .messages-shortcut-input::placeholder'), /color:\s*var\(--ai-text-muted\)/);
+  for (const selector of ['#popupMensagensPadrao .messages-shortcut-input:focus', '#popupMensagensPadrao button:focus-visible']) {
+    assert.match(declarations(selector), /box-shadow:\s*var\(--ai-focus\)/);
+  }
+  assert.match(messagesCss, /:user-invalid\s*\{\s*border-color:\s*var\(--ai-danger\)/);
+  assert.match(declarations('#popupMensagensPadrao #conteudoMensagens'), /scrollbar-color:\s*var\(--ai-border-strong\) var\(--ai-surface\)/);
+});
+
 test('profile management controls inherit the preview palette and stay under their exclusive namespace', () => {
   const css = fs.readFileSync('styles/smart-reply.css', 'utf8');
   const selectors = extractSelectors(css).filter(selector => selector.includes('smart-reply-profiles-'));

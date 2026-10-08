@@ -1,3 +1,85 @@
+.atendeai-reply-control {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 30px;
+    width: 100%;
+    min-width: 0;
+    background: var(--ai-primary-soft);
+    color: var(--ai-primary);
+    border-bottom: 1px solid var(--ai-border);
+}
+
+#containerBotoesGemini .atendeai-reply-control #btnSmartReply {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 7px 6px 7px 10px;
+    gap: 6px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    font-size: var(--ai-font-size-sm);
+}
+
+.atendeai-reply-context-select {
+    appearance: none;
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-left: 1px solid var(--ai-primary-border);
+    border-radius: 0;
+    background: transparent;
+    color: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+
+.atendeai-reply-context-select option {
+    background: var(--ai-surface);
+    color: var(--ai-text);
+    font-size: var(--ai-font-size);
+}
+
+.atendeai-reply-context-arrow {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 30px;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    font-size: 14px;
+}
+
+.atendeai-reply-context-select:hover,
+.atendeai-reply-control[data-context-chosen="true"] .atendeai-reply-context-select {
+    background: var(--ai-surface-hover);
+}
+
+.atendeai-reply-context-select:focus-visible {
+    outline: 2px solid var(--ai-primary);
+    outline-offset: -3px;
+}
+
+.atendeai-reply-context-badge {
+    align-self: flex-start;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-top: 5px;
+    padding: 3px 7px;
+    border: 1px solid var(--ai-primary-border);
+    border-radius: var(--ai-radius-sm);
+    background: var(--ai-primary-soft);
+    color: var(--ai-primary);
+    font-size: var(--ai-font-size-xs);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
 .smart-reply-preview {
     position: fixed;
     right: 20px;
@@ -5,7 +87,9 @@
     width: min(420px, calc(100vw - 32px));
     max-width: calc(100vw - 32px);
     max-height: min(70vh, calc(100dvh - 102px));
-    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     box-sizing: border-box;
     padding: 0;
     background: var(--ai-surface);
@@ -30,6 +114,7 @@
     position: sticky;
     top: 0;
     z-index: 1;
+    flex-shrink: 0;
 }
 
 .smart-reply-heading {
@@ -60,6 +145,12 @@
     line-height: 1;
 }
 
+.smart-reply-preview .smart-reply-close {
+    flex: 0 0 28px;
+    min-height: 28px;
+    padding: 0;
+}
+
 .smart-reply-text {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
@@ -70,7 +161,10 @@
     background: var(--ai-surface-muted);
     border-top: 1px solid transparent;
     border-bottom: 1px solid var(--ai-border);
-    min-height: 64px;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .smart-reply-preview[aria-busy="true"] .smart-reply-text {
@@ -79,6 +173,7 @@
 
 .smart-reply-status,
 .smart-reply-warning {
+    flex-shrink: 0;
     margin: 0;
     padding: 8px 16px 0;
     font-size: var(--ai-font-size-sm);
@@ -101,6 +196,7 @@
     gap: 8px;
     margin: 0;
     padding: 12px 16px 16px;
+    flex-shrink: 0;
 }
 
 .smart-reply-draft-choices[hidden] {
@@ -117,6 +213,33 @@
     cursor: pointer;
     font: inherit;
     font-size: var(--ai-font-size-sm);
+    min-width: 0;
+    max-width: 100%;
+}
+
+.smart-reply-actions .smart-reply-profile {
+    flex: 1 1 110px;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+    .smart-reply-preview {
+        right: 12px;
+        bottom: 12px;
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
+        max-height: calc(100dvh - 24px);
+    }
+    .smart-reply-header { padding: 12px; }
+    .smart-reply-text { padding: 12px; }
+    .smart-reply-actions, .smart-reply-draft-choices { padding: 10px 12px 12px; gap: 6px; }
+}
+
+@media (max-height: 600px) {
+    .smart-reply-preview {
+        bottom: 12px;
+        max-height: calc(100dvh - 24px);
+    }
 }
 
 .smart-reply-preview select:hover {
