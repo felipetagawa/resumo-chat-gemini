@@ -494,6 +494,8 @@ async function initializeExtensionDock(container) {
   let size = Object.hasOwn(scales, saved.size) ? saved.size : "normal";
   let minimized = saved.minimized === true;
   let position = saved.position;
+  let preferredPosition = saved.position;
+  let viewportExpanded = false;
   let drag = null;
 
   const toolbar = document.createElement("div");
@@ -531,27 +533,39 @@ async function initializeExtensionDock(container) {
   }
 
   function persist() {
+    preferredPosition = position;
     chrome.storage.local.set({ [key]: { position, size, minimized } }, () => {
       if (chrome.runtime.lastError) console.error("Não foi possível salvar a posição do dock.");
     });
   }
 
   function applySize() {
-    container.setAttribute("data-minimized", String(minimized));
+    const nativeList = document.querySelector(".chats-list, .contacts-list, .contact-list");
+    const listRect = nativeList?.getBoundingClientRect();
+    // The visual QA found the full dock covering the left queue on narrow windows.
+    // Compact only while the right-hand corridor cannot fit it; keep saved preferences.
+    const viewportCompact = !!listRect && listRect.left < window.innerWidth / 2
+      && window.innerWidth - listRect.right < 188 * scales[size] + 16;
+    const effectiveMinimized = viewportCompact ? !viewportExpanded : minimized;
+    container.setAttribute("data-minimized", String(effectiveMinimized));
+    container.setAttribute("data-compact-viewport", String(viewportCompact));
     sizeButton.textContent = `${Math.round(scales[size] * 100)}%`;
     sizeButton.setAttribute("aria-label", `Tamanho do dock: ${sizeButton.textContent}. Clique para alternar.`);
     sizeButton.title = "Alternar tamanho: 85%, 100%, 115%";
-    sizeButton.hidden = minimized;
-    toggleButton.textContent = minimized ? "▣" : "−";
-    toggleButton.setAttribute("aria-label", minimized ? "Restaurar dock" : "Minimizar dock");
-    toggleButton.setAttribute("aria-expanded", String(!minimized));
-    toggleButton.title = minimized ? "Restaurar dock" : "Minimizar dock";
+    sizeButton.hidden = effectiveMinimized;
+    toggleButton.textContent = effectiveMinimized ? "▣" : "−";
+    toggleButton.setAttribute("aria-label", viewportCompact ? viewportExpanded ? "Recolher ações do dock" : "Expandir ações do dock" : minimized ? "Restaurar dock" : "Minimizar dock");
+    toggleButton.setAttribute("aria-expanded", String(!effectiveMinimized));
+    toggleButton.title = viewportCompact ? "Ações do dock sob demanda nesta janela" : minimized ? "Restaurar dock" : "Minimizar dock";
     container.style.zoom = String(scales[size]);
     container.style.maxWidth = `${Math.max(1, window.innerWidth - 16) / scales[size]}px`;
     container.style.maxHeight = `${Math.max(1, window.innerHeight - 16) / scales[size]}px`;
     container.style.overflow = container.scrollHeight > container.clientHeight
       || container.scrollWidth > container.clientWidth ? "auto" : "visible";
-    clampPosition(position);
+    if (viewportCompact && !viewportExpanded) {
+      const rect = container.getBoundingClientRect();
+      clampPosition({ x: window.innerWidth - rect.width - 8, y: preferredPosition?.y ?? position?.y });
+    } else clampPosition(preferredPosition || position);
   }
 
   sizeButton.addEventListener("click", () => {
@@ -561,6 +575,11 @@ async function initializeExtensionDock(container) {
     persist();
   });
   toggleButton.addEventListener("click", () => {
+    if (container.getAttribute("data-compact-viewport") === "true") {
+      viewportExpanded = !viewportExpanded;
+      applySize();
+      return;
+    }
     minimized = !minimized;
     applySize();
     persist();
@@ -583,7 +602,7 @@ async function initializeExtensionDock(container) {
   handle.addEventListener("pointerup", finishDrag);
   handle.addEventListener("pointercancel", finishDrag);
   handle.addEventListener("lostpointercapture", finishDrag);
-  const onResize = () => { applySize(); persist(); };
+  const onResize = () => { viewportExpanded = false; applySize(); };
   window.addEventListener("resize", onResize);
   const observer = typeof ResizeObserver === "function" ? new ResizeObserver(() => clampPosition(position)) : null;
   observer?.observe(container);

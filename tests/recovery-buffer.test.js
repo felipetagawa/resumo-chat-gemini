@@ -1182,7 +1182,7 @@ test('dock inteiro arrasta somente pelo handle e restaura posicao persistida', a
   assert.equal(next.dock.style.top, '100px');
 });
 
-test('dock limita drag, posicao carregada e resize aos limites do viewport', async () => {
+test('dock limita drag e resize ao viewport sem sobrescrever a posicao escolhida', async () => {
   const h = loadDock({ atendeai_dock_preferences: { position: { x: 9000, y: -500 }, size: 'normal' } });
   await h.ready;
   assert.equal(h.dock.style.left, '602px');
@@ -1196,7 +1196,10 @@ test('dock limita drag, posicao carregada e resize aos limites do viewport', asy
   h.window.innerHeight = 400;
   for (const fn of h.listeners.resize) fn();
   assert.equal(h.dock.style.top, '42px');
-  assert.deepEqual(h.store.atendeai_dock_preferences.position, { x: 8, y: 42 });
+  assert.deepEqual(h.store.atendeai_dock_preferences.position, { x: 8, y: 242 });
+  h.window.innerHeight = 600;
+  for (const fn of h.listeners.resize) fn();
+  assert.equal(h.dock.style.top, '242px');
 });
 
 test('tres tamanhos do dock persistem e posicao continua acessivel', async () => {

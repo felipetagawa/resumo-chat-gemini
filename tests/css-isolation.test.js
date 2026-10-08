@@ -160,37 +160,11 @@ test('F15: Focus selectors only target its namespace and never SZ classes', () =
   }
 });
 
-test('Focus pills give MY_TURN its own emphasis and keep waiting states quieter with theme tokens', () => {
-  const css = stripComments(fs.readFileSync('styles/support-focus.css', 'utf8'));
-  const declarations = state => {
-    const selector = `.atendeai-focus-pill.atendeai-focus-${state}`;
-    return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-      .filter(([, selectors]) => splitSelectors(selectors).includes(selector))
-      .flatMap(([, , body]) => body.split(';').map(line => line.trim()).filter(Boolean))
-      .reduce((result, line) => {
-        const colon = line.indexOf(':'); result[line.slice(0, colon).trim()] = line.slice(colon + 1).trim();
-        return result;
-      }, {});
-  };
-  const mine = declarations('my_turn'), checking = declarations('checking');
-  assert.equal(mine.background, 'var(--ai-primary-soft)');
-  assert.equal(mine['font-weight'], 'var(--ai-weight-bold)');
-  assert.match(mine['border-inline-start'], /solid var\(--ai-primary\)/);
-  assert.equal(checking.background, 'var(--ai-warning-soft)');
-  assert.equal(checking.color, 'var(--ai-warning)');
-  for (const state of ['waiting_customer', 'waiting_third_party']) {
-    const waiting = declarations(state);
-    assert.equal(waiting.color, 'var(--ai-text-muted)');
-    assert.equal(waiting['font-weight'], 'var(--ai-weight-regular)');
-    assert.notEqual(waiting.background, mine.background);
-  }
-  assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b/i);
-});
-
-test('Support Focus has no list decoration CSS or native-card render path', () => {
- const css=fs.readFileSync('styles/support-focus.css','utf8'), source=fs.readFileSync('modules/support-focus.js','utf8');
- assert.doesNotMatch(css,/atendeai-focus-(?:badge|anchor)|sz_contact/);
- assert.doesNotMatch(source,/sz_contact|function decorate|getConversationIdentityFromCard/);
+test('Central and editor stay bounded, use tokens and never style native cards',()=>{
+ const css=fs.readFileSync('styles/support-focus.css','utf8');
+ assert.match(css,/max-height: min\(200px, 25vh\)/); assert.match(css,/overflow-x: hidden/);
+ assert.match(css,/aria-pressed="true"/); assert.doesNotMatch(css,/#[0-9a-f]{3,8}\b/i);
+ assert.doesNotMatch(css,/sz_contact|contact-layout|atendeai-focus-badge/);
  assert.doesNotMatch(fs.readFileSync('options.html','utf8'),/supportFocusBadgesEnabled/);
 });
 

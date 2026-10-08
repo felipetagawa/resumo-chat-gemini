@@ -75,6 +75,14 @@ class MiniNode {
     this.children.unshift(this.children.pop());
   }
 
+  insertBefore(child, reference) {
+    if (!reference) return this.appendChild(child);
+    if (!this.children.includes(reference)) throw new Error('Reference is not a child');
+    child.remove(); child.parentElement = this;
+    this.children.splice(this.children.indexOf(reference), 0, child);
+    return child;
+  }
+
   setPointerCapture() {}
 
   focus() { this.focused = true; }
