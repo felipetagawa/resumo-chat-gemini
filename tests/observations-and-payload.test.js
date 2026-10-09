@@ -584,3 +584,13 @@ test('CUSTOM wire uses only styleInstruction while native requests omit it', asy
   await background.dispatch({ action: 'gerarResposta', conversation: 'CHAT', profile: 'DIRECT', styleInstruction: 'IGNORED' });
   assert.equal(Object.hasOwn(payloads[1], 'styleInstruction'), false);
 });
+
+test('one-off replyInstruction contract validates types and keeps style and facts separate',async()=>{
+ const payloads=[];const background=loadBackground({fetchImpl:async(url,options)=>{payloads.push(JSON.parse(options.body));return {ok:true,async json(){return {reply:'OK'};}};}});
+ for(const replyInstruction of [3,{},true,'x'.repeat(601)]) assert.equal((await background.dispatch({action:'gerarResposta',conversation:'CHAT',profile:'DIRECT',replyInstruction})).success,false);
+ assert.equal(payloads.length,0);
+ await background.dispatch({action:'gerarResposta',conversation:'CHAT',profile:'CUSTOM',styleInstruction:'STYLE',promptComplement:'FACT',replyInstruction:'OBJECTIVE',privateNote:'PRIVATE',summaryObservation:'SUMMARY',nextStep:'FOCUS'});
+ assert.deepEqual(payloads[0],{conversation:'CHAT',profile:'CUSTOM',regenerate:false,styleInstruction:'STYLE',promptComplement:'FACT',replyInstruction:'OBJECTIVE'});
+ await background.dispatch({action:'gerarResposta',conversation:'CHAT',profile:'DIRECT',replyInstruction:'  '});assert.equal(Object.hasOwn(payloads[1],'replyInstruction'),false);
+ assert.ok(!JSON.stringify(background.persisted).includes('OBJECTIVE'));
+});

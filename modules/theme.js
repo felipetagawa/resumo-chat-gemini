@@ -23,8 +23,10 @@ const ThemeModule = (() => {
     "popupMensagensPadrao"
   ]);
   const ROOT_CLASSES = Object.freeze([
+    "atendeai-agenda-dialog",
     "atendeai-focus-central",
     "atendeai-focus-editor",
+    "atendeai-focus-card-slot",
     "atendeai-focus-preview",
     "atendeai-modal-overlay",
     "atendeai-observations-drawer",

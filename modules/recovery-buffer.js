@@ -947,7 +947,6 @@ const RecoveryBufferModule = (() => {
 
   function renderBufferItem(buffer, now, setStatus, index, onView) {
     const item = createElement("div", "recovery-buffer-item");
-    item.setAttribute("data-tone", String((Number(index) || 0) % 4));
 
     const identity = createElement("div", "recovery-buffer-identity");
     const avatar = createElement("span", "recovery-buffer-avatar", initialsFromName(buffer.displayName));

@@ -43,3 +43,12 @@ test('all dock actions remain expandable on demand in compact viewport without p
   await Promise.all(toggle.click()); assert.equal(h.dock.getAttribute('data-minimized'), 'true');
   assert.deepEqual(h.store.atendeai_dock_preferences, h.saved); assert.equal(h.writes.length, 0);
 });
+
+test('real scroll-list also triggers compact dock without changing saved preferences',async()=>{
+ const h=harness();h.dock.parentElement.querySelector('.chats-list').className='scroll-list';await h.init();h.window.innerWidth=480;h.handlers.resize();
+ assert.equal(h.dock.getAttribute('data-compact-viewport'),'true');assert.deepEqual(h.store.atendeai_dock_preferences,h.saved);
+});
+
+test('new dock starts beside the queue and leaves the native right area free',async()=>{
+ const h=harness();delete h.store.atendeai_dock_preferences;await h.init();assert.equal(h.dock.style.left,'380px');assert.equal(h.writes.length,0);
+});

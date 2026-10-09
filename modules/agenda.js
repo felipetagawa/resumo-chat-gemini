@@ -102,18 +102,19 @@ const AgendaModule = (() => {
         const modal = document.createElement("div");
         modal.id = "geminiAgendaModal";
         document.body.appendChild(modal);
+        globalThis.ThemeModule?.apply?.(modal);
 
         modal.innerHTML = `
         <div class="agenda-header">
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="font-weight:700; font-size:18px; color:#333;">Agenda & Gestão</div>
-                <button id="btnEditTabs" style="background:#f0f0f0; border:1px solid #ddd; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; gap:4px; transition:all 0.2s;" title="Reordenar abas">
+                <div style="font-weight:700; font-size:18px; color:var(--ai-text);">Agenda & Gestão</div>
+                <button id="btnEditTabs" style="background:var(--ai-surface-muted); border:1px solid var(--ai-border-strong); padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; gap:4px; transition:all 0.2s;" title="Reordenar abas">
                 <span>↕️</span>
                 <span>Reordenar</span>
                 </button>
             </div>
-            <button id="fecharAgenda" style="background:none; border:none; font-size:20px; cursor:pointer; color:#666; padding:5px;">&times;</button>
+            <button id="fecharAgenda" style="background:none; border:none; font-size:20px; cursor:pointer; color:var(--ai-text-secondary); padding:5px;">&times;</button>
             </div>
         </div>
         <div class="agenda-tabs-container">
@@ -152,8 +153,8 @@ const AgendaModule = (() => {
 
             if (isEditingMode) {
                 editBtn.innerHTML = '<span>✅</span><span>Salvar Ordem</span>';
-                editBtn.style.background = '#e8f5e9';
-                editBtn.style.borderColor = '#4caf50';
+                editBtn.style.background = 'var(--ai-success-soft)';
+                editBtn.style.borderColor = 'var(--ai-success)';
                 tabsContainer.classList.add('editing');
 
                 tabElements.forEach(tab => {
@@ -171,8 +172,8 @@ const AgendaModule = (() => {
 
             } else {
                 editBtn.innerHTML = '<span>↕️</span><span>Reordenar</span>';
-                editBtn.style.background = '#f0f0f0';
-                editBtn.style.borderColor = '#ddd';
+                editBtn.style.background = 'var(--ai-surface-muted)';
+                editBtn.style.borderColor = 'var(--ai-border-strong)';
                 tabsContainer.classList.remove('editing');
 
                 tabElements.forEach(tab => {
@@ -379,10 +380,10 @@ const AgendaModule = (() => {
 
     function getStatusColor(status) {
         switch (status) {
-            case 'todo': return '#ff6b6b';
-            case 'inprogress': return '#4ecdc4';
-            case 'done': return '#1dd1a1';
-            default: return '#999';
+            case 'todo': return 'var(--ai-danger)';
+            case 'inprogress': return 'var(--ai-primary)';
+            case 'done': return 'var(--ai-success)';
+            default: return 'var(--ai-text-muted)';
         }
     }
 
@@ -510,10 +511,10 @@ const AgendaModule = (() => {
                     <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
                         <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 10px;">
                             <div style="flex: 1; min-width: 200px;">
-                                <h3 style="margin: 0 0 5px 0; color: #333; font-size: 18px; font-weight: 600; word-break: break-word;">${eventData.title || 'Sem título'}</h3>
-                                ${eventData.client ? `<p style="margin: 0 0 10px 0; color: #666; font-size: 14px; word-break: break-word;"><strong>Cliente:</strong> ${eventData.client}</p>` : ''}
+                                <h3 style="margin: 0 0 5px 0; color: var(--ai-text); font-size: 18px; font-weight: 600; word-break: break-word;">${eventData.title || 'Sem título'}</h3>
+                                ${eventData.client ? `<p style="margin: 0 0 10px 0; color: var(--ai-text-secondary); font-size: 14px; word-break: break-word;"><strong>Cliente:</strong> ${eventData.client}</p>` : ''}
                             </div>
-                            <span style="display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 12px; background: ${statusColor}20; color: ${statusColor}; font-size: 12px; font-weight: 500; border: 1px solid ${statusColor}40; white-space: nowrap;">
+                            <span style="display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 12px; background: color-mix(in srgb, ${statusColor} 14%, var(--ai-surface)); color: ${statusColor}; font-size: 12px; font-weight: 500; border: 1px solid color-mix(in srgb, ${statusColor} 35%, var(--ai-surface)); white-space: nowrap;">
                                 ${statusIcon} ${statusLabel}
                             </span>
                         </div>
@@ -521,27 +522,27 @@ const AgendaModule = (() => {
                     
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px;">
                         <div>
-                            <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Data:</strong></p>
-                            <p style="margin: 0; font-size: 14px; color: #333; word-break: break-word;">${eventData.date || 'Não definida'}</p>
+                            <p style="margin: 0 0 5px 0; font-size: 13px; color: var(--ai-text-muted); font-weight: 500;"><strong>Data:</strong></p>
+                            <p style="margin: 0; font-size: 14px; color: var(--ai-text); word-break: break-word;">${eventData.date || 'Não definida'}</p>
                         </div>
                         ${eventData.time ? `
                         <div>
-                            <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Hora:</strong></p>
-                            <p style="margin: 0; font-size: 14px; color: #333; word-break: break-word;">${eventData.time}</p>
+                            <p style="margin: 0 0 5px 0; font-size: 13px; color: var(--ai-text-muted); font-weight: 500;"><strong>Hora:</strong></p>
+                            <p style="margin: 0; font-size: 14px; color: var(--ai-text); word-break: break-word;">${eventData.time}</p>
                         </div>
                         ` : ''}
                     </div>
                     
                     ${eventData.problem ? `
                     <div style="margin-bottom: 15px;">
-                        <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Problema/Descrição:</strong></p>
+                        <p style="margin: 0 0 5px 0; font-size: 13px; color: var(--ai-text-muted); font-weight: 500;"><strong>Problema/Descrição:</strong></p>
                         <div style="
                             margin: 0;
                             font-size: 14px;
-                            color: #333;
+                            color: var(--ai-text);
                             line-height: 1.5;
                             padding: 8px;
-                            background: #f8f9fa;
+                            background: var(--ai-surface-muted);
                             border-radius: 4px;
                             word-break: break-word;
                             overflow-wrap: break-word;
@@ -553,14 +554,14 @@ const AgendaModule = (() => {
                     
                     ${eventData.notes ? `
                     <div style="margin-bottom: 15px;">
-                        <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Observações:</strong></p>
+                        <p style="margin: 0 0 5px 0; font-size: 13px; color: var(--ai-text-muted); font-weight: 500;"><strong>Observações:</strong></p>
                         <div style="
                             margin: 0;
                             font-size: 14px;
-                            color: #333;
+                            color: var(--ai-text);
                             line-height: 1.5;
                             padding: 8px;
-                            background: #f8f9fa;
+                            background: var(--ai-surface-muted);
                             border-radius: 4px;
                             word-break: break-word;
                             overflow-wrap: break-word;
@@ -571,8 +572,8 @@ const AgendaModule = (() => {
                     ` : ''}
                     
                     ${eventData.createdAt ? `
-                    <div style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
-                        <p style="margin: 0; font-size: 12px; color: #999; word-break: break-word;"><strong>Criado em:</strong> ${eventData.createdAt}</p>
+                    <div style="border-top: 1px solid var(--ai-border); padding-top: 15px; margin-top: 15px;">
+                        <p style="margin: 0; font-size: 12px; color: var(--ai-text-muted); word-break: break-word;"><strong>Criado em:</strong> ${eventData.createdAt}</p>
                     </div>
                     ` : ''}
                 </div>
@@ -601,22 +602,22 @@ const AgendaModule = (() => {
 
             modalDiv.innerHTML = `
                 <div style="
-                    background: white;
+                    background: var(--ai-surface);
                     border-radius: 8px;
                     width: 100%;
                     max-width: min(500px, 95vw);
                     max-height: min(85vh, 90%);
                     overflow-y: auto;
                     box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-                    border: 1px solid #ddd;
+                    border: 1px solid var(--ai-border-strong);
                     position: relative;
                     display: flex;
                     flex-direction: column;
                 ">
                     <div style="
                         padding: 15px 20px;
-                        border-bottom: 1px solid #eee;
-                        background: #f8f9fa;
+                        border-bottom: 1px solid var(--ai-border);
+                        background: var(--ai-surface-muted);
                         border-radius: 8px 8px 0 0;
                         position: sticky;
                         top: 0;
@@ -627,14 +628,14 @@ const AgendaModule = (() => {
                             <h2 style="
                                 margin: 0;
                                 font-size: clamp(16px, 4vw, 18px);
-                                color: #333;
+                                color: var(--ai-text);
                                 font-weight: 600;
                                 word-break: break-word;
                             ">Visualização de Evento</h2>
                             <button id="closeViewModal" style="
                             border: none;
                             background: transparent;
-                            color: #333;
+                            color: var(--ai-text);
                             font-size: 24px;
                             cursor: pointer;
                             width: 32px;
@@ -665,8 +666,8 @@ const AgendaModule = (() => {
                     
                     <div style="
                         padding: 15px 20px;
-                        border-top: 1px solid #eee;
-                        background: #f8f9fa;
+                        border-top: 1px solid var(--ai-border);
+                        background: var(--ai-surface-muted);
                         border-radius: 0 0 8px 8px;
                         display: flex;
                         flex-wrap: wrap;
@@ -678,8 +679,8 @@ const AgendaModule = (() => {
                     ">
                         <button id="editEventBtn" style="
                             padding: 8px 16px;
-                            background: #4CAF50;
-                            color: white;
+                            background: var(--ai-success);
+                            color: var(--ai-on-primary);
                             border: none;
                             border-radius: 4px;
                             cursor: pointer;
@@ -697,8 +698,8 @@ const AgendaModule = (() => {
                         </button>
                         <button id="deleteEventBtn" style="
                             padding: 8px 16px;
-                            background: #f44336;
-                            color: white;
+                            background: var(--ai-danger);
+                            color: var(--ai-on-primary);
                             border: none;
                             border-radius: 4px;
                             cursor: pointer;
@@ -718,7 +719,9 @@ const AgendaModule = (() => {
                 </div>
             `;
 
+            modalDiv.classList.add("atendeai-agenda-dialog");
             document.body.appendChild(modalDiv);
+            globalThis.ThemeModule?.apply?.(modalDiv);
 
             const closeModal = () => {
                 if (modalDiv && modalDiv.parentNode) {
@@ -789,7 +792,7 @@ const AgendaModule = (() => {
             container.innerHTML = `
             <div class="calendar-controls">
             <button id="prevMonth" style="border:none; background:none; cursor:pointer; font-size:18px; padding:5px;">◀</button>
-            <div style="font-weight:700; font-size:16px; color:#333;">${monthNames[currentMonth]} ${currentYear}</div>
+            <div style="font-weight:700; font-size:16px; color:var(--ai-text);">${monthNames[currentMonth]} ${currentYear}</div>
             <button id="nextMonth" style="border:none; background:none; cursor:pointer; font-size:18px; padding:5px;">▶</button>
             </div>
             <div class="calendar-grid">
@@ -828,7 +831,7 @@ const AgendaModule = (() => {
                         <div class="event-marker ${isOverdue ? 'overdue' : ''}" 
                             data-event-id="${evt.id}" 
                             title="Clique para ver detalhes\n${evt.title}${evt.client ? ' - ' + evt.client : ''}\nStatus: ${getStatusLabel(evt.status)}"
-                            style="border-left: 3px solid ${statusColor}; background: ${statusColor}20; color: ${statusColor}; margin-top: 2px; cursor: pointer; padding: 2px 5px; border-radius: 3px;">
+                            style="border-left: 3px solid ${statusColor}; background: color-mix(in srgb, ${statusColor} 14%, var(--ai-surface)); color: ${statusColor}; margin-top: 2px; cursor: pointer; padding: 2px 5px; border-radius: 3px;">
                             ${statusIcon} ${displayText.length > 20 ? displayText.substring(0, 20) + '...' : displayText}
                         </div>`;
                 });
@@ -885,21 +888,21 @@ const AgendaModule = (() => {
     function iniciarCRM(container) {
         container.innerHTML = `
       <div class="crm-controls">
-        <button id="btnAddCrm" style="background:#1a73e8; color:white; border:none; padding:10px 16px; border-radius:6px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.1);">+ Novo Atendimento</button>
+        <button id="btnAddCrm" style="background:var(--ai-primary); color:var(--ai-on-primary); border:none; padding:10px 16px; border-radius:6px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.1);">+ Novo Atendimento</button>
         <div style="flex:1;"></div>
         <div style="display:flex; gap:10px; align-items:center;">
-            <input type="text" id="filtroCrm" placeholder="Filtrar por nome..." style="padding:8px; border:1px solid #ccc; border-radius:4px; font-size:13px;">
+            <input type="text" id="filtroCrm" placeholder="Filtrar por nome..." style="padding:8px; border:1px solid var(--ai-border-strong); border-radius:4px; font-size:13px;">
             <div style="display:flex; gap:10px; align-items:center;">
-                <div style="font-size:12px; color:#666;">De:</div>
-                <input type="date" id="dataInicio" style="padding:8px; border:1px solid #ccc; border-radius:4px; font-size:13px;">
-                <div style="font-size:12px; color:#666;">Até:</div>
-                <input type="date" id="dataFim" style="padding:8px; border:1px solid #ccc; border-radius:4px; font-size:13px;">
+                <div style="font-size:12px; color:var(--ai-text-secondary);">De:</div>
+                <input type="date" id="dataInicio" style="padding:8px; border:1px solid var(--ai-border-strong); border-radius:4px; font-size:13px;">
+                <div style="font-size:12px; color:var(--ai-text-secondary);">Até:</div>
+                <input type="date" id="dataFim" style="padding:8px; border:1px solid var(--ai-border-strong); border-radius:4px; font-size:13px;">
             </div>
         </div>
       </div>
-      <div style="overflow-x:auto; border:1px solid #eee; border-radius:6px;">
+      <div style="overflow-x:auto; border:1px solid var(--ai-border); border-radius:6px;">
         <table class="crm-table">
-          <thead style="background:#f8f9fa;">
+          <thead style="background:var(--ai-surface-muted);">
             <tr>
               <th>Cliente</th>
               <th>Assunto/Pendência</th>
@@ -1014,7 +1017,7 @@ const AgendaModule = (() => {
                 if (dados.length === 0) {
                     tbody.innerHTML = `
                     <tr>
-                        <td colspan="5" style="text-align:center; padding:24px; color:#777;">
+                        <td colspan="5" style="text-align:center; padding:24px; color:var(--ai-text-secondary);">
                             Nenhum atendimento encontrado para o período selecionado.
                         </td>
                     </tr>
@@ -1030,7 +1033,7 @@ const AgendaModule = (() => {
                     const isOverdue = item.date && item.status !== 'done' && UIBuilder.compararDatas(item.date);
 
                     const tr = document.createElement("tr");
-                    tr.style = isOverdue ? 'background: #ffebee;' : '';
+                    tr.style = isOverdue ? 'background: var(--ai-danger-soft);' : '';
                     tr.innerHTML = `
                     <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         <strong>${item.client}</strong>
@@ -1040,23 +1043,23 @@ const AgendaModule = (() => {
                             ${item.title}
                         </div>
                         ${item.problem ?
-                            '<div style="font-size: 11px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px;">' +
+                            '<div style="font-size: 11px; color: var(--ai-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px;">' +
                             item.problem +
                             '</div>' :
                             ''}
                     </td>
-                    <td style="${isOverdue ? 'color:#d32f2f; font-weight:600;' : ''}; min-width: 120px;">
+                    <td style="${isOverdue ? 'color:var(--ai-danger); font-weight:600;' : ''}; min-width: 120px;">
                         ${dataCompleta}
                     </td>
                     <td style="min-width: 120px;">
-                        <span class="status-badge" style="background: ${getStatusColor(item.status)}20; color: ${getStatusColor(item.status)}; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-block; white-space: nowrap;">
+                        <span class="status-badge" style="background: color-mix(in srgb, ${getStatusColor(item.status)} 14%, var(--ai-surface)); color: ${getStatusColor(item.status)}; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-block; white-space: nowrap;">
                             ${getStatusIcon(item.status)} ${getStatusLabel(item.status)}
                         </span>
                     </td>
                     <td style="min-width: 100px;">
                         <button class="action-btn btn-edit" data-id="${item.id}" title="Editar" style="background:none; border:none; cursor:pointer; font-size:14px; margin-right:5px;">✏️</button>
                         <button class="action-btn btn-status" data-id="${item.id}" data-current="${item.status}" title="Alterar Status" style="background:none; border:none; cursor:pointer; font-size:14px; margin-right:5px;">🔄</button>
-                        <button class="action-btn btn-delete" data-id="${item.id}" title="Excluir" style="background:none; border:none; cursor:pointer; font-size:14px; color:#d93025;">🗑️</button>
+                        <button class="action-btn btn-delete" data-id="${item.id}" title="Excluir" style="background:none; border:none; cursor:pointer; font-size:14px; color:var(--ai-danger);">🗑️</button>
                     </td>
                 `;
                     tbody.appendChild(tr);
@@ -1140,35 +1143,35 @@ const AgendaModule = (() => {
         container.innerHTML = `
         <div class="kanban-header">
             <div style="display:flex; gap:10px; margin-bottom:15px; align-items:center; flex-wrap:wrap;">
-                <button id="btnAddKanban" style="background:#1a73e8; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:600; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,0.1); font-size:12px; white-space:nowrap;">+ Novo Card</button>
-                <input type="text" id="filtroKanban" placeholder="Filtrar..." style="padding:6px; border:1px solid #ccc; border-radius:4px; font-size:12px; width:180px; flex-shrink:0;">
+                <button id="btnAddKanban" style="background:var(--ai-primary); color:var(--ai-on-primary); border:none; padding:6px 12px; border-radius:4px; font-weight:600; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,0.1); font-size:12px; white-space:nowrap;">+ Novo Card</button>
+                <input type="text" id="filtroKanban" placeholder="Filtrar..." style="padding:6px; border:1px solid var(--ai-border-strong); border-radius:4px; font-size:12px; width:180px; flex-shrink:0;">
                 <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
-                    <div style="font-size:11px; color:#666; white-space:nowrap;">De:</div>
-                    <input type="date" id="dataInicioKanban" style="padding:4px 6px; border:1px solid #ccc; border-radius:4px; font-size:11px; width:110px; flex-shrink:0;">
-                    <div style="font-size:11px; color:#666; white-space:nowrap;">Até:</div>
-                    <input type="date" id="dataFimKanban" style="padding:4px 6px; border:1px solid #ccc; border-radius:4px; font-size:11px; width:110px; flex-shrink:0;">
+                    <div style="font-size:11px; color:var(--ai-text-secondary); white-space:nowrap;">De:</div>
+                    <input type="date" id="dataInicioKanban" style="padding:4px 6px; border:1px solid var(--ai-border-strong); border-radius:4px; font-size:11px; width:110px; flex-shrink:0;">
+                    <div style="font-size:11px; color:var(--ai-text-secondary); white-space:nowrap;">Até:</div>
+                    <input type="date" id="dataFimKanban" style="padding:4px 6px; border:1px solid var(--ai-border-strong); border-radius:4px; font-size:11px; width:110px; flex-shrink:0;">
                 </div>
             </div>
         </div>
         <div class="kanban-board" style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; min-height: 450px;">
-            <div class="kanban-column" data-status="todo" style="flex: 1; min-width: 220px; max-width: 240px; background: #f5f5f5; border-radius: 6px; padding: 8px;">
-                <div class="kanban-column-header" style="background: #ff6b6b; color: white; padding: 6px 8px; border-radius: 4px; margin-bottom: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+            <div class="kanban-column" data-status="todo" style="flex: 1; min-width: 220px; max-width: 240px; background: var(--ai-surface-muted); border-radius: 6px; padding: 8px;">
+                <div class="kanban-column-header" style="background: var(--ai-danger); color: var(--ai-on-primary); padding: 6px 8px; border-radius: 4px; margin-bottom: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
                     <span>📋 A Fazer</span>
                     <span class="column-count" style="background: rgba(255,255,255,0.3); padding: 1px 5px; border-radius: 10px; font-size: 10px;">0</span>
                 </div>
                 <div class="kanban-cards" data-status="todo" style="min-height: 80px; transition: all 0.3s; border: 2px dashed transparent; border-radius: 4px;"></div>
             </div>
             
-            <div class="kanban-column" data-status="inprogress" style="flex: 1; min-width: 220px; max-width: 240px; background: #f5f5f5; border-radius: 6px; padding: 8px;">
-                <div class="kanban-column-header" style="background: #4ecdc4; color: white; padding: 6px 8px; border-radius: 4px; margin-bottom: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+            <div class="kanban-column" data-status="inprogress" style="flex: 1; min-width: 220px; max-width: 240px; background: var(--ai-surface-muted); border-radius: 6px; padding: 8px;">
+                <div class="kanban-column-header" style="background: var(--ai-primary); color: var(--ai-on-primary); padding: 6px 8px; border-radius: 4px; margin-bottom: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
                     <span>⚡ Em Progresso</span>
                     <span class="column-count" style="background: rgba(255,255,255,0.3); padding: 1px 5px; border-radius: 10px; font-size: 10px;">0</span>
                 </div>
                 <div class="kanban-cards" data-status="inprogress" style="min-height: 80px; transition: all 0.3s; border: 2px dashed transparent; border-radius: 4px;"></div>
             </div>
             
-            <div class="kanban-column" data-status="done" style="flex: 1; min-width: 220px; max-width: 240px; background: #f5f5f5; border-radius: 6px; padding: 8px;">
-                <div class="kanban-column-header" style="background: #1dd1a1; color: white; padding: 6px 8px; border-radius: 4px; margin-bottom: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+            <div class="kanban-column" data-status="done" style="flex: 1; min-width: 220px; max-width: 240px; background: var(--ai-surface-muted); border-radius: 6px; padding: 8px;">
+                <div class="kanban-column-header" style="background: var(--ai-success); color: var(--ai-on-primary); padding: 6px 8px; border-radius: 4px; margin-bottom: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
                     <span>✅ Concluído</span>
                     <span class="column-count" style="background: rgba(255,255,255,0.3); padding: 1px 5px; border-radius: 10px; font-size: 10px;">0</span>
                 </div>
@@ -1256,37 +1259,37 @@ const AgendaModule = (() => {
             <div style="margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
                     <div>
-                        <h3 style="margin: 0 0 5px 0; color: #333; font-size: 18px; font-weight: 600; word-break: break-word;">${eventData.title || 'Sem título'}</h3>
-                        ${eventData.client ? `<p style="margin: 0 0 10px 0; color: #666; font-size: 14px; word-break: break-word;"><strong>Cliente:</strong> ${eventData.client}</p>` : ''}
+                        <h3 style="margin: 0 0 5px 0; color: var(--ai-text); font-size: 18px; font-weight: 600; word-break: break-word;">${eventData.title || 'Sem título'}</h3>
+                        ${eventData.client ? `<p style="margin: 0 0 10px 0; color: var(--ai-text-secondary); font-size: 14px; word-break: break-word;"><strong>Cliente:</strong> ${eventData.client}</p>` : ''}
                     </div>
-                    <span style="display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 12px; background: ${statusColor}20; color: ${statusColor}; font-size: 12px; font-weight: 500; border: 1px solid ${statusColor}40; white-space: nowrap;">
+                    <span style="display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 12px; background: color-mix(in srgb, ${statusColor} 14%, var(--ai-surface)); color: ${statusColor}; font-size: 12px; font-weight: 500; border: 1px solid color-mix(in srgb, ${statusColor} 35%, var(--ai-surface)); white-space: nowrap;">
                         ${statusIcon} ${statusLabel}
                     </span>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px;">
                     <div>
-                        <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Data:</strong></p>
-                        <p style="margin: 0; font-size: 14px; color: #333; word-break: break-word;">${eventData.date || 'Não definida'}</p>
+                        <p style="margin: 0 0 5px 0; font-size: 13px; color: var(--ai-text-muted); font-weight: 500;"><strong>Data:</strong></p>
+                        <p style="margin: 0; font-size: 14px; color: var(--ai-text); word-break: break-word;">${eventData.date || 'Não definida'}</p>
                     </div>
                     ${eventData.time ? `
                     <div>
-                        <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Hora:</strong></p>
-                        <p style="margin: 0; font-size: 14px; color: #333; word-break: break-word;">${eventData.time}</p>
+                        <p style="margin: 0 0 5px 0; font-size: 13px; color: var(--ai-text-muted); font-weight: 500;"><strong>Hora:</strong></p>
+                        <p style="margin: 0; font-size: 14px; color: var(--ai-text); word-break: break-word;">${eventData.time}</p>
                     </div>
                     ` : ''}
                 </div>
                 
                 ${eventData.problem ? `
                 <div style="margin-bottom: 15px;">
-                    <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Problema/Descrição:</strong></p>
+                    <p style="margin: 0 0 5px 0; font-size: 13px; color: var(--ai-text-muted); font-weight: 500;"><strong>Problema/Descrição:</strong></p>
                     <div style="
                         margin: 0;
                         font-size: 14px;
-                        color: #333;
+                        color: var(--ai-text);
                         line-height: 1.5;
                         padding: 8px;
-                        background: #f8f9fa;
+                        background: var(--ai-surface-muted);
                         border-radius: 4px;
                         word-break: break-word;
                         overflow-wrap: break-word;
@@ -1298,14 +1301,14 @@ const AgendaModule = (() => {
                 
                 ${eventData.notes ? `
                 <div style="margin-bottom: 15px;">
-                    <p style="margin: 0 0 5px 0; font-size: 13px; color: #888; font-weight: 500;"><strong>Observações:</strong></p>
+                    <p style="margin: 0 0 5px 0; font-size: 13px; color: var(--ai-text-muted); font-weight: 500;"><strong>Observações:</strong></p>
                     <div style="
                         margin: 0;
                         font-size: 14px;
-                        color: #333;
+                        color: var(--ai-text);
                         line-height: 1.5;
                         padding: 8px;
-                        background: #f8f9fa;
+                        background: var(--ai-surface-muted);
                         border-radius: 4px;
                         word-break: break-word;
                         overflow-wrap: break-word;
@@ -1316,8 +1319,8 @@ const AgendaModule = (() => {
                 ` : ''}
                 
                 ${eventData.createdAt ? `
-                <div style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
-                    <p style="margin: 0; font-size: 12px; color: #999; word-break: break-word;"><strong>Criado em:</strong> ${eventData.createdAt}</p>
+                <div style="border-top: 1px solid var(--ai-border); padding-top: 15px; margin-top: 15px;">
+                    <p style="margin: 0; font-size: 12px; color: var(--ai-text-muted); word-break: break-word;"><strong>Criado em:</strong> ${eventData.createdAt}</p>
                 </div>
                 ` : ''}
             </div>
@@ -1346,22 +1349,22 @@ const AgendaModule = (() => {
 
             modalDiv.innerHTML = `
             <div style="
-                background: white;
+                background: var(--ai-surface);
                 border-radius: 8px;
                 width: 100%;
                 max-width: min(500px, 95vw);
                 max-height: min(85vh, 90%);
                 overflow-y: auto;
                 box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-                border: 1px solid #ddd;
+                border: 1px solid var(--ai-border-strong);
                 position: relative;
                 display: flex;
                 flex-direction: column;
             ">
                 <div style="
                     padding: 15px 20px;
-                    border-bottom: 1px solid #eee;
-                    background: #f8f9fa;
+                    border-bottom: 1px solid var(--ai-border);
+                    background: var(--ai-surface-muted);
                     border-radius: 8px 8px 0 0;
                     position: sticky;
                     top: 0;
@@ -1372,14 +1375,14 @@ const AgendaModule = (() => {
                         <h2 style="
                             margin: 0;
                             font-size: clamp(16px, 4vw, 18px);
-                            color: #333;
+                            color: var(--ai-text);
                             font-weight: 600;
                             word-break: break-word;
                         ">Visualização de Evento</h2>
                         <button id="closeViewModalKanban" style="
                             border: none;
                             background: transparent;
-                            color: #333;
+                            color: var(--ai-text);
                             font-size: 24px;
                             cursor: pointer;
                             width: 32px;
@@ -1410,8 +1413,8 @@ const AgendaModule = (() => {
                 
                 <div style="
                     padding: 15px 20px;
-                    border-top: 1px solid #eee;
-                    background: #f8f9fa;
+                    border-top: 1px solid var(--ai-border);
+                    background: var(--ai-surface-muted);
                     border-radius: 0 0 8px 8px;
                     display: flex;
                     flex-wrap: wrap;
@@ -1423,8 +1426,8 @@ const AgendaModule = (() => {
                 ">
                     <button id="editEventBtnKanban" style="
                         padding: 8px 16px;
-                        background: #4CAF50;
-                        color: white;
+                        background: var(--ai-success);
+                        color: var(--ai-on-primary);
                         border: none;
                         border-radius: 4px;
                         cursor: pointer;
@@ -1442,8 +1445,8 @@ const AgendaModule = (() => {
                     </button>
                     <button id="deleteEventBtnKanban" style="
                         padding: 8px 16px;
-                        background: #f44336;
-                        color: white;
+                        background: var(--ai-danger);
+                        color: var(--ai-on-primary);
                         border: none;
                         border-radius: 4px;
                         cursor: pointer;
@@ -1463,7 +1466,9 @@ const AgendaModule = (() => {
             </div>
         `;
 
+            modalDiv.classList.add("atendeai-agenda-dialog");
             document.body.appendChild(modalDiv);
+            globalThis.ThemeModule?.apply?.(modalDiv);
 
             const closeModal = () => {
                 if (modalDiv && modalDiv.parentNode) {
@@ -1592,7 +1597,7 @@ const AgendaModule = (() => {
                         cardEl.dataset.order = card.order || 0;
                         cardEl.draggable = true;
                         cardEl.style.cssText = `
-                        background: white;
+                        background: var(--ai-surface);
                         border-radius: 4px;
                         padding: 6px;
                         margin-bottom: 4px;
@@ -1616,18 +1621,18 @@ const AgendaModule = (() => {
 
                         cardEl.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3px;">
-                            <h4 style="margin: 0; font-size: 11px; color: #333; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">${card.title}</h4>
-                            <button class="btn-edit-kanban" data-id="${card.id}" style="background: none; border: none; cursor: pointer; font-size: 9px; color: #666; flex-shrink: 0; padding: 1px 3px; border-radius: 2px; transition: background 0.2s; line-height: 1; z-index: 10;">✏️</button>
+                            <h4 style="margin: 0; font-size: 11px; color: var(--ai-text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">${card.title}</h4>
+                            <button class="btn-edit-kanban" data-id="${card.id}" style="background: none; border: none; cursor: pointer; font-size: 9px; color: var(--ai-text-secondary); flex-shrink: 0; padding: 1px 3px; border-radius: 2px; transition: background 0.2s; line-height: 1; z-index: 10;">✏️</button>
                         </div>
-                        ${card.client ? `<div style="font-size: 9px; color: #666; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px;"><strong>C:</strong> ${card.client}</div>` : ''}
-                        ${card.problem ? `<div style="font-size: 9px; color: #777; margin-bottom: 4px; max-height: 24px; overflow: hidden; word-break: break-word; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${card.problem.split('\n').map(line => line.trim()).filter(line => line).join(' ')}</div>` : ''}
+                        ${card.client ? `<div style="font-size: 9px; color: var(--ai-text-secondary); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px;"><strong>C:</strong> ${card.client}</div>` : ''}
+                        ${card.problem ? `<div style="font-size: 9px; color: var(--ai-text-secondary); margin-bottom: 4px; max-height: 24px; overflow: hidden; word-break: break-word; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${card.problem.split('\n').map(line => line.trim()).filter(line => line).join(' ')}</div>` : ''}
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                            <div style="font-size: 8px; color: ${isOverdue ? '#d32f2f' : '#999'}; font-weight: ${isOverdue ? '600' : 'normal'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70px;">
+                            <div style="font-size: 8px; color: ${isOverdue ? 'var(--ai-danger)' : 'var(--ai-text-muted)'}; font-weight: ${isOverdue ? '600' : 'normal'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70px;">
                                 ${dataFormatada}
                                 ${card.time ? `<br><span style="font-size:7px;">${card.time}</span>` : ''}
                                 ${isOverdue ? ' ⚠️' : ''}
                             </div>
-                            <div style="font-size: 8px; color: #999; flex-shrink: 0; text-align: right;">
+                            <div style="font-size: 8px; color: var(--ai-text-muted); flex-shrink: 0; text-align: right;">
                                 ${atualizacaoFormatada}
                             </div>
                         </div>
@@ -1716,7 +1721,7 @@ const AgendaModule = (() => {
 
             const cardsContainer = e.target.closest('.kanban-cards');
             if (cardsContainer) {
-                cardsContainer.style.border = '2px dashed #1a73e8';
+                cardsContainer.style.border = '2px dashed var(--ai-primary)';
             }
         };
 
@@ -1768,8 +1773,8 @@ const AgendaModule = (() => {
             e.preventDefault();
             const cardsContainer = e.target.closest('.kanban-cards');
             if (cardsContainer) {
-                cardsContainer.style.border = '2px dashed #1a73e8';
-                cardsContainer.style.backgroundColor = 'rgba(26, 115, 232, 0.03)';
+                cardsContainer.style.border = '2px dashed var(--ai-primary)';
+                cardsContainer.style.backgroundColor = 'var(--ai-primary-soft)';
             }
         };
 
@@ -1876,41 +1881,41 @@ const AgendaModule = (() => {
 
     function iniciarNotas(container) {
         container.innerHTML = `
-        <div class="notes-container" style="display: flex; flex-direction: column; height: 550px; background: #f8f9fa; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
-            <div class="notes-header" style="padding: 16px 20px; background: white; border-bottom: 1px solid #e9ecef; display: flex; align-items: center; gap: 10px;">
+        <div class="notes-container" style="display: flex; flex-direction: column; height: 550px; background: var(--ai-surface-muted); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+            <div class="notes-header" style="padding: 16px 20px; background: var(--ai-surface); border-bottom: 1px solid var(--ai-border); display: flex; align-items: center; gap: 10px;">
                 <div style="font-size: 24px;">📝</div>
                 <div style="flex: 1;">
-                    <div style="font-weight: 700; font-size: 16px; color: #333;">Notas Rápidas</div>
-                    <div style="font-size: 12px; color: #666;">Digite e salve automaticamente</div>
+                    <div style="font-weight: 700; font-size: 16px; color: var(--ai-text);">Notas Rápidas</div>
+                    <div style="font-size: 12px; color: var(--ai-text-secondary);">Digite e salve automaticamente</div>
                 </div>
-                <div id="notesCount" style="background: #1a73e8; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">0</div>
+                <div id="notesCount" style="background: var(--ai-primary); color: var(--ai-on-primary); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">0</div>
             </div>
             
-            <div class="notes-list" id="notesList" style="flex: 1; overflow-y: auto; padding: 16px 20px; background: #f8f9fa; min-height: 250px;">
-                <div style="text-align: center; padding: 40px 20px; color: #777;">
+            <div class="notes-list" id="notesList" style="flex: 1; overflow-y: auto; padding: 16px 20px; background: var(--ai-surface-muted); min-height: 250px;">
+                <div style="text-align: center; padding: 40px 20px; color: var(--ai-text-secondary);">
                     <div style="font-size: 48px; margin-bottom: 8px;">📝</div>
-                    <h3 style="margin: 0 0 8px 0; color: #555; font-weight: 500;">Nenhuma nota ainda</h3>
-                    <p style="margin: 0; color: #777; font-size: 14px;">Comece digitando abaixo</p>
+                    <h3 style="margin: 0 0 8px 0; color: var(--ai-text-secondary); font-weight: 500;">Nenhuma nota ainda</h3>
+                    <p style="margin: 0; color: var(--ai-text-secondary); font-size: 14px;">Comece digitando abaixo</p>
                 </div>
             </div>
             
-            <div class="notes-input-container" style="padding: 16px 20px; background: white; border-top: 1px solid #e9ecef;">
+            <div class="notes-input-container" style="padding: 16px 20px; background: var(--ai-surface); border-top: 1px solid var(--ai-border);">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-                    <div style="font-size: 12px; color: #666; font-weight: 600;">Tipo:</div>
+                    <div style="font-size: 12px; color: var(--ai-text-secondary); font-weight: 600;">Tipo:</div>
                     <div style="display: flex; flex-wrap: wrap; gap: 8px; flex: 1;">
-                        <button class="note-type-btn" data-type="info" style="background: #f0f7ff; color: #1a73e8; border: 1px solid #d0e2ff; padding: 6px 12px; border-radius: 16px; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                        <button class="note-type-btn" data-type="info" style="background: var(--ai-primary-soft); color: var(--ai-primary); border: 1px solid var(--ai-primary-border); padding: 6px 12px; border-radius: 16px; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
                             💡 Info
                         </button>
-                        <button class="note-type-btn" data-type="idea" style="background: #fff8e6; color: #fbbc04; border: 1px solid #ffeeb5; padding: 6px 12px; border-radius: 16px; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                        <button class="note-type-btn" data-type="idea" style="background: var(--ai-warning-soft); color: var(--ai-warning); border: 1px solid var(--ai-border-strong); padding: 6px 12px; border-radius: 16px; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
                             ✨ Ideia
                         </button>
-                        <button class="note-type-btn" data-type="task" style="background: #e8f6ed; color: #34a853; border: 1px solid #b8e6cb; padding: 6px 12px; border-radius: 16px; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                        <button class="note-type-btn" data-type="task" style="background: var(--ai-success-soft); color: var(--ai-success); border: 1px solid var(--ai-border-strong); padding: 6px 12px; border-radius: 16px; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
                             ✅ Tarefa
                         </button>
-                        <button class="note-type-btn" data-type="important" style="background: #fdeaea; color: #ea4335; border: 1px solid #f9c6c6; padding: 6px 12px; border-radius: 16px; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                        <button class="note-type-btn" data-type="important" style="background: var(--ai-danger-soft); color: var(--ai-danger); border: 1px solid var(--ai-danger-border); padding: 6px 12px; border-radius: 16px; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
                             🚨 Importante
                         </button>
-                        <button class="note-type-btn" data-type="reminder" style="background: #f4e9ff; color: #8e44ad; border: 1px solid #e0c6ff; padding: 6px 12px; border-radius: 16px; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                        <button class="note-type-btn" data-type="reminder" style="background: var(--ai-primary-soft); color: var(--ai-primary); border: 1px solid var(--ai-primary-border); padding: 6px 12px; border-radius: 16px; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
                             ⏰ Lembrete
                         </button>
                     </div>
@@ -1919,23 +1924,23 @@ const AgendaModule = (() => {
                 <div style="display: flex; gap: 10px; align-items: flex-end;">
                     <div style="flex: 1; position: relative;">
                         <textarea id="noteText" placeholder="Digite sua nota aqui..." 
-                                  style="width: 100%; padding: 12px 14px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 14px; resize: none; min-height: 50px; max-height: 100px; font-family: inherit; background: #fafafa; transition: border 0.2s; line-height: 1.4;"
+                                  style="width: 100%; padding: 12px 14px; border: 1px solid var(--ai-border); border-radius: 10px; font-size: 14px; resize: none; min-height: 50px; max-height: 100px; font-family: inherit; background: var(--ai-surface-muted); transition: border 0.2s; line-height: 1.4;"
                                   rows="2"></textarea>
-                        <div id="charCount" style="position: absolute; bottom: 8px; right: 12px; font-size: 11px; color: #999; background: #fafafa; padding: 2px 6px; border-radius: 10px;">
+                        <div id="charCount" style="position: absolute; bottom: 8px; right: 12px; font-size: 11px; color: var(--ai-text-muted); background: var(--ai-surface-muted); padding: 2px 6px; border-radius: 10px;">
                             0/1000
                         </div>
                     </div>
                     
-                    <button id="btnAddNote" style="background: #1a73e8; color: white; border: none; padding: 12px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; min-width: 90px; height: 50px;">
+                    <button id="btnAddNote" style="background: var(--ai-primary); color: var(--ai-on-primary); border: none; padding: 12px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; min-width: 90px; height: 50px;">
                         <span>Enviar</span>
                     </button>
                 </div>
                 
                 <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="font-size: 11px; color: #666;">
-                        Tipo: <span id="selectedTypeLabel" style="font-weight: 600; color: #1a73e8;">💡 Info</span>
+                    <div style="font-size: 11px; color: var(--ai-text-secondary);">
+                        Tipo: <span id="selectedTypeLabel" style="font-weight: 600; color: var(--ai-primary);">💡 Info</span>
                     </div>
-                    <div style="font-size: 11px; color: #999;">
+                    <div style="font-size: 11px; color: var(--ai-text-muted);">
                         Ctrl + Enter para enviar
                     </div>
                 </div>
@@ -1966,15 +1971,15 @@ const AgendaModule = (() => {
             }
             
             #btnAddNote:hover {
-                background: #0d62d9 !important;
+                background: var(--ai-primary-hover) !important;
                 transform: translateY(-1px);
                 box-shadow: 0 3px 6px rgba(26, 115, 232, 0.2);
             }
             
             #noteText:focus {
                 outline: none;
-                border-color: #1a73e8 !important;
-                background: white !important;
+                border-color: var(--ai-primary) !important;
+                background: var(--ai-surface) !important;
             }
         </style>
     `;
@@ -2004,9 +2009,9 @@ const AgendaModule = (() => {
 
             if (notas.length === 0) {
                 notesList.innerHTML = `
-                <div style="text-align: center; padding: 40px 20px; color: #777;">
-                    <h3 style="margin: 0 0 8px 0; color: #555; font-weight: 500;">Nenhuma nota ainda</h3>
-                    <p style="margin: 0; color: #777; font-size: 14px;">Comece digitando abaixo</p>
+                <div style="text-align: center; padding: 40px 20px; color: var(--ai-text-secondary);">
+                    <h3 style="margin: 0 0 8px 0; color: var(--ai-text-secondary); font-weight: 500;">Nenhuma nota ainda</h3>
+                    <p style="margin: 0; color: var(--ai-text-secondary); font-size: 14px;">Comece digitando abaixo</p>
                 </div>
             `;
                 notesCount.textContent = '0';
@@ -2027,7 +2032,7 @@ const AgendaModule = (() => {
                 const noteElement = document.createElement('div');
                 noteElement.className = 'note-item';
                 noteElement.style.cssText = `
-                background: white;
+                background: var(--ai-surface);
                 border-radius: 10px;
                 padding: 12px 14px;
                 box-shadow: 0 1px 4px rgba(0,0,0,0.04);
@@ -2043,22 +2048,22 @@ const AgendaModule = (() => {
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 16px;">${getNoteTypeIcon(nota.type)}</span>
-                        <span style="font-size: 11px; color: ${getNoteTypeColor(nota.type)}; background: ${getNoteTypeColor(nota.type)}10; padding: 4px 8px; border-radius: 10px; font-weight: 600;">
+                        <span style="font-size: 11px; color: ${getNoteTypeColor(nota.type)}; background: color-mix(in srgb, ${getNoteTypeColor(nota.type)} 14%, var(--ai-surface)); padding: 4px 8px; border-radius: 10px; font-weight: 600;">
                             ${getNoteTypeLabel(nota.type)}
                         </span>
                     </div>
-                    <button class="btn-delete-note" data-id="${nota.id}" style="background: none; border: none; cursor: pointer; font-size: 12px; color: #ddd; padding: 4px; transition: all 0.2s; border-radius: 4px;">
+                    <button class="btn-delete-note" data-id="${nota.id}" style="background: none; border: none; cursor: pointer; font-size: 12px; color: var(--ai-border-strong); padding: 4px; transition: all 0.2s; border-radius: 4px;">
                         🗑️
                     </button>
                 </div>
-                <div style="font-size: 13px; color: #333; line-height: 1.5; margin-bottom: 10px; white-space: pre-wrap; word-break: break-word;">
+                <div style="font-size: 13px; color: var(--ai-text); line-height: 1.5; margin-bottom: 10px; white-space: pre-wrap; word-break: break-word;">
                     ${nota.text.replace(/\n/g, '<br>')}
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="font-size: 10px; color: #999;">
+                    <div style="font-size: 10px; color: var(--ai-text-muted);">
                         ${timeString}
                     </div>
-                    <div style="font-size: 10px; color: #999; font-style: italic;">
+                    <div style="font-size: 10px; color: var(--ai-text-muted); font-style: italic;">
                         ${getTimeAgo(nota.createdAt)}
                     </div>
                 </div>
@@ -2075,12 +2080,12 @@ const AgendaModule = (() => {
                 });
 
                 noteElement.querySelector('.btn-delete-note').addEventListener('mouseenter', function () {
-                    this.style.color = '#ea4335';
-                    this.style.background = '#ffebee';
+                    this.style.color = 'var(--ai-danger)';
+                    this.style.background = 'var(--ai-danger-soft)';
                 });
 
                 noteElement.querySelector('.btn-delete-note').addEventListener('mouseleave', function () {
-                    this.style.color = '#ddd';
+                    this.style.color = 'var(--ai-border-strong)';
                     this.style.background = 'none';
                 });
 
@@ -2096,12 +2101,12 @@ const AgendaModule = (() => {
 
         const getNoteTypeColor = (type) => {
             switch (type) {
-                case 'info': return '#1a73e8';
-                case 'idea': return '#fbbc04';
-                case 'task': return '#34a853';
-                case 'important': return '#ea4335';
-                case 'reminder': return '#8e44ad';
-                default: return '#666';
+                case 'info': return 'var(--ai-primary)';
+                case 'idea': return 'var(--ai-warning)';
+                case 'task': return 'var(--ai-success)';
+                case 'important': return 'var(--ai-danger)';
+                case 'reminder': return 'var(--ai-primary)';
+                default: return 'var(--ai-text-secondary)';
             }
         };
 
@@ -2153,15 +2158,15 @@ const AgendaModule = (() => {
                 if (isSelected) {
                     btn.classList.add('active');
                     btn.style.background = getNoteTypeColor(type);
-                    btn.style.color = 'white';
+                    btn.style.color = 'var(--ai-on-primary)';
                     btn.style.borderColor = getNoteTypeColor(type);
                     btn.style.fontWeight = '700';
                 } else {
                     btn.classList.remove('active');
                     const color = getNoteTypeColor(btnType);
-                    btn.style.background = `${color}15`;
+                    btn.style.background = `color-mix(in srgb, ${color} 14%, var(--ai-surface))`;
                     btn.style.color = color;
-                    btn.style.borderColor = `${color}40`;
+                    btn.style.borderColor = `color-mix(in srgb, ${color} 35%, var(--ai-surface))`;
                     btn.style.fontWeight = '500';
                 }
             });
@@ -2178,13 +2183,13 @@ const AgendaModule = (() => {
             charCount.textContent = `${length}/1000`;
 
             if (length > 900) {
-                charCount.style.color = '#ea4335';
+                charCount.style.color = 'var(--ai-danger)';
                 charCount.style.fontWeight = '600';
             } else if (length > 800) {
-                charCount.style.color = '#fbbc04';
+                charCount.style.color = 'var(--ai-warning)';
                 charCount.style.fontWeight = '600';
             } else {
-                charCount.style.color = '#999';
+                charCount.style.color = 'var(--ai-text-muted)';
                 charCount.style.fontWeight = 'normal';
             }
         };

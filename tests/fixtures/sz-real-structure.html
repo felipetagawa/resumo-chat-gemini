@@ -1,0 +1,18 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Fixture estrutural SZ — QA local</title><style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;font:14px Arial;background:#eff3f5;color:#24313a}
+.native-nav{position:absolute;left:0;top:0;width:48px;height:100vh;background:#243b4b;color:white;padding:12px 6px}
+.native-left{position:absolute;left:48px;top:0;width:282px;height:100vh;background:white}
+.native-search{height:90px;padding:18px 12px}.native-search input{width:100%;padding:8px}
+.queue-column{display:flex;flex-direction:column;position:relative;width:273px;height:485px}
+.native-header{height:53px;flex:none;padding:16px 12px;border-bottom:1px solid #ddd}
+.scroll-list{display:block;width:282px;height:432px;flex-shrink:1;overflow-y:auto;overflow-x:hidden}
+.contact{height:112px}.sz_contact{height:112px;padding:16px 12px;border-bottom:1px solid #ddd;cursor:pointer;background:white}
+.contact-name{font-weight:bold}.native-preview{margin-top:10px;color:#667680}.native-selected{background:#e1eff7}
+.native-chat{position:absolute;left:330px;right:0;top:0;bottom:0;display:flex;flex-direction:column}
+.native-chat-header{padding:22px;background:white;height:65px}.native-messages{flex:1;padding:30px}.msg{padding:15px;background:white;width:55%}
+.native-composer{height:72px;display:flex;padding:12px;gap:8px;background:white}.native-composer textarea{flex:1;resize:none}.native-composer button{width:70px}
+#containerBotoesGemini{position:fixed;left:849px;top:237px;width:188px;height:339px;display:flex;flex-direction:column;z-index:999998;background:white;border:1px solid #aaa}
+#containerBotoesGemini[data-minimized="true"]{height:auto}
+</style></head><body><nav class="native-nav">SZ</nav><aside class="native-left"><div class="native-search"><input aria-label="Pesquisa nativa" placeholder="Pesquisar"></div><div class="queue-column active" id="framework-queue"><div class="native-header">Em atendimento · 5</div><div class="scroll-list">
+<div class="contact" id="framework-wrapper-0"><div class="sz_contact native-selected"><span class="contact-name">Cliente fictício 1</span><div class="native-preview">Conteúdo sintético para teste local</div></div></div><div class="contact" id="framework-wrapper-1"><div class="sz_contact"><span class="contact-name">Cliente fictício 2</span><div class="native-preview">Conteúdo sintético para teste local</div></div></div><div class="contact" id="framework-wrapper-2"><div class="sz_contact"><span class="contact-name">Cliente fictício 3</span><div class="native-preview">Conteúdo sintético para teste local</div></div></div><div class="contact" id="framework-wrapper-3"><div class="sz_contact"><span class="contact-name">Cliente fictício 4</span><div class="native-preview">Conteúdo sintético para teste local</div></div></div><div class="contact" id="framework-wrapper-4"><div class="sz_contact"><span class="contact-name">Cliente fictício 5</span><div class="native-preview">Conteúdo sintético para teste local</div></div></div>
+</div></div></aside><main class="native-chat"><div class="native-chat-header">Conversa sintética</div><div class="native-messages"><div class="msg">Mensagem fictícia</div></div><div class="native-composer"><textarea aria-label="Mensagem nativa"></textarea><button>Enviar</button></div></main><div id="containerBotoesGemini"><button class="gemini-floating-btn">Sugerir resposta</button><button class="gemini-floating-btn">Gerar relatório</button><button class="gemini-floating-btn">Mensagens padrão</button><button class="gemini-floating-btn">Agenda</button><button class="gemini-floating-btn">Observações</button></div></body></html>

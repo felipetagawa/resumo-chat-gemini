@@ -540,7 +540,7 @@ async function initializeExtensionDock(container) {
   }
 
   function applySize() {
-    const nativeList = document.querySelector(".chats-list, .contacts-list, .contact-list");
+    const nativeList = document.querySelector(".chats-list, .contacts-list, .contact-list, .scroll-list");
     const listRect = nativeList?.getBoundingClientRect();
     // The visual QA found the full dock covering the left queue on narrow windows.
     // Compact only while the right-hand corridor cannot fit it; keep saved preferences.
@@ -565,6 +565,11 @@ async function initializeExtensionDock(container) {
     if (viewportCompact && !viewportExpanded) {
       const rect = container.getBoundingClientRect();
       clampPosition({ x: window.innerWidth - rect.width - 8, y: preferredPosition?.y ?? position?.y });
+    } else if (!preferredPosition && !position && Number.isFinite(listRect?.right)
+      && listRect.left >= 0 && listRect.right < window.innerWidth / 2) {
+      // New docks start beside the queue rather than over SZ's native right panel.
+      // A technician's saved or dragged position remains authoritative.
+      clampPosition({ x: listRect.right + 12, y: container.getBoundingClientRect().top });
     } else clampPosition(preferredPosition || position);
   }
 
@@ -833,7 +838,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
   const botaoSmartReply = createButton('btnSmartReply', 'Sugerir resposta', '',
     guardFeature(() => SmartReplyModule.open(smartReplyControl.consumeMode())));
   botaoSmartReply.type = 'button';
-  botaoSmartReply.className += ' atendeai-focus-primary';
+  botaoSmartReply.className += ' atendeai-reply-secondary';
   botaoSmartReply.innerHTML = '<svg class="atendeai-focus-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14v10H8l-5 4V3Z"/><path d="M6 7h8M6 10h5"/></svg> Sugerir resposta';
   const smartReplyControl = SmartReplyModule.mountContextControl(botaoSmartReply);
   botaoDocs.id = 'btnConsultarDocsLoop';
@@ -880,19 +885,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
     }
   );
 
-  if (userSector === "preatendimento") {
-    container.appendChild(botaoClassificarProduto);
-    container.appendChild(productClassifierResult);
-  }
-
-  const showSmartReply = visibility?.btnSmartReply ?? visibility?.btnAssistenteIA ?? true;
-  if (showSmartReply || isVisible('btnConsultarDocsLoop')) {
-    const replyGroup = document.createElement('div');
-    replyGroup.className = 'gemini-report-group';
-    if (showSmartReply) replyGroup.appendChild(smartReplyControl.element);
-    if (isVisible('btnConsultarDocsLoop')) replyGroup.appendChild(botaoDocs);
-    container.appendChild(replyGroup);
-  }
+  botaoResumo.className += ' atendeai-report-primary';
   if (isVisible("btnResumoGemini")) {
     const reportGroup = document.createElement("div");
     reportGroup.className = "gemini-report-group";
@@ -900,7 +893,14 @@ function criarBotoesFlutuantes(visibility, userSector) {
     reportGroup.appendChild(botaoConversasPreservadas);
     container.appendChild(reportGroup);
   }
+  const showSmartReply = visibility?.btnSmartReply ?? visibility?.btnAssistenteIA ?? true;
+  if (showSmartReply) container.appendChild(smartReplyControl.element);
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);
+  if (isVisible('btnConsultarDocsLoop')) container.appendChild(botaoDocs);
+  if (userSector === "preatendimento") {
+    container.appendChild(botaoClassificarProduto);
+    container.appendChild(productClassifierResult);
+  }
   if (isVisible("btnAgenda")) container.appendChild(botaoAgenda);
   container.appendChild(botaoObservacoes);
   container.appendChild(botaoConfiguracoes); // Sempre mostra Configurações

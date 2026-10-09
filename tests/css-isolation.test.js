@@ -162,22 +162,15 @@ test('F15: Focus selectors only target its namespace and never SZ classes', () =
 
 test('Central and editor stay bounded, use tokens and never style native cards',()=>{
  const css=fs.readFileSync('styles/support-focus.css','utf8');
- assert.match(css,/max-height: min\(200px, 25vh\)/); assert.match(css,/overflow-x: hidden/);
+ assert.match(css,/max-height: min\(380px, calc\(100vh - 24px\)\)/); assert.match(css,/overflow-x: hidden/);
  assert.match(css,/aria-pressed="true"/); assert.doesNotMatch(css,/#[0-9a-f]{3,8}\b/i);
- assert.doesNotMatch(css,/sz_contact|contact-layout|atendeai-focus-badge/);
+ assert.doesNotMatch(css,/sz_contact|contact-layout/);
  assert.doesNotMatch(fs.readFileSync('options.html','utf8'),/supportFocusBadgesEnabled/);
 });
 
-test('dark Recovery overrides each light tone and avatar; private notes use a theme surface', () => {
-  const css = fs.readFileSync('styles/recovery.css', 'utf8');
-  for (let tone = 0; tone < 4; tone++) {
-    const selector = `.recovery-buffer-panel[data-atendeai-theme="dark"] .recovery-buffer-item[data-tone="${tone}"]`;
-    assert.ok(css.includes(`${selector} { border-left-color: var(--ai-`));
-    assert.ok(css.includes(`${selector} .recovery-buffer-avatar { background: var(--ai-`));
-  }
-  assert.match(css, /\[data-atendeai-theme="dark"\] \.recovery-buffer-item\s*\{\s*background:\s*var\(--ai-surface-muted\)/);
-  const privateNote = css.match(/\.recovery-private-note\s*\{([^}]+)\}/)[1];
-  assert.match(privateNote, /background:\s*var\(--ai-surface-muted\)/);
+test('preserved records use neutral theme surfaces; private notes keep their own surface',()=>{
+ const css=fs.readFileSync('styles/recovery.css','utf8');assert.doesNotMatch(css,/data-tone|border-left-width/);
+ assert.match(css,/\.recovery-private-note\s*\{[^}]*background:\s*var\(--ai-surface-muted\)/);
 });
 
 test('Docs popup uses themed surfaces, foregrounds and explicit shared placeholders', () => {
@@ -262,4 +255,17 @@ test('profile sections separate headings, cards and actions with wrapping and th
  assert.match(chip,/color:\s*var\(--ai-primary\)/);assert.match(chip,/background:\s*var\(--ai-primary-soft\)/);
  assert.doesNotMatch(chip,/cursor:\s*pointer/);
  assert.match(css,/\.smart-reply-profiles-panel[^{]*\{[^}]*overflow-wrap:\s*anywhere/);
+});
+
+test('real SZ layout budget changes only the extension flex space',()=>{
+ const css=fs.readFileSync('styles/support-focus.css','utf8');
+ const central=css.match(/\.atendeai-focus-central\s*\{([^}]+)\}/)[1];
+ assert.match(central,/min-height: 28px/);assert.match(central,/flex: 0 0 auto/);assert.match(central,/overflow: hidden/);
+ for(const selector of extractSelectors(css))assert.doesNotMatch(selector,/\.(?:scroll-list|contact|sz_contact)(?:\W|$)/);
+});
+
+test('preparation controls and Agenda use theme tokens and preserved cards are neutral',()=>{
+ const agenda=fs.readFileSync('styles/calendar.css','utf8');assert.doesNotMatch(agenda,/background:\s*(?:white|#fff)\b/);
+ const recovery=fs.readFileSync('styles/recovery.css','utf8');assert.doesNotMatch(recovery,/data-tone|border-left-width/);
+ const smart=fs.readFileSync('styles/smart-reply.css','utf8');assert.match(smart,/smart-reply-preparation/);assert.match(smart,/aria-checked/);
 });
