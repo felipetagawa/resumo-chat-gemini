@@ -9,18 +9,27 @@ const MessagesModule = (() => {
         }
     }
 
+    const SHORTCUT_ACTION_MODE_KEY = "atendeai_shortcut_action_mode";
+
     async function carregarEMostrarMensagens() {
         const popup = criarPopupMensagens();
         document.body.appendChild(popup);
         window.ThemeModule?.apply(popup);
 
-        const data = await StorageHelper.get(["customMessages", "messageShortcuts", "atendeai_user_sector", "atendeai_user_name"]);
+        const data = await StorageHelper.get([
+            "customMessages",
+            "messageShortcuts",
+            "atendeai_user_sector",
+            "atendeai_user_name",
+            SHORTCUT_ACTION_MODE_KEY
+        ]);
         const customMessagesList = data.customMessages || [];
         const shortcuts = data.messageShortcuts || {};
         const sector = data.atendeai_user_sector || "suporte";
         const name = data.atendeai_user_name || "";
+        const actionMode = data[SHORTCUT_ACTION_MODE_KEY] === "send" ? "send" : "insert";
 
-        renderizarMensagens(popup, customMessagesList, shortcuts, sector, name);
+        renderizarMensagens(popup, customMessagesList, shortcuts, sector, name, actionMode);
     }
 
     function criarPopupMensagens() {
@@ -68,9 +77,35 @@ const MessagesModule = (() => {
         { text: "Olá! 😊\nAgradecemos por aguardar. Sabemos que o tempo de espera pode ser cansativo e agradecemos a sua paciência.\nSou do pré-atendimento e já estou verificando o melhor técnico disponível para dar continuidade ao seu atendimento.\nSe quiser adiantar alguma informação por aqui, isso pode nos ajudar a agilizar.\n\nSeguimos acompanhando até a resolução. 💙" }
     ];
 
-    function renderizarMensagens(popup, customMessagesList, shortcuts = {}, sector = "suporte", name = "") {
+    function renderizarMensagens(popup, customMessagesList, shortcuts = {}, sector = "suporte", name = "", actionMode = "insert") {
         const container = popup.querySelector("#conteudoMensagens");
         const isPre = sector === "preatendimento";
+
+        const modeConfig = document.createElement("div");
+        modeConfig.className = "messages-mode-config";
+        modeConfig.innerHTML = `
+          <div class="messages-mode-header">
+            <span class="messages-mode-title">Ao clicar em um atalho:</span>
+          </div>
+          <div class="messages-mode-options">
+            <label class="messages-mode-option">
+              <input type="radio" name="atendeai_shortcut_action_mode" value="insert" ${actionMode === 'insert' ? 'checked' : ''}>
+              <span>Inserir no campo</span>
+            </label>
+            <label class="messages-mode-option">
+              <input type="radio" name="atendeai_shortcut_action_mode" value="send" ${actionMode === 'send' ? 'checked' : ''}>
+              <span>Enviar diretamente</span>
+            </label>
+          </div>
+        `;
+
+        modeConfig.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener("change", async (e) => {
+                const newMode = e.target.value;
+                await StorageHelper.set({ [SHORTCUT_ACTION_MODE_KEY]: newMode });
+                atualizarRotulosBotoes(popup, newMode);
+            });
+        });
 
         const fixedMessages = isPre ? PRE_FIXED_MESSAGES.map(m => resolveTemplate(m.text, name)) : SUPPORT_FIXED_MESSAGES;
 
@@ -79,7 +114,7 @@ const MessagesModule = (() => {
         fixedMessages.forEach((msg, index) => {
             const key = `fixed_${index}`;
             const shortcut = shortcuts[key];
-            const card = criarCardMensagem(msg, false, shortcut, index);
+            const card = criarCardMensagem(msg, false, shortcut, index, actionMode);
             fixedAcordeon.content.appendChild(card);
         });
         container.appendChild(fixedAcordeon.container);
@@ -167,19 +202,22 @@ const MessagesModule = (() => {
                 customMessagesList.forEach((msg, index) => {
                     const key = `custom_${index}`;
                     const shortcut = shortcuts[key];
-                    const card = criarCardMensagem(msg, true, shortcut, index);
+                    const card = criarCardMensagem(msg, true, shortcut, index, actionMode);
                     customAcordeon.content.appendChild(card);
                 });
             }
             container.appendChild(customAcordeon.container);
         }
+
+        container.appendChild(modeConfig);
     }
 
-    function criarCardMensagem(text, isCustom, shortcut = null, index = -1) {
+    function criarCardMensagem(text, isCustom, shortcut = null, index = -1, actionMode = "insert") {
         const card = document.createElement("div");
         card.className = 'messages-card';
 
         const shortcutBadge = shortcut ? `<span class="messages-shortcut-badge">/${shortcut}</span>` : '';
+        const actionLabel = actionMode === "send" ? "Enviar" : "Inserir";
 
         card.innerHTML = `
       <div class="messages-text">
@@ -188,7 +226,7 @@ const MessagesModule = (() => {
       </div>
       <div class="messages-actions">
         ${isCustom ? `<button class="btn-excluir">Excluir</button>` : ''}
-        <button class="btn-enviar">Enviar</button>
+        <button class="btn-enviar">${actionLabel}</button>
         <button class="btn-copiar">Copiar</button>
       </div>
     `;
@@ -364,13 +402,15 @@ const MessagesModule = (() => {
             });
         }
 
-        card.querySelector(".btn-enviar").addEventListener("click", (e) => {
-            e.stopPropagation();
-            enviarMensagemParaChat(text);
+        card.querySelector(".btn-enviar").addEventListener("click", async (e) => {
+            e?.stopPropagation?.();
+            const data = await StorageHelper.get([SHORTCUT_ACTION_MODE_KEY]);
+            const currentMode = data[SHORTCUT_ACTION_MODE_KEY] === "send" ? "send" : "insert";
+            executarAcaoCardMensagem(text, currentMode);
         });
 
         card.querySelector(".btn-copiar").addEventListener("click", (e) => {
-            e.stopPropagation();
+            e?.stopPropagation?.();
             navigator.clipboard.writeText(text);
             const btn = e.target;
             const original = btn.textContent;
@@ -381,26 +421,127 @@ const MessagesModule = (() => {
         return card;
     }
 
-    function enviarMensagemParaChat(mensagem) {
-        const textAreas = document.querySelectorAll('textarea[placeholder*="Digite"], div[contenteditable="true"][role="textbox"], div[contenteditable="true"][placeholder*="Digite"], #twemoji-textarea');
+    function atualizarRotulosBotoes(popup, mode) {
+        const label = mode === "send" ? "Enviar" : "Inserir";
+        popup.querySelectorAll(".btn-enviar").forEach(btn => {
+            btn.textContent = label;
+        });
+    }
 
-        let inputEncontrado = null;
+    function hasSafeActiveAttendance() {
+        const activeCards = document.querySelectorAll('.sz_contact.active, .sz_contact.native-selected');
+        if (activeCards.length !== 1) return false;
+        const card = activeCards[0];
+        if (window.ChatCaptureModule?.identificarAtendimentoResposta) {
+            const token = window.ChatCaptureModule.identificarAtendimentoResposta();
+            if (token) return true;
+        }
+        for (const attr of ['data-sz-attendance-session', 'data-sz-protocol', 'data-chat-id', 'data-id']) {
+            if (card.hasAttribute ? card.hasAttribute(attr) : card.getAttribute?.(attr) != null) return true;
+        }
+        const hasClass = (c) => card.classList ? card.classList.contains(c) : String(card.className || '').split(/\s+/).includes(c);
+        if (hasClass('native-selected') || hasClass('active')) {
+            return true;
+        }
+        return false;
+    }
 
-        for (let input of textAreas) {
-            const isVisible = input.offsetWidth > 0 && input.offsetHeight > 0 &&
-                getComputedStyle(input).visibility !== 'hidden';
-            if (isVisible) {
-                inputEncontrado = input;
-                break;
+    function isExtensionElement(el) {
+        if (!el) return false;
+        for (let cur = el; cur; cur = cur.parentElement) {
+            if (cur.id === 'containerBotoesGemini' || cur.id === 'popupMensagensPadrao' ||
+                cur.id === 'messageShortcutDropdown' || (cur.id && String(cur.id).startsWith('atendeai-'))) {
+                return true;
+            }
+            const cls = String(cur.className || '');
+            if (cls.includes('atendeai-') || cls.includes('smart-reply-dock') || cls.includes('messages-card')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function isSendButtonCandidate(el) {
+        if (!el || el.disabled || el.getAttribute?.('aria-disabled') === 'true') return false;
+        if (isExtensionElement(el)) return false;
+
+        if (el.offsetWidth !== undefined && el.offsetHeight !== undefined) {
+            if (el.offsetWidth === 0 && el.offsetHeight === 0) {
+                if (typeof getComputedStyle === 'function') {
+                    const style = getComputedStyle(el);
+                    if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+                }
             }
         }
 
-        if (!inputEncontrado) {
-            alert("Não foi possível encontrar o campo de mensagem. Certifique-se de que há um chat ativo.");
-            return;
+        const text = (el.textContent || '').trim().toLowerCase();
+        if (text === 'enviar' || text === 'send') return true;
+
+        const title = (el.getAttribute?.('title') || '').trim().toLowerCase();
+        const aria = (el.getAttribute?.('aria-label') || '').trim().toLowerCase();
+        if (title.includes('enviar') || title.includes('send') || aria.includes('enviar') || aria.includes('send')) return true;
+
+        const className = String(el.className || '').toLowerCase();
+        if (className.includes('btn-send') || className.includes('send-btn') || className.includes('btn-enviar')) return true;
+
+        if (el.type === 'submit') return true;
+
+        const icon = el.querySelector?.('i, svg, span');
+        if (icon) {
+            const iconText = (icon.textContent || '').trim().toLowerCase();
+            const iconAttr = (icon.getAttribute?.('data-icon') || '').trim().toLowerCase();
+            if (iconText === 'send' || iconAttr.includes('send')) return true;
         }
 
-        if (inputEncontrado.contentEditable === 'true') {
+        return false;
+    }
+
+    function findNativeSendButton(inputEl) {
+        if (!inputEl) return null;
+
+        const container = inputEl.closest?.('.native-composer, .chat-composer, .chat-input, .chat-footer, [class*="composer"], form') || inputEl.parentElement;
+        if (container) {
+            const buttons = container.querySelectorAll?.('button, [role="button"], input[type="submit"]') || [];
+            for (const btn of buttons) {
+                if (isSendButtonCandidate(btn)) return btn;
+            }
+        }
+
+        let sibling = inputEl.nextElementSibling;
+        while (sibling) {
+            if (isSendButtonCandidate(sibling)) return sibling;
+            const btn = sibling.querySelector?.('button, [role="button"]');
+            if (btn && isSendButtonCandidate(btn)) return btn;
+            sibling = sibling.nextElementSibling;
+        }
+
+        const chatMain = inputEl.closest?.('main, .native-chat, .chat-container, .conversation-container') || document;
+        const docButtons = chatMain.querySelectorAll?.('button, [role="button"], input[type="submit"]') || [];
+        for (const btn of docButtons) {
+            if (isSendButtonCandidate(btn)) return btn;
+        }
+
+        return null;
+    }
+
+    function localizarCampoMensagem() {
+        const textAreas = document.querySelectorAll('textarea[placeholder*="Digite"], div[contenteditable="true"][role="textbox"], div[contenteditable="true"][placeholder*="Digite"], #twemoji-textarea');
+
+        for (const input of textAreas) {
+            if (input.closest?.('#popupMensagensPadrao, #containerBotoesGemini, #messageShortcutDropdown, [id^="atendeai-"]')) continue;
+            const isVisible = (input.offsetWidth === undefined || input.offsetWidth > 0 || input.offsetHeight > 0) &&
+                (typeof getComputedStyle !== 'function' || getComputedStyle(input).visibility !== 'hidden');
+            if (isVisible) {
+                return input;
+            }
+        }
+        return null;
+    }
+
+    function preencherCampoMensagem(inputEncontrado, mensagem) {
+        if (!inputEncontrado) return;
+
+        if (inputEncontrado.isContentEditable || inputEncontrado.contentEditable === 'true') {
             inputEncontrado.focus();
             inputEncontrado.textContent = mensagem;
 
@@ -409,19 +550,52 @@ const MessagesModule = (() => {
 
             setTimeout(() => {
                 const range = document.createRange();
-                const sel = window.getSelection();
-                range.selectNodeContents(inputEncontrado);
-                range.collapse(false);
-                sel.removeAllRanges();
-                sel.addRange(range);
+                const sel = window.getSelection?.();
+                if (sel) {
+                    range.selectNodeContents(inputEncontrado);
+                    range.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
             }, 50);
         } else {
-            inputEncontrado.value = mensagem;
+            const setter = typeof HTMLTextAreaElement !== 'undefined' && Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+            if (setter && inputEncontrado instanceof HTMLTextAreaElement) {
+                setter.call(inputEncontrado, mensagem);
+            } else {
+                inputEncontrado.value = mensagem;
+            }
             inputEncontrado.focus();
 
             const inputEvent = new Event('input', { bubbles: true, cancelable: true });
             inputEncontrado.dispatchEvent(inputEvent);
         }
+    }
+
+    function executarAcaoCardMensagem(mensagem, mode = "insert") {
+        const inputEncontrado = localizarCampoMensagem();
+        if (!inputEncontrado) {
+            alert("Não foi possível encontrar o campo de mensagem. Certifique-se de que há um chat ativo.");
+            return;
+        }
+
+        if (mode === "send") {
+            const safeAttendance = hasSafeActiveAttendance();
+            const sendBtn = findNativeSendButton(inputEncontrado);
+
+            preencherCampoMensagem(inputEncontrado, mensagem);
+
+            if (safeAttendance && sendBtn) {
+                sendBtn.click();
+            }
+            return;
+        }
+
+        preencherCampoMensagem(inputEncontrado, mensagem);
+    }
+
+    function enviarMensagemParaChat(mensagem) {
+        executarAcaoCardMensagem(mensagem, "insert");
     }
 
     return {

@@ -61,6 +61,195 @@ window.atendeaiSZDiagnostic = (() => {
       queues:[...document.querySelectorAll(categories.queue)].map(n=>({rect:rect(n),parent:rect(n.parentElement),cardCount:n.querySelectorAll('.sz_contact').length,
         overflowY:getComputedStyle(n).overflowY,parentFlexColumn:getComputedStyle(n.parentElement).display==='flex'&&getComputedStyle(n.parentElement).flexDirection==='column',scrollTop:round(n.scrollTop)}))};
   }
-  return {snapshot,geometry,clear(){history.clear();previousNodes=new WeakMap();delete window.atendeaiSZDiagnostic;return 'Diagnóstico removido.';}};
+  function inspectVue(inspected) {
+    const card = inspected?.closest?.('.sz_contact') || inspected;
+    if (!card) return { error: 'Selecione no painel Elements um cartão .sz_contact ou filho e passe $0.' };
+    let vm = null;
+    let contactObj = null;
+    let curr = card;
+    for (let depth = 0; depth < 4 && curr && curr !== document.body; depth++) {
+      const candidateVm = curr.__vue__;
+      if (candidateVm) {
+        if (!vm) vm = candidateVm;
+        const props = candidateVm.$props || candidateVm;
+        const contact = props.contact || candidateVm.contact;
+        if (contact && typeof contact === 'object') {
+          vm = candidateVm;
+          contactObj = contact;
+          break;
+        }
+      }
+      curr = curr.parentElement;
+    }
+    if (!vm) return { hasVueInstance: false, note: 'Nenhuma instância Vue (__vue__) encontrada no cartão ou ancestrais imediatos.' };
+    const props = vm.$props || {};
+    const propKeys = Object.keys(props);
+    if (!contactObj && props.contact && typeof props.contact === 'object') contactObj = props.contact;
+    const contactKeys = contactObj ? Object.keys(contactObj) : [];
+    const hasContactId = !!(contactObj?._id || contactObj?.contact_id || props.contact_id);
+    const hasProtocol = typeof contactObj?.protocol === "string" && contactObj.protocol.trim().length > 0;
+    const isAttendance = contactObj?.isAttendance === true;
+    const attendanceProp = props.attendance || props.chat || props.session;
+    const hasAttendanceSessionProp = (hasProtocol && isAttendance) || !!(attendanceProp || props.attendanceId || props.chatId || contactObj?.attendance_id || contactObj?.attendance?._id);
+    return {
+      hasVueInstance: true,
+      componentTag: vm.$vnode?.tag || vm.$options?._componentTag || 'unknown',
+      propKeys,
+      contactObjectKeys: contactKeys,
+      hasContactId,
+      hasProtocol,
+      isAttendance,
+      hasAttendanceSessionProp,
+      semanticAssessment: hasProtocol && isAttendance
+        ? 'Propriedade de sessão de atendimento detectada com sucesso (contact.protocol com isAttendance: true).'
+        : hasProtocol && !isAttendance
+          ? 'Protocolo detectado, mas isAttendance !== true (atendimento inativo ou finalizado).'
+          : hasAttendanceSessionProp
+            ? 'Propriedade de sessão de atendimento detectada com sucesso.'
+            : hasContactId
+              ? 'BLOQUEADO: detectado apenas ID de cadastro de contato (contact._id). Sessão de atendimento não comprovada.'
+              : 'Nenhum ID de contato ou atendimento identificado nas props.'
+    };
+  }
+  function diagnoseBridge() {
+    const cardElements = cards();
+    let aceitos = 0;
+    const rejeitadosPorMotivo = {
+      semInstanciaVue: 0,
+      semPropContact: 0,
+      atendimentoInativo: 0,
+      protocoloAusenteOuVazio: 0,
+      padraoTelefone: 0,
+      idContatoComoProtocolo: 0,
+      telefoneContatoComoProtocolo: 0,
+      protocoloDuplicado: 0
+    };
+
+    const BRAZILIAN_DDD = "(?:1[1-9]|2[12478]|3[1-578]|4[1-9]|5[13-5]|6[1-9]|7[13-579]|8[1-9]|9[1-9])";
+    const brPhoneRegexes = [
+      new RegExp(`^55${BRAZILIAN_DDD}9\\d{8}$`),
+      new RegExp(`^55${BRAZILIAN_DDD}[2-5]\\d{7}$`),
+      new RegExp(`^${BRAZILIAN_DDD}9\\d{8}$`),
+      new RegExp(`^${BRAZILIAN_DDD}[2-5]\\d{7}$`)
+    ];
+
+    const candidates = [];
+    const counts = new Map();
+
+    cardElements.forEach(card => {
+      let vm = null;
+      let contactObj = null;
+      let curr = card;
+      for (let depth = 0; depth < 4 && curr && curr !== document.body; depth++) {
+        const candidateVm = curr.__vue__;
+        if (candidateVm) {
+          if (!vm) vm = candidateVm;
+          const props = candidateVm.$props || candidateVm;
+          const contact = props.contact || candidateVm.contact;
+          if (contact && typeof contact === 'object') {
+            vm = candidateVm;
+            contactObj = contact;
+            break;
+          }
+        }
+        curr = curr.parentElement;
+      }
+
+      if (!vm) {
+        rejeitadosPorMotivo.semInstanciaVue++;
+        return;
+      }
+      if (!contactObj) {
+        rejeitadosPorMotivo.semPropContact++;
+        return;
+      }
+      if (contactObj.isAttendance !== true) {
+        rejeitadosPorMotivo.atendimentoInativo++;
+        return;
+      }
+      const rawProt = contactObj.protocol;
+      if (typeof rawProt !== 'string' && typeof rawProt !== 'number') {
+        rejeitadosPorMotivo.protocoloAusenteOuVazio++;
+        return;
+      }
+      const protocol = String(rawProt).trim();
+      if (!protocol) {
+        rejeitadosPorMotivo.protocoloAusenteOuVazio++;
+        return;
+      }
+
+      const contactId = String(contactObj._id || contactObj.contact_id || '').trim();
+      if (contactId && protocol === contactId) {
+        rejeitadosPorMotivo.idContatoComoProtocolo++;
+        return;
+      }
+      const rawPhone = contactObj.phone || contactObj.cellphone || contactObj.number || contactObj.telefone;
+      if (rawPhone) {
+        const phoneDigits = String(rawPhone).replace(/\D/g, '');
+        const protDigits = protocol.replace(/\D/g, '');
+        if (phoneDigits && protDigits && phoneDigits === protDigits) {
+          rejeitadosPorMotivo.telefoneContatoComoProtocolo++;
+          return;
+        }
+      }
+
+      const isFormattedPhone = /^\+?\d{1,4}[-.\s(]/.test(protocol) || /\(\d{2}\)/.test(protocol) || /\b\d{4,5}-\d{4}\b/.test(protocol);
+      const digits = protocol.replace(/\D/g, '');
+      const isTimestampOrLong = /^20[2-9]\d{6,}$/.test(digits) || digits.length >= 14;
+      const isPhone = isFormattedPhone || (!isTimestampOrLong && brPhoneRegexes.some(r => r.test(digits)));
+
+      if (isPhone) {
+        rejeitadosPorMotivo.padraoTelefone++;
+        return;
+      }
+
+      candidates.push({ card, protocol });
+      counts.set(protocol, (counts.get(protocol) || 0) + 1);
+    });
+
+    candidates.forEach(({ protocol }) => {
+      if (counts.get(protocol) === 1) {
+        aceitos++;
+      } else {
+        rejeitadosPorMotivo.protocoloDuplicado++;
+      }
+    });
+
+    return {
+      totalCartoes: cardElements.length,
+      aceitos,
+      rejeitadosPorMotivo
+    };
+  }
+
+  function audit() {
+    const cardElements = cards();
+    const bridgeAttrCount = cardElements.filter(c => c.hasAttribute('data-sz-protocol')).length;
+    const attendanceAttrCount = cardElements.filter(c => c.getAttribute('data-sz-attendance') === 'true').length;
+    const protocolIdCount = cardElements.filter(c => (c.getAttribute('data-chat-id') || '').startsWith('protocol:')).length;
+    const slots = document.querySelectorAll('.atendeai-focus-card-slot').length;
+    const triggers = document.querySelectorAll('.atendeai-focus-trigger').length;
+    const icon = document.querySelector('#btnSmartReply .atendeai-focus-icon');
+    const iconRect = icon?.getBoundingClientRect?.() || { width: 0, height: 0 };
+    const bridgeReady = document.documentElement?.getAttribute('data-atendeai-sz-bridge') === 'ready';
+
+    const sessionAttrCount = cardElements.filter(c => c.hasAttribute('data-sz-attendance-session')).length;
+
+    return {
+      cartoes: cardElements.length,
+      pontePronta: bridgeReady,
+      ponteComProtocolo: bridgeAttrCount,
+      ponteComSessao: sessionAttrCount,
+      ponteComAtendimento: attendanceAttrCount,
+      idsProtocolo: protocolIdCount,
+      slotsPrioridade: slots,
+      gatilhosPrioridade: triggers,
+      iconeSmartReplyLargura: Math.round(iconRect.width),
+      iconeSmartReplyAltura: Math.round(iconRect.height),
+      diagnosticoPonte: diagnoseBridge(),
+      diagnosticoPontePassoAPasso: (typeof window !== 'undefined' && window.__atendeai_sz_bridge_diag__) || null
+    };
+  }
+  return {snapshot,geometry,inspectVue,diagnoseBridge,audit,status:audit,clear(){history.clear();previousNodes=new WeakMap();delete window.atendeaiSZDiagnostic;return 'Diagnóstico removido.';}};
 })();
 'AtendeAI: diagnóstico somente leitura pronto. Nenhuma identidade foi aprovada.';

@@ -265,6 +265,44 @@
     background: var(--ai-surface);
     scrollbar-color: var(--ai-border-strong) var(--ai-surface);
 }
+#popupMensagensPadrao .messages-mode-config {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--ai-surface-muted);
+    border: 1px solid var(--ai-border);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+#popupMensagensPadrao .messages-mode-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+#popupMensagensPadrao .messages-mode-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ai-text-secondary);
+}
+#popupMensagensPadrao .messages-mode-options {
+    display: flex;
+    gap: 16px;
+}
+#popupMensagensPadrao .messages-mode-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ai-text);
+    cursor: pointer;
+    font-weight: 500;
+}
+#popupMensagensPadrao .messages-mode-option input[type="radio"] {
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--ai-primary);
+}
 #popupMensagensPadrao .messages-add {
     margin: 4px 0 10px 0;
     background: var(--ai-primary-soft);

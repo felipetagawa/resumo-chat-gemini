@@ -7,11 +7,14 @@ const ShortcutsModule = (() => {
   let currentFiltered = [];
   let currentQuery = "";
   let userSector = "";
+  let currentActionMode = "insert";
+  let isSending = false;
 
   let cacheReady = false;
   let loadingPromise = null;
   let loadSeq = 0;
 
+  const SHORTCUT_ACTION_MODE_KEY = "atendeai_shortcut_action_mode";
   const MAX_SHORTCUT_LEN = 20;
 
   const INVALID_CHARS_REPLACE = /[^A-Za-zÀ-ÖØ-öø-ÿ0-9 _-]/g;
@@ -63,12 +66,15 @@ const ShortcutsModule = (() => {
           "customMessages",
           "messageShortcuts",
           NAME_KEY,
-          SECTOR_KEY
+          SECTOR_KEY,
+          SHORTCUT_ACTION_MODE_KEY
         ]);
 
         const shortcuts = data.messageShortcuts || {};
         const sector = String(data[SECTOR_KEY] || "").trim().toLowerCase();
         const name = String(data[NAME_KEY] || "").trim();
+        const storedMode = data[SHORTCUT_ACTION_MODE_KEY];
+        currentActionMode = storedMode === "send" ? "send" : "insert";
 
         const isPre = sector === "preatendimento";
 
@@ -278,9 +284,17 @@ const ShortcutsModule = (() => {
         renderDropdown();
       });
 
-      node.addEventListener("pointerdown", (e) => {
+      let handledPointer = false;
+      const onTriggerItem = (e) => {
         e.preventDefault();
         e.stopPropagation();
+
+        if (e.type === "pointerdown") {
+          handledPointer = true;
+          setTimeout(() => { handledPointer = false; }, 300);
+        } else if (e.type === "click" && handledPointer) {
+          return;
+        }
 
         const idx = parseInt(node.dataset.idx, 10);
         if (Number.isNaN(idx)) return;
@@ -288,36 +302,184 @@ const ShortcutsModule = (() => {
         const item = currentFiltered[idx];
         if (!activeInputEl || !item) return;
 
-        // executa exatamente o item clicado
+        // executa imediatamente o item clicado
         if (item.type === "cmd") {
-          inserirMensagemSubstituindoSlashQuery(activeInputEl, item.data.message);
-          closeDropdown();
+          handleShortcutAction(item.data.message, { source: "click" });
         } else if (item.type === "create") {
           closeDropdown();
           abrirModalCriarAtalho(item.query);
         }
-      });
+      };
+
+      node.addEventListener("pointerdown", onTriggerItem);
+      node.addEventListener("click", onTriggerItem);
     });
   }
 
-  function executarAcaoSelecionada() {
-    console.log("[Shortcuts] executarAcaoSelecionada chamado");
-    console.log("[Shortcuts] activeInputEl:", activeInputEl);
-    console.log("[Shortcuts] selectedIndex:", selectedIndex);
-    console.log("[Shortcuts] currentFiltered:", currentFiltered);
+  function hasSafeActiveAttendance() {
+    const activeCards = document.querySelectorAll('.sz_contact.active, .sz_contact.native-selected');
+    if (activeCards.length !== 1) return false;
+    const card = activeCards[0];
+    if (window.ChatCaptureModule?.identificarAtendimentoResposta) {
+      const token = window.ChatCaptureModule.identificarAtendimentoResposta();
+      if (token) return true;
+    }
+    for (const attr of ['data-sz-attendance-session', 'data-sz-protocol', 'data-chat-id', 'data-id']) {
+      if (card.hasAttribute ? card.hasAttribute(attr) : card.getAttribute?.(attr) != null) return true;
+    }
+    const hasClass = (c) => card.classList ? card.classList.contains(c) : String(card.className || '').split(/\s+/).includes(c);
+    if (hasClass('native-selected') || hasClass('active')) {
+      return true;
+    }
+    return false;
+  }
 
-    if (!activeInputEl || !currentFiltered[selectedIndex]) {
-      console.warn("[Shortcuts] Condição falhou - activeInputEl ou item não existe");
+  function isExtensionElement(el) {
+    if (!el) return false;
+    for (let cur = el; cur; cur = cur.parentElement) {
+      if (cur.id === 'containerBotoesGemini' || cur.id === 'popupMensagensPadrao' ||
+          cur.id === 'messageShortcutDropdown' || (cur.id && String(cur.id).startsWith('atendeai-'))) {
+        return true;
+      }
+      const cls = String(cur.className || '');
+      if (cls.includes('atendeai-') || cls.includes('smart-reply-dock') || cls.includes('messages-card')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function isSendButtonCandidate(el) {
+    if (!el || el.disabled || el.getAttribute?.('aria-disabled') === 'true') return false;
+    if (isExtensionElement(el)) return false;
+
+    if (el.offsetWidth !== undefined && el.offsetHeight !== undefined) {
+      if (el.offsetWidth === 0 && el.offsetHeight === 0) {
+        if (typeof getComputedStyle === 'function') {
+          const style = getComputedStyle(el);
+          if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+        }
+      }
+    }
+
+    const text = (el.textContent || '').trim().toLowerCase();
+    if (text === 'enviar' || text === 'send') return true;
+
+    const title = (el.getAttribute?.('title') || '').trim().toLowerCase();
+    const aria = (el.getAttribute?.('aria-label') || '').trim().toLowerCase();
+    if (title.includes('enviar') || title.includes('send') || aria.includes('enviar') || aria.includes('send')) return true;
+
+    const className = String(el.className || '').toLowerCase();
+    if (className.includes('btn-send') || className.includes('send-btn') || className.includes('btn-enviar')) return true;
+
+    if (el.type === 'submit') return true;
+
+    const icon = el.querySelector?.('i, svg, span');
+    if (icon) {
+      const iconText = (icon.textContent || '').trim().toLowerCase();
+      const iconAttr = (icon.getAttribute?.('data-icon') || '').trim().toLowerCase();
+      if (iconText === 'send' || iconAttr.includes('send')) return true;
+    }
+
+    return false;
+  }
+
+  function findNativeSendButton(inputEl) {
+    if (!inputEl) return null;
+
+    const container = inputEl.closest?.('.native-composer, .chat-composer, .chat-input, .chat-footer, [class*="composer"], form') || inputEl.parentElement;
+    if (container) {
+      const buttons = container.querySelectorAll?.('button, [role="button"], input[type="submit"]') || [];
+      for (const btn of buttons) {
+        if (isSendButtonCandidate(btn)) return btn;
+      }
+    }
+
+    let sibling = inputEl.nextElementSibling;
+    while (sibling) {
+      if (isSendButtonCandidate(sibling)) return sibling;
+      const btn = sibling.querySelector?.('button, [role="button"]');
+      if (btn && isSendButtonCandidate(btn)) return btn;
+      sibling = sibling.nextElementSibling;
+    }
+
+    const chatMain = inputEl.closest?.('main, .native-chat, .chat-container, .conversation-container') || document;
+    const docButtons = chatMain.querySelectorAll?.('button, [role="button"], input[type="submit"]') || [];
+    for (const btn of docButtons) {
+      if (isSendButtonCandidate(btn)) return btn;
+    }
+
+    return null;
+  }
+
+  async function handleShortcutAction(message, { source = "click" } = {}) {
+    if (!activeInputEl) return;
+
+    const targetInput = activeInputEl;
+    const mode = source === "enter" ? "insert" : currentActionMode;
+
+    if (mode === "send") {
+      // 1. IME composition check
+      if (targetInput.dataset?.isComposing === "true") {
+        inserirMensagemSubstituindoSlashQuery(targetInput, message);
+        closeDropdown();
+        return;
+      }
+
+      // 2. Draft safety: ensure composer doesn't contain other user text
+      const before = getTextBeforeCaret(targetInput);
+      const active = findActiveSlashQuery(before);
+      const fullText = (targetInput.isContentEditable ? targetInput.textContent : targetInput.value) || "";
+
+      let hasOtherDraftText = false;
+      if (active) {
+        const textBefore = fullText.slice(0, active.slashIndex).trim();
+        const textAfter = fullText.slice(before.length).trim();
+        hasOtherDraftText = textBefore.length > 0 || textAfter.length > 0;
+      } else {
+        hasOtherDraftText = fullText.trim().length > 0;
+      }
+
+      // 3. Active attendance check
+      const safeAttendance = hasSafeActiveAttendance();
+
+      // 4. Native send button check
+      const sendBtn = findNativeSendButton(targetInput);
+
+      if (hasOtherDraftText || !safeAttendance || !sendBtn) {
+        // Fallback to insertion without auto-sending
+        inserirMensagemSubstituindoSlashQuery(targetInput, message);
+        closeDropdown();
+        return;
+      }
+
+      // 5. Prevent duplicate send
+      if (isSending) return;
+      isSending = true;
+
+      try {
+        inserirMensagemSubstituindoSlashQuery(targetInput, message);
+        closeDropdown();
+        sendBtn.click();
+      } catch (err) {
+        // Safe fail-closed: text is inserted, never assert false success or delete text
+      } finally {
+        setTimeout(() => { isSending = false; }, 600);
+      }
       return;
     }
 
-    const item = currentFiltered[selectedIndex];
-    console.log("[Shortcuts] Item selecionado:", item);
+    // Default: Modo A (Inserir no campo)
+    inserirMensagemSubstituindoSlashQuery(targetInput, message);
+    closeDropdown();
+  }
 
+  function executarAcaoSelecionada() {
+    if (!activeInputEl || !currentFiltered[selectedIndex]) return;
+
+    const item = currentFiltered[selectedIndex];
     if (item.type === 'cmd') {
-      console.log("[Shortcuts] Inserindo mensagem:", item.data.message);
-      inserirMensagemSubstituindoSlashQuery(activeInputEl, item.data.message);
-      closeDropdown();
+      handleShortcutAction(item.data.message, { source: "enter" });
     } else if (item.type === 'create') {
       const query = item.query;
       closeDropdown();
@@ -446,23 +608,16 @@ const ShortcutsModule = (() => {
   }
 
   function inserirMensagemSubstituindoSlashQuery(el, message) {
-    console.log("[Shortcuts] inserirMensagemSubstituindoSlashQuery chamado");
-    console.log("[Shortcuts] Elemento:", el);
-    console.log("[Shortcuts] Mensagem:", message);
-    console.log("[Shortcuts] isContentEditable:", el.isContentEditable);
+    if (!el) return;
 
-    if (el.isContentEditable) {
+    if (el.isContentEditable || el.contentEditable === "true") {
       const before = getTextBeforeCaret(el);
       const active = findActiveSlashQuery(before);
-
-      console.log("[Shortcuts] ContentEditable - before:", before);
-      console.log("[Shortcuts] ContentEditable - active:", active);
 
       const fullText = el.textContent || "";
       const caretPos = before.length;
 
       let start, end;
-
       if (active) {
         start = active.slashIndex;
         end = caretPos;
@@ -472,28 +627,21 @@ const ShortcutsModule = (() => {
       }
 
       const newText = fullText.slice(0, start) + message + fullText.slice(end);
-      console.log("[Shortcuts] ContentEditable - newText:", newText);
 
       el.textContent = newText;
       el.focus();
       setCaretContentEditable(el, start + message.length);
       el.dispatchEvent(new Event("input", { bubbles: true }));
-
-      console.log("[Shortcuts] ContentEditable - Mensagem inserida!");
       return;
     }
 
     const before = getTextBeforeCaret(el);
     const active = findActiveSlashQuery(before);
 
-    console.log("[Shortcuts] Textarea/Input - before:", before);
-    console.log("[Shortcuts] Textarea/Input - active:", active);
-
     const value = el.value || "";
     const caretPos = el.selectionStart ?? before.length;
 
     let start, end;
-
     if (active) {
       start = active.slashIndex;
       end = caretPos;
@@ -503,18 +651,23 @@ const ShortcutsModule = (() => {
     }
 
     const newValue = value.slice(0, start) + message + value.slice(end);
-    console.log("[Shortcuts] Textarea/Input - newValue:", newValue);
 
-    el.value = newValue;
+    const setter = (typeof HTMLTextAreaElement !== "undefined" && Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set) ||
+      (typeof HTMLInputElement !== "undefined" && Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set);
+    if (setter && (el instanceof HTMLTextAreaElement || (typeof HTMLInputElement !== "undefined" && el instanceof HTMLInputElement))) {
+      setter.call(el, newValue);
+    } else {
+      el.value = newValue;
+    }
 
     const newCaret = start + message.length;
     el.focus();
-    el.setSelectionRange(newCaret, newCaret);
+    if (typeof el.setSelectionRange === "function") {
+      el.setSelectionRange(newCaret, newCaret);
+    }
 
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
-
-    console.log("[Shortcuts] Textarea/Input - Mensagem inserida!");
   }
 
   function setCaretContentEditable(el, pos) {
@@ -620,9 +773,13 @@ const ShortcutsModule = (() => {
     carregarAtalhosMensagens();
 
     StorageHelper.addListener((changes, namespace) => {
-      if (namespace === "local" && (changes.messageShortcuts || changes.customMessages || changes[NAME_KEY] ||
-        changes[SECTOR_KEY])) {
-        carregarAtalhosMensagens();
+      if (namespace === "local") {
+        if (changes[SHORTCUT_ACTION_MODE_KEY]) {
+          currentActionMode = changes[SHORTCUT_ACTION_MODE_KEY].newValue === "send" ? "send" : "insert";
+        }
+        if (changes.messageShortcuts || changes.customMessages || changes[NAME_KEY] || changes[SECTOR_KEY]) {
+          carregarAtalhosMensagens();
+        }
       }
     });
 

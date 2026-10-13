@@ -172,3 +172,78 @@ test('popup constrains viewport geometry and has only one scrolling content area
   assert.match(content, /overflow-y:\s*auto/);
   assert.doesNotMatch(popup, /overflow(?:-y)?:\s*(?:auto|scroll)/);
 });
+
+test('mode preference toggles between insert and send, updates card labels, and persists', async () => {
+  const h = harness(), popup = await h.open();
+  const config = popup.querySelector('.messages-mode-config');
+  assert.ok(config);
+
+  // Default is insert mode
+  const sendBtns = popup.querySelectorAll('.btn-enviar');
+  assert.ok(sendBtns.length > 0);
+  assert.equal(sendBtns[0].textContent, 'Inserir');
+
+  const radios = config.querySelectorAll('input');
+  assert.equal(radios.length, 2);
+  const insertRadio = radios.find(r => r.value === 'insert');
+  const sendRadio = radios.find(r => r.value === 'send');
+  assert.ok(insertRadio && sendRadio);
+
+  // Change to send mode
+  sendRadio.value = 'send';
+  await sendRadio.fire('change');
+  await h.flush();
+
+  assert.equal(h.store.atendeai_shortcut_action_mode, 'send');
+  assert.equal(sendBtns[0].textContent, 'Enviar');
+
+  // Change back to insert mode
+  insertRadio.value = 'insert';
+  await insertRadio.fire('change');
+  await h.flush();
+
+  assert.equal(h.store.atendeai_shortcut_action_mode, 'insert');
+  assert.equal(sendBtns[0].textContent, 'Inserir');
+});
+
+test('card action button transmits in send mode with active chat, and inserts safely in insert mode', async () => {
+  const h = harness();
+  const popup = await h.open();
+
+  const composer = new TemplateNode('textarea');
+  composer.id = 'twemoji-textarea';
+  composer.offsetWidth = composer.offsetHeight = 100;
+  composer.dispatchEvent = () => {};
+  h.document.body.appendChild(composer);
+
+  const sendClicks = [];
+  const nativeSendBtn = new TemplateNode('button');
+  nativeSendBtn.textContent = 'Enviar';
+  nativeSendBtn.offsetWidth = nativeSendBtn.offsetHeight = 50;
+  nativeSendBtn.click = () => sendClicks.push('click');
+  h.document.body.appendChild(nativeSendBtn);
+
+  const activeCard = new TemplateNode('div');
+  activeCard.className = 'sz_contact active';
+  activeCard.setAttribute('data-sz-attendance-session', 'att_active_123');
+  h.document.body.appendChild(activeCard);
+
+  // 1. In default 'insert' mode: clicks card action button -> inserts into composer, no send click
+  const cardBtn = popup.querySelector('.btn-enviar');
+  await cardBtn.fire('click');
+  await h.flush();
+  assert.ok(composer.value.includes('IBS'));
+  assert.equal(sendClicks.length, 0);
+
+  // 2. Switch to 'send' mode
+  const sendRadio = popup.querySelector('.messages-mode-config').querySelectorAll('input').find(r => r.value === 'send');
+  await sendRadio.fire('change');
+  await h.flush();
+
+  // 3. Click card action button -> fills composer AND clicks native send button
+  composer.value = '';
+  await cardBtn.fire('click');
+  await h.flush();
+  assert.ok(composer.value.includes('IBS'));
+  assert.equal(sendClicks.length, 1);
+});

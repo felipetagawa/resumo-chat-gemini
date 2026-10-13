@@ -67,6 +67,16 @@
     },
     {
       "matches": [
+        "https://softeninformatica.sz.chat/*"
+      ],
+      "js": [
+        "modules/sz-vue-bridge.js"
+      ],
+      "run_at": "document_end",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
         "https://sistemaempresarialweb.com.br/crm-atendimento*",
         "https://www.sistemaempresarialweb.com.br/crm-atendimento*"
       ],
@@ -92,6 +102,7 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "modules/sz-vue-bridge.js",
         "icon48.png",
         "agenda.png",
         "relatorio.png",

@@ -1,0 +1,6 @@
+dist/
+.agents/
+skills-lock.json
+offline-smart-reply-investigation.mjs
+.DS_Store
+Thumbs.db

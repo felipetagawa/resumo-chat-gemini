@@ -34,19 +34,47 @@ class Element {
   dispatchEvent() {}
 }
 
-async function loadShortcuts(shortcuts = ['2'], messages = shortcuts.map(s => `Mensagem ${s}`)) {
+async function loadShortcuts(shortcuts = ['2'], messages = shortcuts.map(s => `Mensagem ${s}`), {
+  mode = 'insert',
+  hasActiveCard = false,
+  ambiguousCards = false,
+  hasSendButton = false
+} = {}) {
   const listeners = [];
   const body = { children: [], appendChild(node) { this.children.push(node); } };
-  const document = { body, createElement: tag => new Element(tag),
-    addEventListener(type, fn, capture) { listeners.push({ type, fn, capture }); } };
+  const sendClicks = [];
+  const nativeSendBtn = new Element('button');
+  nativeSendBtn.textContent = 'Enviar';
+  nativeSendBtn.click = () => sendClicks.push('click');
+
+  const activeCard = new Element('div');
+  activeCard.classList = { contains: (cls) => cls === 'sz_contact' || cls === 'active' };
+  activeCard.dataset = { szAttendanceSession: 'att_test123' };
+  activeCard.hasAttribute = (attr) => attr === 'data-sz-attendance-session';
+  activeCard.getAttribute = (attr) => attr === 'data-sz-attendance-session' ? 'att_test123' : null;
+
+  const cardsList = ambiguousCards ? [activeCard, activeCard] : (hasActiveCard ? [activeCard] : []);
+
+  const document = {
+    body,
+    createElement: tag => new Element(tag),
+    querySelectorAll: (selector) => {
+      if (selector.includes('.sz_contact')) return cardsList;
+      if (selector.includes('button') && hasSendButton) return [nativeSendBtn];
+      return [];
+    },
+    addEventListener(type, fn, capture) { listeners.push({ type, fn, capture }); }
+  };
   let modalCount = 0;
   const UIBuilder = { criarModalFormulario() { modalCount++; } };
   const context = { document, Event: class { constructor(type) { this.type = type; } },
     window: { innerWidth: 900, addEventListener() {}, UIBuilder }, UIBuilder,
     console: { log() {}, warn() {}, error() {} },
+    setTimeout: (fn) => setTimeout(fn, 1),
     StorageHelper: { addListener() {}, async get() { return {
       atendeai_user_sector: 'suporte', customMessages: messages,
-      messageShortcuts: Object.fromEntries(shortcuts.map((s, i) => [`custom_${i}`, s]))
+      messageShortcuts: Object.fromEntries(shortcuts.map((s, i) => [`custom_${i}`, s])),
+      atendeai_shortcut_action_mode: mode
     }; } } };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('modules/shortcuts.js', 'utf8'), context);
@@ -81,7 +109,7 @@ async function loadShortcuts(shortcuts = ['2'], messages = shortcuts.map(s => `M
     const row = dropdown().children[index];
     for (const fn of row.listeners.pointerdown || []) fn({ preventDefault() {}, stopPropagation() {} });
   }
-  return { input, dropdown, type, key, keyup, click, modalCount: () => modalCount };
+  return { input, dropdown, type, key, keyup, click, modalCount: () => modalCount, sendClicks };
 }
 
 test('/2 apenas filtra ao digitar; Espaco nao expande', async () => {
@@ -190,4 +218,69 @@ test('Enter substitui somente a query antes do caret e Shift+Enter segue para SZ
   assert.equal(h.key('Enter', { shiftKey: true }).prevented, false);
   h.key('Enter');
   assert.equal(h.input.value, 'Antes Mensagem 2 depois');
+});
+
+test('Modo A: clique insere sem enter e sem acionar envio', async () => {
+  const h = await loadShortcuts(['2'], undefined, { mode: 'insert', hasActiveCard: true, hasSendButton: true });
+  await h.type('/2');
+  h.click(0);
+  assert.equal(h.input.value, 'Mensagem 2');
+  assert.equal(h.sendClicks.length, 0);
+});
+
+test('Modo B: clique com query isolada, atendimento ativo e botao nativo dispara envio direto', async () => {
+  const h = await loadShortcuts(['2'], undefined, { mode: 'send', hasActiveCard: true, hasSendButton: true });
+  await h.type('/2');
+  h.click(0);
+  assert.equal(h.input.value, 'Mensagem 2');
+  assert.equal(h.sendClicks.length, 1);
+});
+
+test('Modo B: rascunho anterior ou posterior protege contra envio acidental (fallback para insercao)', async () => {
+  const h = await loadShortcuts(['2'], undefined, { mode: 'send', hasActiveCard: true, hasSendButton: true });
+  await h.type('Favor verificar /2 urgente', 18);
+  h.click(0);
+  assert.equal(h.input.value, 'Favor verificar Mensagem 2 urgente');
+  assert.equal(h.sendClicks.length, 0);
+});
+
+test('Modo B: sem atendimento ativo identificado com seguranca nao envia (fallback insercao)', async () => {
+  const h = await loadShortcuts(['2'], undefined, { mode: 'send', hasActiveCard: false, hasSendButton: true });
+  await h.type('/2');
+  h.click(0);
+  assert.equal(h.input.value, 'Mensagem 2');
+  assert.equal(h.sendClicks.length, 0);
+});
+
+test('Modo B: atendimentos ativos ambiguos (mais de um) nao enviam', async () => {
+  const h = await loadShortcuts(['2'], undefined, { mode: 'send', ambiguousCards: true, hasSendButton: true });
+  await h.type('/2');
+  h.click(0);
+  assert.equal(h.input.value, 'Mensagem 2');
+  assert.equal(h.sendClicks.length, 0);
+});
+
+test('Modo B: ausencia de botao nativo de envio nao apaga texto e nao quebra', async () => {
+  const h = await loadShortcuts(['2'], undefined, { mode: 'send', hasActiveCard: true, hasSendButton: false });
+  await h.type('/2');
+  h.click(0);
+  assert.equal(h.input.value, 'Mensagem 2');
+  assert.equal(h.sendClicks.length, 0);
+});
+
+test('Modo B: tecla Enter no menu continua consistente e apenas insere sem envio automatico', async () => {
+  const h = await loadShortcuts(['2'], undefined, { mode: 'send', hasActiveCard: true, hasSendButton: true });
+  await h.type('/2');
+  h.key('Enter');
+  assert.equal(h.input.value, 'Mensagem 2');
+  assert.equal(h.sendClicks.length, 0);
+});
+
+test('Modo B: composicao IME ativa previne envio automatico', async () => {
+  const h = await loadShortcuts(['2'], undefined, { mode: 'send', hasActiveCard: true, hasSendButton: true });
+  await h.type('/2');
+  h.input.dataset.isComposing = 'true';
+  h.click(0);
+  assert.equal(h.input.value, 'Mensagem 2');
+  assert.equal(h.sendClicks.length, 0);
 });

@@ -42,6 +42,23 @@
     filter: none;
 }
 
+.gemini-floating-btn .atendeai-focus-icon,
+.atendeai-focus-icon {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+    max-width: 16px;
+    max-height: 16px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vertical-align: middle;
+}
+
 .gemini-preserved-link {
     display: block;
     width: var(--ai-dock-width);

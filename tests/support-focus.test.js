@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { el, createDocument, collect, textOf } = require('./mini-dom');
 const KEY = 'atendeai_support_focus_v1';
+const ENABLED_KEY = 'atendeai_support_focus_enabled';
 const BADGES_KEY = 'atendeai_support_focus_badges_enabled';
 test('summary bar starts compact outside dock and cards receive compact entry slots', async()=>{
  const h=harness(); await h.mount();
@@ -115,6 +116,7 @@ test('legacy attendance stamp records remain unchanged and are never re-keyed by
  assert.deepEqual(h.store[KEY].items[id],old);assert.equal(h.document.querySelectorAll('.atendeai-focus-row').length,0);
 });
 function harness(store = {}, locks) {
+  if (store[ENABLED_KEY] === undefined && store.__isNewUser !== true) { store[ENABLED_KEY] = true; }
   const document = createDocument(), observers = [], timers = new Map(), changeListeners = []; let seq = 0, clock = 100000000;
   const context = { document, window: {}, console, navigator: { locks }, Date: class extends Date { static now() { return clock; } },
     setTimeout(fn) { timers.set(++seq, fn); return seq; }, clearTimeout(id) { timers.delete(id); },
@@ -365,13 +367,13 @@ test('local alerts appear directly on cards when customer responds without reord
  assert.equal(Object.values(h.store[KEY].items)[0].priority, 'NEXT');
 });
 
-test('insecure cards show indicator, block saving and never invent data-chat-id', async () => {
+test('insecure cards have no polluting dotted indicators, block saving and never invent data-chat-id', async () => {
  const h = harness();
  const insecure = h.card('Unsafe Client', '06/10/26 09:00', false, '');
  delete insecure.attrs['data-chat-id'];
  await h.mount();
- const indicator = insecure.querySelector('.atendeai-focus-trigger-disabled');
- assert.ok(indicator);
+ assert.equal(insecure.querySelector('.atendeai-focus-trigger-disabled'), null);
+ assert.equal(insecure.querySelector('.atendeai-focus-card-slot'), null);
  assert.equal(insecure.getAttribute('data-chat-id'), null);
  assert.equal(Object.keys(h.store[KEY]?.items || {}).length, 0);
 });
@@ -389,5 +391,499 @@ test('quick filter toggles queue visibility without breaking native list or scro
  assert.equal(h.lucia.style.display, '');
  assert.equal(h.cassia.style.display, '');
  assert.equal(h.list.scrollTop, 50);
+});
+
+test('Vue attendance identity enables priority, tags, step persistence and survives remount', async () => {
+ const h = harness();
+ delete h.lucia.attrs['data-chat-id'];
+ delete h.cassia.attrs['data-chat-id'];
+ h.lucia.__vue__ = {
+  $props: {
+   attendance: { _id: 'vue-att-101' },
+   contact: { _id: 'contact-lucia', name: 'Lucia Vue' }
+  }
+ };
+ h.cassia.__vue__ = {
+  $props: {
+   attendance: { _id: 'vue-att-102' },
+   contact: { _id: 'contact-cassia', name: 'Cassia Vue' }
+  }
+ };
+ await h.mount();
+ await h.click('Organizar atendimento');
+ await h.click('Agora');
+ await h.click('Fiscal');
+ h.document.querySelector('.atendeai-focus-input').value = 'Conferir ICMS da nota';
+ await h.click('Salvar alterações');
+
+ const item = h.store[KEY].items['vue-attendance:vue-att-101'];
+ assert.ok(item);
+ assert.equal(item.priority, 'NOW');
+ assert.deepEqual(item.tags, ['Fiscal']);
+ assert.equal(item.nextStep, 'Conferir ICMS da nota');
+
+ const badge = h.lucia.querySelector('.atendeai-focus-badge-now');
+ assert.ok(badge);
+ assert.equal(badge.textContent, '● Agora');
+ assert.equal(h.lucia.querySelector('.atendeai-focus-tag').textContent, 'Fiscal');
+ assert.match(h.lucia.querySelector('.atendeai-focus-step').textContent, /Conferir ICMS da nota/);
+
+ await h.mount();
+ assert.ok(h.lucia.querySelector('.atendeai-focus-badge-now'));
+ assert.equal(h.store[KEY].items['vue-attendance:vue-att-101'].priority, 'NOW');
+});
+
+test('Vue contact-only IDs (contact._id, contact_id) are rejected to prevent cross-association', async () => {
+ const h = harness();
+ delete h.lucia.attrs['data-chat-id'];
+ h.lucia.__vue__ = {
+  $props: {
+   contact: { _id: 'customer-profile-123', contact_id: 'customer-profile-123', name: 'Lucia Profile' }
+  }
+ };
+ await h.mount();
+ assert.equal(h.lucia.querySelector('.atendeai-focus-card-slot'), null);
+ assert.equal(h.button('Organizar atendimento'), undefined);
+ assert.equal(Object.keys(h.store[KEY]?.items || {}).length, 0);
+});
+
+test('duplicate Vue attendance IDs across cards are rejected fail-closed', async () => {
+ const h = harness();
+ delete h.lucia.attrs['data-chat-id'];
+ delete h.cassia.attrs['data-chat-id'];
+ h.lucia.__vue__ = { $props: { attendance: { _id: 'same-attendance' } } };
+ h.cassia.__vue__ = { $props: { attendance: { _id: 'same-attendance' } } };
+ await h.mount();
+ assert.equal(h.lucia.querySelector('.atendeai-focus-card-slot'), null);
+ assert.equal(h.cassia.querySelector('.atendeai-focus-card-slot'), null);
+ assert.equal(h.button('Organizar atendimento'), undefined);
+});
+
+test('Vue attendance identity preserves strict isolation on switching', async () => {
+ const h = harness();
+ delete h.lucia.attrs['data-chat-id'];
+ delete h.cassia.attrs['data-chat-id'];
+ h.lucia.__vue__ = { $props: { attendance: { _id: 'session-alpha' }, contact: { name: 'Lucia' } } };
+ h.cassia.__vue__ = { $props: { attendance: { _id: 'session-beta' }, contact: { name: 'Cassia' } } };
+ await h.mount();
+
+ await h.click('Organizar atendimento');
+ await h.click('Agora');
+ h.document.querySelector('.atendeai-focus-input').value = 'Passo Alpha';
+ await h.click('Salvar alterações');
+
+ h.lucia.className = 'sz_contact';
+ h.cassia.className = 'sz_contact active';
+ await h.flush();
+
+ await h.click('Organizar atendimento');
+ await h.click('Baixa');
+ h.document.querySelector('.atendeai-focus-input').value = 'Passo Beta';
+ await h.click('Salvar alterações');
+
+ assert.equal(h.store[KEY].items['vue-attendance:session-alpha'].priority, 'NOW');
+ assert.equal(h.store[KEY].items['vue-attendance:session-alpha'].nextStep, 'Passo Alpha');
+ assert.equal(h.store[KEY].items['vue-attendance:session-beta'].priority, 'LOW');
+ assert.equal(h.store[KEY].items['vue-attendance:session-beta'].nextStep, 'Passo Beta');
+
+ assert.ok(h.lucia.querySelector('.atendeai-focus-badge-now'));
+ assert.ok(h.cassia.querySelector('.atendeai-focus-badge-low'));
+});
+
+test('contact.protocol with isAttendance === true enables priority, tags, step persistence and survives remount', async () => {
+ const h = harness();
+ delete h.lucia.attrs['data-chat-id'];
+ delete h.cassia.attrs['data-chat-id'];
+ h.lucia.__vue__ = {
+  $props: {
+   contact: { protocol: 'SZ-20261013-001', isAttendance: true, _id: 'cust-1' }
+  }
+ };
+ h.cassia.__vue__ = {
+  $props: {
+   contact: { protocol: 'SZ-20261013-002', isAttendance: true, _id: 'cust-2' }
+  }
+ };
+ await h.mount();
+ await h.click('Organizar atendimento');
+ await h.click('Agora');
+ await h.click('Bloqueante');
+ h.document.querySelector('.atendeai-focus-input').value = 'Verificar protocolo 001';
+ await h.click('Salvar alterações');
+
+ const item = h.store[KEY].items['data-chat-id:protocol:SZ-20261013-001'];
+ assert.ok(item);
+ assert.equal(item.priority, 'NOW');
+ assert.deepEqual(item.tags, ['Bloqueante']);
+ assert.equal(item.nextStep, 'Verificar protocolo 001');
+
+ const badge = h.lucia.querySelector('.atendeai-focus-badge-now');
+ assert.ok(badge);
+ assert.equal(badge.textContent, '● Agora');
+ assert.equal(h.lucia.querySelector('.atendeai-focus-tag').textContent, 'Bloqueante');
+ assert.match(h.lucia.querySelector('.atendeai-focus-step').textContent, /Verificar protocolo 001/);
+
+ await h.mount();
+ assert.ok(h.lucia.querySelector('.atendeai-focus-badge-now'));
+ assert.equal(h.store[KEY].items['data-chat-id:protocol:SZ-20261013-001'].priority, 'NOW');
+});
+
+test('contact.protocol without isAttendance: true or with phone-like value fails closed', async () => {
+ const h = harness();
+ delete h.lucia.attrs['data-chat-id'];
+ h.lucia.__vue__ = {
+  $props: {
+   contact: { protocol: 'SZ-20261013-001', isAttendance: false }
+  }
+ };
+ await h.mount();
+ assert.equal(h.lucia.querySelector('.atendeai-focus-card-slot'), null);
+ assert.equal(h.button('Organizar atendimento'), undefined);
+
+ // Test with phone-like protocol
+ h.lucia.__vue__ = {
+  $props: {
+   contact: { protocol: '5511999998888', isAttendance: true }
+  }
+ };
+ await h.flush();
+ assert.equal(h.lucia.querySelector('.atendeai-focus-card-slot'), null);
+ assert.equal(h.button('Organizar atendimento'), undefined);
+});
+
+test('duplicate contact.protocol across multiple cards is rejected fail-closed', async () => {
+ const h = harness();
+ delete h.lucia.attrs['data-chat-id'];
+ delete h.cassia.attrs['data-chat-id'];
+ h.lucia.__vue__ = { $props: { contact: { protocol: 'SZ-DUP-01', isAttendance: true } } };
+ h.cassia.__vue__ = { $props: { contact: { protocol: 'SZ-DUP-01', isAttendance: true } } };
+ await h.mount();
+ assert.equal(h.lucia.querySelector('.atendeai-focus-card-slot'), null);
+ assert.equal(h.cassia.querySelector('.atendeai-focus-card-slot'), null);
+ assert.equal(h.button('Organizar atendimento'), undefined);
+});
+
+test('bridge DOM attributes enable attendance priority and prevent cross-association', async () => {
+ const h = harness();
+ delete h.lucia.attrs['data-chat-id'];
+ delete h.cassia.attrs['data-chat-id'];
+ h.lucia.setAttribute('data-sz-protocol', 'SZ-BRIDGE-01');
+ h.lucia.setAttribute('data-sz-attendance', 'true');
+ h.cassia.setAttribute('data-sz-protocol', 'SZ-BRIDGE-02');
+ h.cassia.setAttribute('data-sz-attendance', 'true');
+ await h.mount();
+
+ await h.click('Organizar atendimento');
+ await h.click('Próximo');
+ await h.click('Aguardando cliente');
+ await h.click('Salvar alterações');
+
+ const item = h.store[KEY].items['data-chat-id:protocol:SZ-BRIDGE-01'];
+ assert.ok(item);
+ assert.equal(item.priority, 'NEXT');
+ assert.deepEqual(item.tags, ['Aguardando cliente']);
+ assert.ok(h.lucia.querySelector('.atendeai-focus-badge-next'));
+});
+
+test('empty summary bar is hidden when totalPrioritized is 0 and shown when items are prioritized', async () => {
+ const h = harness();
+ await h.mount();
+ const central = h.document.querySelector('.atendeai-focus-central');
+ assert.ok(central);
+ // Initially no items are prioritized
+ assert.equal(central.getAttribute('data-empty'), 'true');
+ assert.equal(central.style.display, 'none');
+
+ // Prioritize one item
+ await h.click('Organizar atendimento');
+ await h.click('Agora');
+ await h.click('Salvar alterações');
+
+ assert.equal(central.getAttribute('data-empty'), 'false');
+ assert.equal(central.style.display, '');
+
+ // Clear priority
+ await h.click('Organizar atendimento');
+ await h.click('Limpar');
+ assert.equal(central.getAttribute('data-empty'), 'true');
+ assert.equal(central.style.display, 'none');
+});
+
+test('UI updates when bridge disponibilizes identity dynamically via event or attribute mutations', async () => {
+ const h = harness();
+ delete h.lucia.attrs['data-chat-id'];
+ delete h.cassia.attrs['data-chat-id'];
+ await h.mount();
+
+ // Initially neither card has verified identity
+ assert.equal(h.lucia.querySelector('.atendeai-focus-card-slot'), null);
+ assert.equal(h.cassia.querySelector('.atendeai-focus-card-slot'), null);
+
+ // Bridge sets attributes dynamically and fires atendeai:sz-bridge-synced
+ h.lucia.setAttribute('data-sz-protocol', 'SZ-DYNAMIC-01');
+ h.lucia.setAttribute('data-sz-attendance', 'true');
+ h.cassia.setAttribute('data-sz-protocol', 'SZ-DYNAMIC-02');
+ h.cassia.setAttribute('data-sz-attendance', 'true');
+
+ // Dispatch bridge-synced event
+ const listeners = h.document.listeners.filter(l => l.type === 'atendeai:sz-bridge-synced');
+ assert.ok(listeners.length > 0);
+ listeners.forEach(l => l.fn());
+ await h.flush();
+
+ // UI dynamically updated: both cards have slots with "+ Prioridade" trigger
+ const luciaSlot = h.lucia.querySelector('.atendeai-focus-card-slot');
+ const cassiaSlot = h.cassia.querySelector('.atendeai-focus-card-slot');
+ assert.ok(luciaSlot);
+ assert.ok(cassiaSlot);
+ assert.ok(luciaSlot.querySelector('.atendeai-focus-trigger'));
+ assert.ok(cassiaSlot.querySelector('.atendeai-focus-trigger'));
+ assert.equal(luciaSlot.querySelector('.atendeai-focus-trigger').textContent, '＋ Prioridade');
+});
+
+test('Smart Reply floating button in dock has explicit 16x16 icon, stroke attributes and compact button', async () => {
+ const h = harness();
+ Object.assign(h.context, {
+  DOMHelpers: { exists: () => false, createElement: (tag, opts = {}) => el(tag, opts.id ? { id: opts.id } : {}) },
+  getIconHTML: () => '', guardFeature: fn => fn, initializeExtensionDock: () => {},
+  ObservationsModule: { openDrawer() {} },
+  DocsModule: { exibirPainelConsultaDocs() {} },
+  MessagesModule: { toggleMensagens() {} },
+  AgendaModule: { exibirAgenda() {} }
+ });
+ const create = h.document.createElement;
+ h.document.createElement = tag => { const n = create(tag); n.insertAdjacentHTML = () => {}; return n; };
+ vm.runInContext(fs.readFileSync('modules/chat-capture.js', 'utf8'), h.context);
+ vm.runInContext(fs.readFileSync('modules/smart-reply-context.js', 'utf8'), h.context);
+ vm.runInContext(fs.readFileSync('modules/smart-reply-profiles.js', 'utf8'), h.context);
+ vm.runInContext(fs.readFileSync('modules/smart-reply-profiles-ui.js', 'utf8'), h.context);
+ vm.runInContext(fs.readFileSync('modules/smart-reply.js', 'utf8'), h.context);
+ const source = fs.readFileSync('content.js', 'utf8');
+ vm.runInContext(source.slice(source.indexOf('function criarBotoesFlutuantes('), source.indexOf('\nMessagingHelper.addListener(')), h.context);
+ h.dock.remove();
+ h.context.criarBotoesFlutuantes({ btnSmartReply: true, btnResumoGemini: true }, 'suporte');
+ await new Promise(setImmediate);
+ const smartBtn = h.document.getElementById('btnSmartReply');
+ assert.ok(smartBtn);
+ assert.ok(smartBtn.className.includes('gemini-floating-btn'));
+ assert.ok(smartBtn.className.includes('atendeai-reply-secondary'));
+
+ assert.ok(smartBtn.innerHTML.includes('class="atendeai-focus-icon"'));
+ assert.ok(smartBtn.innerHTML.includes('width="16"'));
+ assert.ok(smartBtn.innerHTML.includes('height="16"'));
+ assert.ok(smartBtn.innerHTML.includes('viewBox="0 0 20 20"'));
+ assert.ok(smartBtn.innerHTML.includes('fill="none"'));
+ assert.ok(smartBtn.innerHTML.includes('stroke="currentColor"'));
+ assert.ok(smartBtn.innerHTML.includes('stroke-width="1.6"'));
+ assert.ok(smartBtn.innerHTML.includes('stroke-linecap="round"'));
+ assert.ok(smartBtn.innerHTML.includes('stroke-linejoin="round"'));
+
+ // Verify CSS rules enforce explicit 16x16 dimensions, stroke and compact button height
+ const buttonsCss = fs.readFileSync('styles/buttons.css', 'utf8');
+ const smartReplyCss = fs.readFileSync('styles/smart-reply.css', 'utf8');
+ assert.match(buttonsCss, /\.atendeai-focus-icon[\s\S]*?width:\s*16px/);
+ assert.match(buttonsCss, /\.atendeai-focus-icon[\s\S]*?height:\s*16px/);
+ assert.match(buttonsCss, /\.atendeai-focus-icon[\s\S]*?fill:\s*none/);
+ assert.match(buttonsCss, /\.atendeai-focus-icon[\s\S]*?stroke:\s*currentColor/);
+ assert.match(smartReplyCss, /#btnSmartReply[\s\S]*?min-height:\s*34px/);
+ assert.match(smartReplyCss, /\.atendeai-focus-icon[\s\S]*?width:\s*16px/);
+ assert.match(smartReplyCss, /\.atendeai-focus-icon[\s\S]*?height:\s*16px/);
+
+ // Text and icon alignment in dock
+ assert.match(smartBtn.innerHTML, /Sugerir resposta/);
+});
+
+test('numeric attendance protocols (pure digits timestamp) enable priority controls on cards', async () => {
+ const h = harness();
+ // 14-digit numeric timestamp protocols
+ h.lucia.setAttribute('data-sz-protocol', '20261013140512');
+ h.lucia.setAttribute('data-sz-attendance', 'true');
+ h.cassia.setAttribute('data-sz-protocol', '20261013140513');
+ h.cassia.setAttribute('data-sz-attendance', 'true');
+
+ await h.mount();
+
+ const luciaSlot = h.lucia.querySelector('.atendeai-focus-card-slot');
+ const cassiaSlot = h.cassia.querySelector('.atendeai-focus-card-slot');
+ assert.ok(luciaSlot);
+ assert.ok(cassiaSlot);
+ assert.ok(luciaSlot.querySelector('.atendeai-focus-trigger'));
+ assert.ok(cassiaSlot.querySelector('.atendeai-focus-trigger'));
+ assert.equal(luciaSlot.querySelector('.atendeai-focus-trigger').textContent, '＋ Prioridade');
+});
+
+test('new users start with feature disabled, but activation switch is visible and shows OFF', async () => {
+  const h = harness({ __isNewUser: true });
+  await h.mount();
+  const activation = h.document.querySelector('.atendeai-focus-activation');
+  assert.ok(activation);
+  const switchBtn = activation.querySelector('.atendeai-focus-switch');
+  assert.ok(switchBtn);
+  assert.equal(switchBtn.getAttribute('aria-checked'), 'false');
+  assert.ok(switchBtn.className.includes('atendeai-focus-switch-off'));
+  assert.equal(h.document.querySelector('.atendeai-focus-central'), null);
+  assert.equal(h.lucia.querySelector('.atendeai-focus-card-slot'), null);
+  assert.equal(h.cassia.querySelector('.atendeai-focus-card-slot'), null);
+});
+
+test('existing users with registered priorities start enabled and preserve their data', async () => {
+  const existingItem = {
+    sourceId: 'data-chat-id:lucia-1',
+    displayName: 'Lucia',
+    priority: 'NOW',
+    tags: ['Fiscal'],
+    nextStep: 'Ajustar nota fiscal',
+    updatedAt: 100000000
+  };
+  const h = harness({
+    __isNewUser: true,
+    [KEY]: { version: 1, items: { [existingItem.sourceId]: existingItem } }
+  });
+  await h.mount();
+  const activation = h.document.querySelector('.atendeai-focus-activation');
+  assert.ok(activation);
+  const switchBtn = activation.querySelector('.atendeai-focus-switch');
+  assert.equal(switchBtn.getAttribute('aria-checked'), 'true');
+  assert.ok(switchBtn.className.includes('atendeai-focus-switch-on'));
+  assert.ok(h.lucia.querySelector('.atendeai-focus-card-slot'));
+  assert.ok(h.lucia.querySelector('.atendeai-focus-badge-now'));
+  assert.deepEqual(h.store[KEY].items[existingItem.sourceId], existingItem);
+});
+
+test('toggling OFF hides controls, badges, summary, filters and preserves saved data and retention', async () => {
+  const h = harness();
+  await h.mount();
+  await h.save();
+  assert.ok(h.lucia.querySelector('.atendeai-focus-card-slot'));
+  assert.ok(h.document.querySelector('.atendeai-focus-central'));
+  const savedDataBefore = structuredClone(h.store[KEY]);
+
+  let switchBtn = h.document.querySelector('.atendeai-focus-switch');
+  assert.ok(switchBtn);
+  await Promise.all(switchBtn.click());
+
+  switchBtn = h.document.querySelector('.atendeai-focus-switch');
+  assert.equal(h.store[ENABLED_KEY], false);
+  assert.equal(switchBtn.getAttribute('aria-checked'), 'false');
+  assert.equal(h.document.querySelector('.atendeai-focus-central'), null);
+  assert.equal(h.lucia.querySelector('.atendeai-focus-card-slot'), null);
+  assert.equal(h.cassia.querySelector('.atendeai-focus-card-slot'), null);
+  assert.equal(h.document.querySelector('.atendeai-focus-editor'), null);
+  assert.equal(h.lucia.style.display, '');
+  assert.equal(h.cassia.style.display, '');
+
+  assert.deepEqual(h.store[KEY], savedDataBefore);
+
+  await Promise.all(switchBtn.click());
+  switchBtn = h.document.querySelector('.atendeai-focus-switch');
+  assert.equal(h.store[ENABLED_KEY], true);
+  assert.equal(switchBtn.getAttribute('aria-checked'), 'true');
+  assert.ok(h.lucia.querySelector('.atendeai-focus-card-slot'));
+  assert.ok(h.lucia.querySelector('.atendeai-focus-badge'));
+  assert.deepEqual(h.store[KEY], savedDataBefore);
+});
+
+test('individual preference persisted via chrome.storage.local and survives remount', async () => {
+  const h = harness();
+  await h.mount();
+  let switchBtn = h.document.querySelector('.atendeai-focus-switch');
+  await Promise.all(switchBtn.click());
+  assert.equal(h.store[ENABLED_KEY], false);
+
+  await h.mount();
+  switchBtn = h.document.querySelector('.atendeai-focus-switch');
+  assert.equal(switchBtn.getAttribute('aria-checked'), 'false');
+  assert.equal(h.document.querySelector('.atendeai-focus-central'), null);
+  assert.equal(h.lucia.querySelector('.atendeai-focus-card-slot'), null);
+
+  await h.setStorage({ [ENABLED_KEY]: true });
+  switchBtn = h.document.querySelector('.atendeai-focus-switch');
+  assert.equal(switchBtn.getAttribute('aria-checked'), 'true');
+  assert.ok(h.lucia.querySelector('.atendeai-focus-card-slot'));
+});
+
+test('repeated toggling does not duplicate observers, elements or event listeners', async () => {
+  const h = harness();
+  await h.mount();
+  for (let i = 0; i < 4; i++) {
+    const switchBtn = h.document.querySelector('.atendeai-focus-switch');
+    await Promise.all(switchBtn.click());
+  }
+  assert.equal(h.document.querySelectorAll('.atendeai-focus-activation').length, 1);
+  assert.equal(h.document.querySelectorAll('.atendeai-focus-central').length, 1);
+  assert.equal(h.lucia.querySelectorAll('.atendeai-focus-card-slot').length, 1);
+  assert.equal(h.cassia.querySelectorAll('.atendeai-focus-card-slot').length, 1);
+
+  await h.mount();
+  assert.equal(h.document.querySelectorAll('.atendeai-focus-activation').length, 1);
+  assert.equal(h.document.querySelectorAll('.atendeai-focus-central').length, 1);
+  assert.equal(h.lucia.querySelectorAll('.atendeai-focus-card-slot').length, 1);
+  assert.equal(h.cassia.querySelectorAll('.atendeai-focus-card-slot').length, 1);
+});
+
+test('activation control mounts in header when Em atendimento header is present in DOM', async () => {
+  const h = harness();
+  const header = el('div', { class: 'native-header', text: 'Em atendimento (5)' });
+  h.list.parentElement.insertBefore(header, h.list);
+  await h.mount();
+  const activation = h.document.querySelector('.atendeai-focus-activation');
+  assert.ok(activation);
+  assert.equal(activation.parentElement, header);
+  assert.ok(activation.className.includes('atendeai-focus-activation-in-header'));
+});
+
+test('narrow cards adapt tags space and do not squeeze card layout', async () => {
+  const item = {
+    sourceId: 'data-chat-id:lucia-1',
+    displayName: 'Lucia',
+    priority: 'NOW',
+    tags: ['Fiscal', 'Bloqueante'],
+    nextStep: 'Ajuste de rejeição',
+    updatedAt: 100000000
+  };
+  const h = harness({ [KEY]: { version: 1, items: { [item.sourceId]: item } } });
+
+  // Normal width (>= 210px) shows 2 tags
+  h.lucia.getBoundingClientRect = () => ({ width: 240, height: 60, left: 0, right: 240, top: 0, bottom: 60 });
+  await h.mount();
+  let tags = h.lucia.querySelectorAll('.atendeai-focus-tag');
+  assert.equal(tags.length, 2);
+  assert.equal(tags[0].textContent, 'Fiscal');
+  assert.equal(tags[1].textContent, 'Bloqueante');
+
+  // Medium narrow width (170px <= width < 210px) shows 1 tag
+  h.lucia.getBoundingClientRect = () => ({ width: 180, height: 60, left: 0, right: 180, top: 0, bottom: 60 });
+  await h.flush();
+  tags = h.lucia.querySelectorAll('.atendeai-focus-tag');
+  assert.equal(tags.length, 1);
+  assert.equal(tags[0].textContent, 'Fiscal');
+
+  // Extreme narrow width (< 170px) shows 0 tags
+  h.lucia.getBoundingClientRect = () => ({ width: 150, height: 60, left: 0, right: 150, top: 0, bottom: 60 });
+  await h.flush();
+  tags = h.lucia.querySelectorAll('.atendeai-focus-tag');
+  assert.equal(tags.length, 0);
+  assert.ok(h.lucia.querySelector('.atendeai-focus-badge-now'));
+  assert.ok(h.lucia.querySelector('.atendeai-focus-step'));
+});
+
+test('automatic hover listeners are removed and editor only opens on intentional click', async () => {
+  const h = harness();
+  await h.mount();
+  const slot = h.lucia.querySelector('.atendeai-focus-card-slot');
+  assert.ok(slot);
+  assert.equal(slot.listeners.mouseover, undefined);
+  assert.equal(slot.listeners.mouseenter, undefined);
+  assert.equal(slot.listeners.focusin, undefined);
+  assert.equal(h.document.querySelector('.atendeai-focus-preview'), null);
+  assert.equal(h.document.querySelector('.atendeai-focus-editor'), null);
+
+  const trigger = slot.querySelector('.atendeai-focus-trigger');
+  assert.ok(trigger);
+  await Promise.all(trigger.click());
+  assert.ok(h.document.querySelector('.atendeai-focus-editor'));
+
+  await h.click('Cancelar');
+  assert.equal(h.document.querySelector('.atendeai-focus-editor'), null);
 });
 

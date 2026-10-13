@@ -81,8 +81,19 @@ async function isUserConfigured() {
   return !!name && isValidSector(sector);
 }
 
+function ensureSzVueBridge() {
+  if (document.documentElement?.getAttribute("data-atendeai-sz-bridge") === "ready") return;
+  try {
+    const s = document.createElement("script");
+    s.src = chrome.runtime.getURL("modules/sz-vue-bridge.js");
+    s.onload = () => s.remove();
+    (document.head || document.documentElement).appendChild(s);
+  } catch (e) {}
+}
+
 function inicializarModulos() {
   if (modulosInicializados) return;
+  ensureSzVueBridge();
 
   ShortcutsModule.init();
   NotificationsModule.init();
@@ -839,7 +850,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
     guardFeature(() => SmartReplyModule.open(smartReplyControl.consumeMode())));
   botaoSmartReply.type = 'button';
   botaoSmartReply.className += ' atendeai-reply-secondary';
-  botaoSmartReply.innerHTML = '<svg class="atendeai-focus-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14v10H8l-5 4V3Z"/><path d="M6 7h8M6 10h5"/></svg> Sugerir resposta';
+  botaoSmartReply.innerHTML = '<svg class="atendeai-focus-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h14v10H8l-5 4V3Z"/><path d="M6 7h8M6 10h5"/></svg> Sugerir resposta';
   const smartReplyControl = SmartReplyModule.mountContextControl(botaoSmartReply);
   botaoDocs.id = 'btnConsultarDocsLoop';
   botaoDocs.className = 'gemini-preserved-link';
@@ -908,7 +919,9 @@ function criarBotoesFlutuantes(visibility, userSector) {
   document.body.appendChild(container);
   globalThis.ThemeModule?.apply?.(container);
   void globalThis.ThemeModule?.init?.()?.then?.(() => globalThis.ThemeModule.apply(container));
-  void SupportFocusModule.mount(container);
+  if (userSector !== "preatendimento") {
+    void SupportFocusModule.mount(container);
+  }
   void initializeExtensionDock(container);
 }
 

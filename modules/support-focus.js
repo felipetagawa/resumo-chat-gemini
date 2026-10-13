@@ -1,14 +1,16 @@
 // Local priorities. No transcript, model calls or AI payload integration.
 const SupportFocusModule = (() => {
   const KEY = "atendeai_support_focus_v1", TTL = 86400000;
+  const ENABLED_KEY = "atendeai_support_focus_enabled";
+  const BADGES_KEY = "atendeai_support_focus_badges_enabled";
   const PRIORITIES = Object.freeze({ NOW: "Agora", NEXT: "Próximo", LOW: "Baixa" });
   const SUGGESTED_TAGS = Object.freeze(["Fiscal", "Retorno", "Cliente", "Terceiro", "Param.", "Urgente"]);
   const LEGACY_TAGS = Object.freeze(["Bloqueante", "Em teste", "Aguardando cliente", "Aguardando terceiro", "NF-e"]);
   const TAGS = Object.freeze([...SUGGESTED_TAGS, ...LEGACY_TAGS.filter(t => !SUGGESTED_TAGS.includes(t))]);
   const LEGACY = Object.freeze({ MY_TURN: [], CHECKING: ["Em teste"], WAITING_CUSTOMER: ["Aguardando cliente"], WAITING_THIRD_PARTY: ["Aguardando terceiro"] });
-  let root, observer, timer, identity, editor, preview, anchor;
+  let root, observer, timer, identity, editor, preview, anchor, activationControl;
   let editing = false, editorEpoch = 0, generation = 0, renderKey = "", cached = { items: {} }, inboundWatch;
-  let activeFilter = "ALL";
+  let activeFilter = "ALL", isEnabled = false;
   let queue = Promise.resolve();
 
   function enqueue(task) {
@@ -43,15 +45,203 @@ const SupportFocusModule = (() => {
     return state;
   }
 
-  function cards() { return Array.from(document.querySelectorAll(".sz_contact")); }
+  async function checkFeatureEnabled() {
+    const data = await storage("get", [ENABLED_KEY, BADGES_KEY, KEY]);
+    if (typeof data?.[ENABLED_KEY] === "boolean") return data[ENABLED_KEY];
+    if (typeof data?.[BADGES_KEY] === "boolean") return data[BADGES_KEY];
+    const existingItems = data?.[KEY]?.items;
+    if (existingItems && typeof existingItems === "object" && Object.keys(existingItems).length > 0) {
+      return true;
+    }
+    return false;
+  }
+
+  async function setFeatureEnabled(value) {
+    isEnabled = Boolean(value);
+    await storage("set", { [ENABLED_KEY]: isEnabled });
+  }
+
+  const BRAZILIAN_DDD = "(?:1[1-9]|2[12478]|3[1-578]|4[1-9]|5[13-5]|6[1-9]|7[13-579]|8[1-9]|9[1-9])";
+  const BR_PHONE_REGEXES = [
+    new RegExp(`^55${BRAZILIAN_DDD}9\\d{8}$`),     // 13 digits: 55 + DDD + 9 mobile
+    new RegExp(`^55${BRAZILIAN_DDD}[2-5]\\d{7}$`),  // 12 digits: 55 + DDD + landline
+    new RegExp(`^${BRAZILIAN_DDD}9\\d{8}$`),       // 11 digits: DDD + 9 mobile
+    new RegExp(`^${BRAZILIAN_DDD}[2-5]\\d{7}$`)    // 10 digits: DDD + landline
+  ];
+
+  function isPhoneLike(value) {
+    const compact = String(value || "").trim();
+    if (!compact) return false;
+    // Explicit phone formatting (e.g. +55..., (11) 99999-8888, 99999-9999)
+    if (/^\+?\d{1,4}[-.\s(]/.test(compact) || /\(\d{2}\)/.test(compact) || /\b\d{4,5}-\d{4}\b/.test(compact)) {
+      return true;
+    }
+    const digits = compact.replace(/\D/g, "");
+    // Year-based timestamp protocols (e.g. 2024..., 2025..., 2026...) or 14+ digit IDs are valid protocols, NOT phones
+    if (/^20[2-9]\d{6,}$/.test(digits) || digits.length >= 14) {
+      return false;
+    }
+    return BR_PHONE_REGEXES.some(r => r.test(digits));
+  }
+
+  function findContactsRoot() {
+    return document.querySelector('.content.active #contact-fields.contacts-field.contact-scroll') ||
+      document.querySelector('.content.active #contact-fields') ||
+      document.querySelector('#contact-fields.contacts-field.contact-scroll') ||
+      document.querySelector('#contact-fields') ||
+      document.querySelector('.contacts-field.contact-scroll');
+  }
+
+  function cards() {
+    const root = findContactsRoot();
+    if (root) {
+      const list = Array.from(root.querySelectorAll(".sz_contact")).filter(el => el?.isConnected !== false);
+      if (list.length > 0) return list;
+    }
+    return Array.from(document.querySelectorAll(".sz_contact")).filter(el => el?.isConnected !== false);
+  }
+
+  function getVueAttendanceIdentity(card) {
+    if (!card) return null;
+
+    // 1. Direct session token or protocol attribute from bridge
+    const sessionAttr = String(card.getAttribute("data-sz-attendance-session") || "").trim();
+    const protocolAttr = String(card.getAttribute("data-sz-protocol") || "").trim();
+    const isAttendanceAttr = card.getAttribute("data-sz-attendance") === "true";
+    if ((sessionAttr || protocolAttr) && isAttendanceAttr) {
+      const token = sessionAttr || protocolAttr;
+      if (!isPhoneLike(token)) {
+        const matching = cards().filter(c => {
+          const s = String(c.getAttribute("data-sz-attendance-session") || "").trim();
+          const p = String(c.getAttribute("data-sz-protocol") || "").trim();
+          return (sessionAttr && s === sessionAttr) || (protocolAttr && p === protocolAttr);
+        });
+        if (matching.length === 1) {
+          const displayName = String(card.querySelector(".contact-name")?.textContent || "Conversa").trim();
+          return Object.freeze({
+            sourceId: `data-chat-id:protocol:${token}`,
+            displayName: displayName || "Conversa"
+          });
+        }
+        return null;
+      }
+    }
+
+    // 2. Verified contact.protocol check directly from Vue (for tests or MAIN world fallback)
+    // Inspect card and ancestors up to 4 levels for contact
+    let contact = null;
+    let curr = card;
+    for (let depth = 0; depth < 4 && curr && curr !== document.body; depth++) {
+      const candidateVm = curr.__vue__;
+      if (candidateVm) {
+        const p = candidateVm.$props || candidateVm;
+        const c = p.contact || candidateVm.contact;
+        if (c && typeof c === "object") { contact = c; break; }
+      }
+      curr = curr.parentElement;
+    }
+
+    // Requires contact.isAttendance === true AND contact.protocol to be a non-empty string.
+    // Bare contact._id, contact_id, name or phone are strictly rejected!
+    if (contact && typeof contact === "object") {
+      if (contact.isAttendance === true && (typeof contact.protocol === "string" || typeof contact.protocol === "number")) {
+        const protocol = String(contact.protocol).trim();
+        if (protocol && !isPhoneLike(protocol)) {
+          // Reject if protocol matches contact's own ID or contact's phone
+          const contactId = String(contact._id || contact.contact_id || "").trim();
+          if (contactId && protocol === contactId) return null;
+          const rawPhone = contact.phone || contact.cellphone || contact.number || contact.telefone;
+          if (rawPhone) {
+            const phoneDigits = String(rawPhone).replace(/\D/g, "");
+            const protDigits = protocol.replace(/\D/g, "");
+            if (phoneDigits && protDigits && phoneDigits === protDigits) return null;
+          }
+          // Verify uniqueness across all cards
+          const matching = cards().filter(c => {
+            let otherContact = null;
+            let otherCurr = c;
+            for (let depth = 0; depth < 4 && otherCurr && otherCurr !== document.body; depth++) {
+              const otherVm = otherCurr.__vue__;
+              if (otherVm) {
+                const otherProps = otherVm.$props || otherVm;
+                const oc = otherProps?.contact || otherVm.contact;
+                if (oc && typeof oc === "object") { otherContact = oc; break; }
+              }
+              otherCurr = otherCurr.parentElement;
+            }
+            return otherContact?.isAttendance === true &&
+              (typeof otherContact?.protocol === "string" || typeof otherContact?.protocol === "number") &&
+              String(otherContact.protocol).trim() === protocol;
+          });
+          if (matching.length === 1) {
+            const displayName = String(contact.name || card.querySelector(".contact-name")?.textContent || "Conversa").trim();
+            return Object.freeze({
+              sourceId: `data-chat-id:protocol:${protocol}`,
+              displayName: displayName || "Conversa"
+            });
+          }
+          return null; // Duplicate protocol fail-closed
+        }
+      }
+    }
+
+    // 3. Explicit attendance object (attendance._id, attendanceId, chatId)
+    const vm = card.__vue__ || card.parentElement?.__vue__;
+    if (!vm) return null;
+    const props = vm.$props || vm;
+    const attendance = props.attendance || props.chat || props.session;
+    let attendanceId = "";
+    if (attendance && typeof attendance === "object") {
+      attendanceId = String(attendance._id || attendance.id || attendance.attendance_id || attendance.chat_id || "").trim();
+    } else if (typeof props.attendanceId === "string" || typeof props.attendanceId === "number") {
+      attendanceId = String(props.attendanceId).trim();
+    } else if (typeof props.chatId === "string" || typeof props.chatId === "number") {
+      attendanceId = String(props.chatId).trim();
+    }
+
+    if (!attendanceId || isPhoneLike(attendanceId)) return null;
+
+    // Contact IDs cannot prove attendance identity:
+    // If attendanceId matches bare contact._id / contact_id without genuine attendance property,
+    // reject it to prevent cross-association across different attendances of the same contact.
+    const contactId = String(props.contact?._id || props.contact?.contact_id || props.contact_id || "").trim();
+    if (attendanceId === contactId && !props.attendance && !props.chat && !props.session && !props.attendanceId && !props.chatId) {
+      return null;
+    }
+
+    // Must be unique across visible cards
+    const matching = cards().filter(c => {
+      const otherVm = c.__vue__ || c.parentElement?.__vue__;
+      const otherProps = otherVm?.$props || otherVm;
+      if (!otherProps) return false;
+      const otherAtt = otherProps.attendance || otherProps.chat || otherProps.session;
+      const otherId = String(
+        (otherAtt && (otherAtt._id || otherAtt.id || otherAtt.attendance_id || otherAtt.chat_id)) ||
+        otherProps.attendanceId || otherProps.chatId || ""
+      ).trim();
+      return otherId === attendanceId;
+    });
+    if (matching.length !== 1) return null;
+
+    const displayName = String(props.contact?.name || card.querySelector(".contact-name")?.textContent || "Conversa").trim();
+    return Object.freeze({
+      sourceId: `vue-attendance:${attendanceId}`,
+      displayName: displayName || "Conversa"
+    });
+  }
 
   function safeIdentity(card) {
     if (!card) return null;
+    const vueId = getVueAttendanceIdentity(card);
+    if (vueId) return vueId;
     const value = String(card.getAttribute("data-chat-id") || "").trim();
-    if (!value || cards().filter(c => String(c.getAttribute("data-chat-id") || "").trim() === value).length !== 1) return null;
-    const id = RecoveryBufferModule.getConversationIdentityFromCard(card);
-    // Contact IDs, generic DOM IDs and name/time stamps cannot prove attendance identity.
-    return id?.sourceId === `data-chat-id:${value}` ? id : null;
+    if (value) {
+      if (cards().filter(c => String(c.getAttribute("data-chat-id") || "").trim() === value).length !== 1) return null;
+      const id = RecoveryBufferModule.getConversationIdentityFromCard(card);
+      // Contact IDs, generic DOM IDs and name/time stamps cannot prove attendance identity.
+      return id?.sourceId === `data-chat-id:${value}` ? id : null;
+    }
+    return null;
   }
 
   function currentIdentity() {
@@ -60,9 +250,18 @@ const SupportFocusModule = (() => {
   }
 
   function cardFor(id) {
-    if (!String(id).startsWith("data-chat-id:")) return null;
-    const matching = cards().filter(c => `data-chat-id:${String(c.getAttribute("data-chat-id") || "").trim()}` === id);
-    return matching.length === 1 && safeIdentity(matching[0]) ? matching[0] : null;
+    const sid = String(id || "");
+    if (sid.startsWith("data-chat-id:")) {
+      const matching = cards().filter(c => `data-chat-id:${String(c.getAttribute("data-chat-id") || "").trim()}` === sid);
+      if (matching.length === 1 && safeIdentity(matching[0])) return matching[0];
+      const bySafe = cards().filter(c => safeIdentity(c)?.sourceId === sid);
+      return bySafe.length === 1 ? bySafe[0] : null;
+    }
+    if (sid.startsWith("vue-attendance:") || sid.startsWith("protocol:")) {
+      const matching = cards().filter(c => safeIdentity(c)?.sourceId === sid);
+      return matching.length === 1 ? matching[0] : null;
+    }
+    return null;
   }
 
   function node(tag, label, className) {
@@ -112,6 +311,11 @@ const SupportFocusModule = (() => {
     const countLow = counts("LOW");
     const totalPrioritized = countNow + countNext + countLow;
 
+    // Ocultar a barra quando ela não tiver utilidade (0 priorizados e filtro inativo)
+    const isUseless = totalPrioritized === 0 && activeFilter === "ALL";
+    root.setAttribute("data-empty", String(isUseless));
+    root.style.display = isUseless ? "none" : "";
+
     const summarySection = node("div", "", "summary");
     const toggleBtn = button("", () => {
       activeFilter = activeFilter === "ALL" ? "PRIORITIZED" : "ALL";
@@ -157,7 +361,7 @@ const SupportFocusModule = (() => {
   function applyFilter() {
     const cardList = cards();
     for (const card of cardList) {
-      if (activeFilter === "PRIORITIZED") {
+      if (isEnabled && activeFilter === "PRIORITIZED") {
         const id = safeIdentity(card);
         const hasPriority = id && cached.items[id.sourceId] && cached.items[id.sourceId].priority;
         card.style.display = hasPriority ? "" : "none";
@@ -168,9 +372,22 @@ const SupportFocusModule = (() => {
   }
 
   function renderCard(card) {
+    if (!isEnabled) {
+      card.querySelector(".atendeai-focus-card-slot")?.remove();
+      return;
+    }
+
     const cardId = safeIdentity(card);
     const item = cardId ? cached.items[cardId.sourceId] : null;
     let slot = card.querySelector(".atendeai-focus-card-slot");
+
+    if (!cardId) {
+      // Unsafe card without verified attendance session identity:
+      // Remove any slot to avoid visual pollution (no dotted boxes, no clutter).
+      slot?.remove();
+      return;
+    }
+
     if (!slot) {
       slot = node("div", "", "card-slot");
       card.appendChild(slot);
@@ -183,54 +400,49 @@ const SupportFocusModule = (() => {
 
     const isCardActive = /(?:^|\s)(?:active|selected|open)(?:\s|$)/.test(String(card.className));
 
-    if (cardId) {
-      if (item && item.priority) {
-        const prioKey = item.priority.toLowerCase();
-        const prioLabel = item.priority === "NOW" ? "● Agora" : item.priority === "NEXT" ? "● Próx." : "● Baixa";
-        const ariaLabel = isCardActive ? "Organizar atendimento" : `Organizar ${cardId.displayName}`;
-        const badgeBtn = button(prioLabel, e => {
-          e?.preventDefault?.(); e?.stopPropagation?.();
-          showEditor(cached.items[cardId?.sourceId] || item, e?.currentTarget || e?.target, card, cardId);
-        }, `badge atendeai-focus-badge-${prioKey}`);
-        badgeBtn.setAttribute("aria-label", ariaLabel);
-        badgeBtn.title = `Prioridade: ${prioLabel} — clique para editar`;
-        badges.appendChild(badgeBtn);
+    if (item && item.priority) {
+      const prioKey = item.priority.toLowerCase();
+      const prioLabel = item.priority === "NOW" ? "● Agora" : item.priority === "NEXT" ? "● Próx." : "● Baixa";
+      const ariaLabel = isCardActive ? "Organizar atendimento" : `Organizar ${cardId.displayName}`;
+      const badgeBtn = button(prioLabel, e => {
+        e?.preventDefault?.(); e?.stopPropagation?.();
+        showEditor(cached.items[cardId?.sourceId] || item, e?.currentTarget || e?.target, card, cardId);
+      }, `badge atendeai-focus-badge-${prioKey}`);
+      badgeBtn.setAttribute("aria-label", ariaLabel);
+      badgeBtn.title = `Prioridade: ${prioLabel} — clique para editar`;
+      badges.appendChild(badgeBtn);
 
-        // Short tags (up to 3)
-        for (const tag of (item.tags || []).slice(0, 3)) {
-          badges.appendChild(node("span", tag, "tag"));
-        }
+      // Short tags: display only when there is space
+      const cardWidth = card.clientWidth || card.getBoundingClientRect?.()?.width || 250;
+      const maxTags = cardWidth < 170 ? 0 : cardWidth < 210 ? 1 : 2;
+      for (const tag of (item.tags || []).slice(0, maxTags)) {
+        badges.appendChild(node("span", tag, "tag"));
+      }
 
-        // Local Alert
-        if (item.alert) {
-          const alertSpan = node("span", "🔔 Resposta", "alert");
-          alertSpan.setAttribute("role", "status");
-          alertSpan.title = "Cliente respondeu neste atendimento";
-          badges.appendChild(alertSpan);
-        }
+      // Local Alert
+      if (item.alert) {
+        const alertSpan = node("span", "🔔 Resposta", "alert");
+        alertSpan.setAttribute("role", "status");
+        alertSpan.title = "Cliente respondeu neste atendimento";
+        badges.appendChild(alertSpan);
+      }
 
-        // Optional Next Step
-        if (item.nextStep) {
-          const stepDiv = node("div", `↳ ${item.nextStep}`, "step");
-          stepDiv.title = item.nextStep;
-          slot.appendChild(stepDiv);
-        }
-      } else {
-        // Safe card, not prioritized yet
-        const ariaLabel = isCardActive ? "Organizar atendimento" : `Organizar ${cardId.displayName}`;
-        const triggerBtn = button("＋ Prioridade", e => {
-          e?.preventDefault?.(); e?.stopPropagation?.();
-          showEditor(item, e?.currentTarget || e?.target, card, cardId);
-        }, "trigger");
-        triggerBtn.setAttribute("aria-label", ariaLabel);
-        triggerBtn.title = `Definir prioridade para ${cardId.displayName}`;
-        badges.appendChild(triggerBtn);
+      // Optional Next Step
+      if (item.nextStep) {
+        const stepDiv = node("div", `↳ ${item.nextStep}`, "step");
+        stepDiv.title = `Próximo passo: ${item.nextStep}`;
+        slot.appendChild(stepDiv);
       }
     } else {
-      // Unsafe card in real SZ without data-chat-id
-      const disabledIndicator = node("span", "Prioridade indisponível", "trigger atendeai-focus-trigger-disabled");
-      disabledIndicator.title = "Identidade do atendimento não autenticada no SZ (salvamento bloqueado por segurança)";
-      badges.appendChild(disabledIndicator);
+      // Safe card, not prioritized yet: compact indicator
+      const ariaLabel = isCardActive ? "Organizar atendimento" : `Organizar ${cardId.displayName}`;
+      const triggerBtn = button("＋ Prioridade", e => {
+        e?.preventDefault?.(); e?.stopPropagation?.();
+        showEditor(item, e?.currentTarget || e?.target, card, cardId);
+      }, "trigger");
+      triggerBtn.setAttribute("aria-label", ariaLabel);
+      triggerBtn.title = `Definir prioridade para ${cardId.displayName}`;
+      badges.appendChild(triggerBtn);
     }
   }
 
@@ -414,7 +626,12 @@ const SupportFocusModule = (() => {
 
   function safeList() {
     const candidates = [];
-    for (const list of document.querySelectorAll(".chats-list, .contacts-list, .contact-list, .scroll-list")) {
+    const nativeRoot = findContactsRoot();
+    const selectors = nativeRoot
+      ? [nativeRoot, ...document.querySelectorAll(".chats-list, .contacts-list, .contact-list, .scroll-list")]
+      : Array.from(document.querySelectorAll(".chats-list, .contacts-list, .contact-list, .scroll-list"));
+
+    for (const list of new Set(selectors)) {
       if (list === document.body || !list.parentElement || !list.querySelector(".sz_contact")) continue;
       if (list.querySelector("input, textarea, .msg") || /(?:^|\s)sz_contact(?:\s|$)/.test(String(list.className))) continue;
       const r = list.getBoundingClientRect?.();
@@ -445,7 +662,102 @@ const SupportFocusModule = (() => {
     return candidates.length === 1 ? candidates[0] : null;
   }
 
+  function findEmAtendimentoHeader() {
+    const list = safeList();
+    const parent = list?.parentElement;
+    if (parent) {
+      const candidates = Array.from(parent.querySelectorAll(".header-text, div.header-text, .native-header, h1, h2, h3, h4, div, span, p"));
+      for (const el of candidates) {
+        if (own(el)) continue;
+        const t = String(el.textContent || "").trim().toLowerCase();
+        if (t.includes("em atendimento")) {
+          return el;
+        }
+      }
+    }
+    const roots = [
+      document.querySelector('.content.active'),
+      document.querySelector('.queue-column'),
+      document.querySelector('#framework-queue'),
+      document.querySelector('#contact-fields'),
+      document.body
+    ].filter(Boolean);
+    for (const rootEl of roots) {
+      const candidates = Array.from(rootEl.querySelectorAll(".header-text, div.header-text, .native-header, .contacts-header, .chats-header, h1, h2, h3, div, span"));
+      for (const el of candidates) {
+        if (own(el)) continue;
+        const t = String(el.textContent || "").trim().toLowerCase();
+        if (t.includes("em atendimento")) {
+          return el;
+        }
+      }
+    }
+    return null;
+  }
+
+  function placeActivationControl() {
+    const list = safeList();
+    if (!list) {
+      activationControl?.remove();
+      activationControl = null;
+      return;
+    }
+
+    if (!activationControl) {
+      activationControl = node("div", "", "activation");
+    }
+
+    const header = findEmAtendimentoHeader();
+    if (header) {
+      activationControl.className = "atendeai-focus-activation atendeai-focus-activation-in-header";
+      if (activationControl.parentElement !== header) {
+        activationControl.remove();
+        header.appendChild(activationControl);
+      }
+    } else {
+      activationControl.className = "atendeai-focus-activation";
+      const fallbackContainer = document.body;
+      if (activationControl.parentElement !== fallbackContainer) {
+        activationControl.remove();
+        fallbackContainer.appendChild(activationControl);
+      }
+    }
+
+    renderActivationControl();
+  }
+
+  function renderActivationControl() {
+    if (!activationControl) return;
+    clear(activationControl);
+    paint(activationControl);
+
+    const switchBtn = button("", async e => {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      try {
+        await setFeatureEnabled(!isEnabled);
+        await refresh();
+      } catch {}
+    }, `switch ${isEnabled ? "atendeai-focus-switch-on" : "atendeai-focus-switch-off"}`);
+
+    switchBtn.setAttribute("role", "switch");
+    switchBtn.setAttribute("aria-checked", String(isEnabled));
+    switchBtn.setAttribute("aria-label", `Prioridades: ${isEnabled ? "Ativado" : "Desativado"}`);
+    switchBtn.title = isEnabled
+      ? "Central de Prioridades: ON (clique para desativar)"
+      : "Central de Prioridades: OFF (clique para ativar)";
+
+    const labelSpan = node("span", "Prioridades: ", "switch-label");
+    const stateSpan = node("span", isEnabled ? "ON" : "OFF", `switch-state ${isEnabled ? "atendeai-focus-switch-state-on" : "atendeai-focus-switch-state-off"}`);
+
+    switchBtn.appendChild(labelSpan);
+    switchBtn.appendChild(stateSpan);
+
+    activationControl.appendChild(switchBtn);
+  }
+
   function placeCentral() {
+    if (!isEnabled) { root?.remove(); root = null; return; }
     const list = safeList();
     if (!list) { root?.remove(); root = null; closeEditor(); closePreview(); return; }
     const maxHeight = `${Math.min(242, centralBudget(list))}px`;
@@ -461,7 +773,7 @@ const SupportFocusModule = (() => {
   }
 
   function verifiedInbound(id) {
-    if (!id) { inboundWatch = null; return null; }
+    if (!id || !String(id.sourceId).startsWith("data-chat-id:")) { inboundWatch = null; return null; }
     const chatId = id.sourceId.slice("data-chat-id:".length);
     const messages = Array.from(document.querySelectorAll(".msg")).filter(m => m.getAttribute("data-chat-id") === chatId);
     const previous = inboundWatch;
@@ -484,7 +796,24 @@ const SupportFocusModule = (() => {
   }
 
   async function refresh() {
-    const request = ++generation; placeCentral();
+    const request = ++generation;
+    isEnabled = await checkFeatureEnabled();
+    placeActivationControl();
+
+    if (!isEnabled) {
+      closeEditor();
+      closePreview();
+      root?.remove();
+      root = null;
+      renderKey = "";
+      cards().forEach(card => {
+        card.querySelector(".atendeai-focus-card-slot")?.remove();
+      });
+      applyFilter();
+      return;
+    }
+
+    placeCentral();
     const current = currentIdentity(), messageId = verifiedInbound(current);
     if (current?.sourceId !== identity?.sourceId) { closeEditor(); closePreview(); }
     identity = current;
@@ -500,7 +829,7 @@ const SupportFocusModule = (() => {
       if (request !== generation) return;
       if (currentIdentity()?.sourceId !== current?.sourceId) { schedule(); return; }
       cached = state;
-      const key = JSON.stringify([identity, tracked(), activeFilter]);
+      const key = JSON.stringify([identity, tracked(), activeFilter, isEnabled]);
       if (key !== renderKey && !editing) {
         renderKey = key;
         renderSummary();
@@ -531,29 +860,36 @@ const SupportFocusModule = (() => {
     return null;
   }
 
+  function requestBridgeSync() {
+    if (typeof document.dispatchEvent === "function") {
+      const evt = typeof CustomEvent === "function" ? new CustomEvent("atendeai:request-sz-sync") : { type: "atendeai:request-sz-sync" };
+      document.dispatchEvent(evt);
+    }
+  }
+
   async function mount() {
-    document.querySelectorAll(".atendeai-focus-anchor, .atendeai-focus-badge, .atendeai-focus-card, .atendeai-focus-card-slot").forEach(el => el.remove());
-    closeEditor(); closePreview(); root?.remove(); root = null; identity = null; renderKey = ""; inboundWatch = null;
+    document.querySelectorAll(".atendeai-focus-anchor, .atendeai-focus-badge, .atendeai-focus-card, .atendeai-focus-card-slot, .atendeai-focus-activation").forEach(el => el.remove());
+    closeEditor(); closePreview(); root?.remove(); root = null; activationControl?.remove(); activationControl = null; identity = null; renderKey = ""; inboundWatch = null;
     cards().forEach(c => { c.style.display = ""; });
     activeFilter = "ALL";
     if (!observer) {
       observer = new MutationObserver(records => {
-        if ((root && !document.body.contains(root)) || records.some(r => !own(r.target) && !(r.type === "childList" && [...r.addedNodes, ...r.removedNodes].length && [...r.addedNodes, ...r.removedNodes].every(own)))) {
+        if ((root && !document.body.contains(root)) || (activationControl && !document.body.contains(activationControl)) || records.some(r => !own(r.target) && !(r.type === "childList" && [...r.addedNodes, ...r.removedNodes].length && [...r.addedNodes, ...r.removedNodes].every(own)))) {
           if (currentIdentity()?.sourceId !== identity?.sourceId) { closeEditor(); closePreview(); inboundWatch = null; }
           schedule();
         }
       });
       observer.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
-      chrome.storage.onChanged?.addListener((changes, area) => { if (area === "local" && changes[KEY]) schedule(); });
-      document.addEventListener("mouseover", e => { const card = eventCard(e.target); if (card && !card.contains(e.relatedTarget)) showPreview(card); });
-      document.addEventListener("mouseout", e => { const card = eventCard(e.target); if (card && !card.contains(e.relatedTarget)) closePreview(); });
-      document.addEventListener("focusin", e => { const card = eventCard(e.target); if (card) showPreview(card); });
-      document.addEventListener("focusout", closePreview);
+      chrome.storage.onChanged?.addListener((changes, area) => {
+        if (area === "local" && (changes[KEY] || changes[ENABLED_KEY] || changes[BADGES_KEY])) schedule();
+      });
+      document.addEventListener("atendeai:sz-bridge-synced", () => schedule());
       document.addEventListener("scroll", e => { closePreview(); if (!editor?.contains(e.target)) closeEditor(); }, true);
       document.addEventListener("pointerdown", e => { if (editor && !editor.contains(e.target) && !anchor?.contains(e.target)) closeEditor(); }, true);
       globalThis.window?.addEventListener?.("blur", () => { closePreview(); closeEditor(); });
       globalThis.window?.addEventListener?.("resize", () => { closePreview(); closeEditor(); schedule(); });
     }
+    requestBridgeSync();
     await refresh();
   }
 
