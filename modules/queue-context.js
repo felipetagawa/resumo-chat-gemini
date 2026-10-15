@@ -14,10 +14,17 @@ const QueueContextModule = (() => {
     if (!value) return null;
     return all.filter(c => String(c.getAttribute("data-chat-id") || "").trim() === value).length === 1 ? value : null;
   }
+  function insideStrip(node) {
+    for (let current = node; current; current = current.parentElement) {
+      if (current.classList?.contains(ROOT)) return true;
+    }
+    return false;
+  }
   function safeList() {
     for (const list of document.querySelectorAll(LIST_SELECTOR)) {
       if (!list.parentElement || !list.querySelector(".sz_contact")) continue;
-      if (list.querySelector("input, textarea, .msg")) continue;
+      // Our own inline editor lives in a strip inside the list; only native fields disqualify it.
+      if (Array.from(list.querySelectorAll("input, textarea, .msg")).some(node => !insideStrip(node))) continue;
       return list;
     }
     return null;
@@ -112,6 +119,8 @@ const QueueContextModule = (() => {
     const list = safeList(), strips = Array.from(document.querySelectorAll(`.${ROOT}`));
     if (!list) { strips.forEach(strip => strip.remove()); return; }
     const all = Array.from(list.querySelectorAll(".sz_contact"));
+    // A framework wrapper per card could clip or overflow onto the next card unseen: fail closed.
+    if (!all.every(card => card.parentElement === list)) { disable("cards dentro de contêineres próprios"); return; }
     if (!flowSafe(all)) { disable("lista sem fluxo normal"); return; }
     const wanted = new Map();
     for (const card of all) {

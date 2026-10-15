@@ -42,8 +42,11 @@ const QueueContextParse = (() => {
   function problemMessages(messages) {
     const list = messages || [], index = dividerIndex(list);
     const texts = items => items.filter(isClient).map(m => clean(m.text)).filter(Boolean);
-    const before = texts(index < 0 ? list : list.slice(0, index));
-    if (before.length || index < 0) return { texts: before, beforeDivider: true };
+    // No divider yet: the technician has not taken the chat, so the input is not final.
+    if (index < 0) return { texts: texts(list), beforeDivider: false };
+    const before = texts(list.slice(0, index));
+    // Greetings alone before the divider are not a problem description worth an AI call.
+    if (before.some(meaningful)) return { texts: before, beforeDivider: true };
     return { texts: texts(list.slice(index + 1)), beforeDivider: false };
   }
 

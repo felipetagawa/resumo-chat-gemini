@@ -177,3 +177,25 @@ test('Escape and blur cancel without saving', async () => {
     assert.equal(strip.querySelector('.atendeai-queue-ctx-problem').textContent, 'linha da ia');
   }
 });
+
+test('final review: an unrelated SZ mutation during inline edit keeps the editor and the save works', async () => {
+  const h = harness({ store: { [KEY]: { version: 1, items: { l: item(null, 'linha da ia') } } } });
+  const l = h.card('Lucia', 'l'); await h.mount();
+  const strip = l.nextElementSibling;
+  strip.querySelector('.atendeai-queue-ctx-problem').fire('dblclick');
+  await h.mutate();
+  const input = strip.querySelector('.atendeai-queue-ctx-input');
+  assert.ok(input, 'editor survives'); assert.equal(l.nextElementSibling, strip);
+  input.value = 'Linha corrigida';
+  await Promise.all(input.fire('keydown', { key: 'Enter' })); await h.flush();
+  assert.deepEqual(h.store[KEY].items.l.problem, { text: 'Linha corrigida', source: 'manual' });
+});
+
+test('final review: cards wrapped in their own container disable the feature', async () => {
+  const { el } = require('./queue-context-harness');
+  const h = harness({ store: { [KEY]: { version: 1, items: { l: item('111111111', 'L') } } } });
+  const l = h.card('Lucia', 'l'); const wrapper = el('div', { class: 'item' });
+  h.list.appendChild(wrapper); wrapper.appendChild(l);
+  await h.mount();
+  assert.equal(h.strips().length, 0); assert.match(h.warns.join('\n'), /desligado/);
+});

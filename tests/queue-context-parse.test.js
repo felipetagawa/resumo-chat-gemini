@@ -94,3 +94,13 @@ test('format and normalize', () => {
   assert.equal(P.normalizeLine('"Certificado novo não emite DANFE."'), 'Certificado novo não emite DANFE');
   assert.equal(P.normalizeLine('x'.repeat(90)).length, 70);
 });
+
+test('final review: greeting-only messages before the divider are not AI input', () => {
+  const r = plain(P.problemMessages([client('boa tarde'), system('Triagem transferiu para Felipe'), client('o pdv travou na venda')]));
+  assert.deepEqual(r, { texts: ['o pdv travou na venda'], beforeDivider: false });
+});
+
+test('final review: without transfer or technician message there is no divider yet, so no AI', () => {
+  const r = plain(P.problemMessages([client('oi'), client('minha nota não sai')]));
+  assert.deepEqual(r, { texts: ['oi', 'minha nota não sai'], beforeDivider: false });
+});
