@@ -87,6 +87,24 @@ class MiniNode {
 
   focus() { this.focused = true; }
 
+  select() {}
+
+  get nextElementSibling() {
+    const siblings = this.parentElement?.children;
+    return siblings ? siblings[siblings.indexOf(this) + 1] || null : null;
+  }
+
+  get previousElementSibling() {
+    const siblings = this.parentElement?.children;
+    return siblings ? siblings[siblings.indexOf(this) - 1] || null : null;
+  }
+
+  fire(type, event = {}) {
+    return (this.listeners[type] || []).map((fn) => fn({
+      type, target: this, preventDefault() {}, stopPropagation() {}, ...event
+    }));
+  }
+
   contains(node) {
     return node === this || this.children.some(child => child.contains(node));
   }

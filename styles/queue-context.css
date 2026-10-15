@@ -1,0 +1,58 @@
+/* styles/queue-context.css
+   Contexto na fila: one fixed 16px line in normal flow after a native card.
+   Sits on the native SZ surface, so it inherits the list text color instead of extension tokens. */
+.atendeai-queue-ctx {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  height: 16px;
+  margin: 0;
+  padding: 0 8px 0 72px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16px;
+  color: inherit;
+  background: transparent;
+}
+.atendeai-queue-ctx-code {
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: 600 11px/16px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  cursor: copy;
+}
+.atendeai-queue-ctx-code:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+.atendeai-queue-ctx-sep {
+  flex: none;
+  opacity: 0.5;
+}
+.atendeai-queue-ctx-problem {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.atendeai-queue-ctx-problem[data-source="heuristic"] {
+  opacity: 0.6;
+}
+.atendeai-queue-ctx-input {
+  flex: 1;
+  min-width: 0;
+  height: 14px;
+  margin: 0;
+  padding: 0 2px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  background: Canvas;
+  color: CanvasText;
+  font: inherit;
+}
