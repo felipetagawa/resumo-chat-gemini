@@ -15,6 +15,7 @@
     gap: 6px;
     box-sizing: border-box;
     padding: 8px;
+    overflow-y: auto;
     background: var(--ai-surface);
     color: var(--ai-text);
     border: 1px solid var(--ai-border-strong);
@@ -127,6 +128,11 @@
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: 6px;
+    /* In a very short dock the card scrolls; the actions stay reachable. */
+    position: sticky;
+    bottom: 0;
+    padding-top: 2px;
+    background: var(--ai-surface);
 }
 
 #containerBotoesGemini .smart-reply-primary,
