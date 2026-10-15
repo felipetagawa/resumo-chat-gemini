@@ -217,47 +217,14 @@ test('message popup and form styles are isolated and use tokens for all visual s
   assert.match(declarations('#popupMensagensPadrao #conteudoMensagens'), /scrollbar-color:\s*var\(--ai-border-strong\) var\(--ai-surface\)/);
 });
 
-test('profile management controls inherit the preview palette and stay under their exclusive namespace', () => {
+test('Smart Reply card lives inside the dock footprint, uses tokens and respects reduced motion', () => {
   const css = fs.readFileSync('styles/smart-reply.css', 'utf8');
-  const selectors = extractSelectors(css).filter(selector => selector.includes('smart-reply-profiles-'));
-  assert.ok(selectors.length > 10);
-  for (const selector of selectors) assert.match(selector, /^\.smart-reply-profiles-/);
-  const profileCss = css.slice(css.indexOf('.smart-reply-profiles-panel {'));
-  assert.doesNotMatch(profileCss, /#[0-9a-f]{3,8}\b/i);
-  assert.match(profileCss, /background: var\(--ai-surface\)/);
-  assert.match(profileCss, /color: var\(--ai-text\)/);
-  assert.match(profileCss, /box-shadow: var\(--ai-focus\)/);
-});
-
-test('profiles fit viewport with one flexible scrolling body and no fixed form', () => {
- const css=fs.readFileSync('styles/smart-reply.css','utf8');
- assert.match(css,/\.smart-reply-preview\[data-profiles-open="true"\][^{]*\{[^}]*top:\s*12px/);
- assert.match(css,/\.smart-reply-profiles-panel\s*\{[^}]*min-height:\s*0/);
- assert.match(css,/\.smart-reply-profiles-body\s*\{[^}]*overflow-y:\s*auto/);
- assert.match(css,/\.smart-reply-preview\[data-profiles-open="true"\][^{]*\{[^}]*bottom:\s*12px[^}]*max-height:\s*calc\(100dvh - 24px\)/);
- assert.doesNotMatch(css,/max-height:\s*280px/);
- assert.doesNotMatch(css,/\.smart-reply-profiles-(?:actions|instruction)[^{]*\{[^}]*position:\s*(fixed|absolute)/);
-});
-
-test('profile sections separate headings, cards and actions with wrapping and theme tokens', () => {
- const css=stripComments(fs.readFileSync('styles/smart-reply.css','utf8'));
- const declarations=selector=>[...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-  .filter(([,selectors])=>splitSelectors(selectors.trim()).includes(selector)).map(([, ,body])=>body).join(';');
- assert.match(declarations('.smart-reply-profiles-body'),/display:\s*flex/);
- assert.match(declarations('.smart-reply-profiles-body'),/gap:\s*20px/);
- assert.match(declarations('.smart-reply-profiles-section'),/gap:\s*12px/);
- for(const selector of ['.smart-reply-profiles-section-header','.smart-reply-profiles-actions']) {
-  assert.match(declarations(selector),/flex-wrap:\s*wrap/);
-  assert.match(declarations(selector),/gap:\s*(?:8|12)px/);
- }
- assert.match(declarations('.smart-reply-profiles-row'),/padding:\s*12px/);
- assert.match(declarations('.smart-reply-profiles-row'),/gap:\s*8px/);
- assert.match(declarations('.smart-reply-profiles-help'),/line-height:\s*1\.5/);
- const button=declarations('.smart-reply-profiles-panel button');
- assert.match(button,/min-width:\s*min\(120px, 100%\)/);assert.match(button,/max-width:\s*100%/);
- assert.match(button,/white-space:\s*normal/);
- const chip=declarations('.smart-reply-profiles-chip');
- assert.match(chip,/color:\s*var\(--ai-primary\)/);assert.match(chip,/background:\s*var\(--ai-primary-soft\)/);
- assert.doesNotMatch(chip,/cursor:\s*pointer/);
- assert.match(css,/\.smart-reply-profiles-panel[^{]*\{[^}]*overflow-wrap:\s*anywhere/);
+  assert.doesNotMatch(css, /position:\s*(fixed|absolute)/);
+  assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b/i);
+  assert.doesNotMatch(css, /smart-reply-profiles|smart-reply-preview|atendeai-reply-context/);
+  assert.match(css, /#containerBotoesGemini\[data-reply-open="true"\] > :not\(\.gemini-dock-toolbar\):not\(#atendeai-smart-reply\)\s*\{[^}]*display:\s*none/);
+  assert.match(css, /\.smart-reply-card\s*\{[^}]*min-height:\s*0/);
+  assert.match(css, /\.smart-reply-text\s*\{[^}]*overflow-y:\s*auto/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.smart-reply-skeleton\s*\{[^}]*animation:\s*none/);
+  assert.match(css, /:focus-visible\s*\{[^}]*box-shadow:\s*var\(--ai-focus\)/);
 });
