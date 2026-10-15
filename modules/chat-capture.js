@@ -76,8 +76,8 @@ const ChatCaptureModule = (() => {
             const knownCustomer = matchesCustomer(normalize(name));
             if (!sent && name && !knownCustomer && !scoped) return [];
             if (!sent && received && name && !knownCustomer) return [];
-            return [{ name: name || (sent ? 'Técnico' : 'Cliente'), message,
-                scoped, customer: !sent && (knownCustomer || (!name && received)) }];
+            return [{ name: name || (sent ? 'Técnico' : 'Cliente'), author: name, message,
+                scoped, customer: !sent && (knownCustomer || (!name && received)), sent }];
         });
         // SZ can update its active card before replacing the old transcript.
         // Without a matching customer or attendance container, fail closed.
@@ -123,6 +123,29 @@ const ChatCaptureModule = (() => {
             }
         }
         return { conversation, fullConversation };
+    }
+
+    const normalizeName = value => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('pt-BR');
+    // Smart Reply needs to know which lines are the technician's own voice.
+    function capturarConversaRotulada(selfName = '') {
+        const self = normalizeName(selfName);
+        const labeled = mensagensParaResposta().map(item => ({ ...item, name: item.customer
+            ? (item.author ? `Cliente (${item.author})` : 'Cliente')
+            : !item.sent ? item.name
+            : !self ? 'Técnico' : normalizeName(item.author) === self ? 'Você' : 'Outro técnico' }));
+        return { conversation: limitarMensagensRecentes(labeled.slice(-12)),
+            fullConversation: labeled.map(item => `${item.name}: ${item.message}`).join('\n') };
+    }
+
+    function mensagensDaResposta() {
+        return mensagensParaResposta().map(({ author, message, sent }) => ({ author, message, sent }));
+    }
+
+    function encontrarComposer() {
+        const candidates = Array.from(document.querySelectorAll('textarea[placeholder*="Digite"], div[contenteditable="true"][role="textbox"], div[contenteditable="true"][placeholder*="Digite"], #twemoji-textarea'))
+            .filter(el => el.offsetWidth > 0 && el.offsetHeight > 0 && getComputedStyle(el).visibility !== 'hidden'
+                && !el.closest?.('#containerBotoesGemini, [id^="atendeai-"]'));
+        return candidates.length === 1 ? candidates[0] : null;
     }
 
     function capturarTextoChat() {
@@ -231,6 +254,9 @@ const ChatCaptureModule = (() => {
     return {
         capturarTextoChat,
         capturarContextoResposta,
+        capturarConversaRotulada,
+        mensagensDaResposta,
+        encontrarComposer,
         identificarAtendimentoResposta,
         observarAtendimentoResposta,
         extrairProblemaDoResumo,
