@@ -66,6 +66,9 @@ function harness(saved = {}) {
     NotificationsModule: { init: noop, verificarNotificacoesChat: noop }
   };
   for (const name of ['ShortcutsModule', 'PreControlModule', 'ObservationsModule', 'RecoveryBufferModule']) context[name] = { init: noop };
+  context.ChatCaptureModule = { observarAtendimentoResposta: noop };
+  context.StyleSamplesModule = { start: noop };
+  context.SmartReplyModule = { retireLegacyProfiles: noop };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('content.js', 'utf8'), context);
   // Dock features have their own tests; keep the entrypoint and onboarding real.
