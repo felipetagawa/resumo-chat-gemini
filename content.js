@@ -90,6 +90,10 @@ function inicializarModulos() {
   PreControlModule.init();
   ObservationsModule.init();
   RecoveryBufferModule.init();
+  // Track attendance ownership from page load, so a same-name switch is caught before the first suggestion.
+  ChatCaptureModule.observarAtendimentoResposta();
+  StyleSamplesModule.start();
+  SmartReplyModule.retireLegacyProfiles();
   void globalThis.ThemeModule?.init?.();
 
   modulosInicializados = true;
@@ -831,11 +835,10 @@ function criarBotoesFlutuantes(visibility, userSector) {
   }));
 
   const botaoSmartReply = createButton('btnSmartReply', 'Sugerir resposta', '',
-    guardFeature(() => SmartReplyModule.open(smartReplyControl.consumeMode())));
+    guardFeature(() => SmartReplyModule.open()));
   botaoSmartReply.type = 'button';
   botaoSmartReply.className += ' atendeai-reply-primary';
   botaoSmartReply.innerHTML = '<svg class="atendeai-reply-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14v10H8l-5 4V3Z"/><path d="M6 7h8M6 10h5"/></svg> Sugerir resposta';
-  const smartReplyControl = SmartReplyModule.mountContextControl(botaoSmartReply);
   botaoDocs.id = 'btnConsultarDocsLoop';
   botaoDocs.className = 'gemini-preserved-link';
   botaoDocs.textContent = 'Consultar Docs';
@@ -889,7 +892,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
   if (showSmartReply || isVisible('btnConsultarDocsLoop')) {
     const replyGroup = document.createElement('div');
     replyGroup.className = 'gemini-report-group';
-    if (showSmartReply) replyGroup.appendChild(smartReplyControl.element);
+    if (showSmartReply) replyGroup.appendChild(botaoSmartReply);
     if (isVisible('btnConsultarDocsLoop')) replyGroup.appendChild(botaoDocs);
     container.appendChild(replyGroup);
   }
