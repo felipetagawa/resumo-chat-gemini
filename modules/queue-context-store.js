@@ -1,0 +1,62 @@
+// modules/queue-context-store.js
+// Local per-attendance context. Only chrome.storage.local; never sent anywhere.
+const QueueContextStore = (() => {
+  const KEY = "atendeai_queue_context_v1", TTL = 3 * 86400000;
+  const LEGACY_KEYS = ["atendeai_support_focus_v1", "atendeai_support_focus_badges_enabled"];
+  const RANK = Object.freeze({ heuristic: 1, ai: 2, manual: 3 });
+  let queue = Promise.resolve();
+
+  function storage(method, value) {
+    return new Promise((resolve, reject) => chrome.storage.local[method](value, data => {
+      const error = chrome.runtime?.lastError;
+      if (error) reject(new Error(error.message)); else resolve(data);
+    }));
+  }
+  function serial(task) {
+    // Two SZ tabs share storage: serialize across tabs when Web Locks exist.
+    const execute = () => globalThis.navigator?.locks?.request ? navigator.locks.request(KEY, task) : task();
+    const run = queue.then(execute, execute); queue = run.catch(() => {}); return run;
+  }
+  async function readAll() { const data = await storage("get", [KEY]); return data?.[KEY]?.items || {}; }
+  function fresh(item) { return !!item && Number.isFinite(item.updatedAt) && Date.now() - item.updatedAt < TTL; }
+  function shape(item) {
+    return { anydesk: item?.anydesk ?? null, problem: item?.problem ?? null, aiRequested: item?.aiRequested === true };
+  }
+  function mergeItem(current, patch) {
+    const next = shape(current);
+    if (patch.anydesk) next.anydesk = String(patch.anydesk);
+    if (patch.aiRequested === true) next.aiRequested = true;
+    const p = patch.problem;
+    if (p?.text && RANK[p.source] && (!next.problem || RANK[p.source] >= RANK[next.problem.source])) {
+      next.problem = { text: String(p.text), source: p.source };
+    }
+    return next;
+  }
+
+  async function get(id) { const item = (await readAll())[id]; return fresh(item) ? item : null; }
+  async function all() {
+    return Object.fromEntries(Object.entries(await readAll()).filter(([, item]) => fresh(item)));
+  }
+  function merge(id, patch) {
+    return serial(async () => {
+      const items = await readAll(), current = fresh(items[id]) ? items[id] : null;
+      const next = mergeItem(current, patch || {});
+      if (!current && !next.anydesk && !next.problem && !next.aiRequested) return null;
+      if (current && JSON.stringify(shape(current)) === JSON.stringify(next)) return current;
+      const saved = { ...next, updatedAt: Date.now() };
+      await storage("set", { [KEY]: { version: 1, items: { ...items, [id]: saved } } });
+      return saved;
+    });
+  }
+  function prune() {
+    return serial(async () => {
+      const items = await readAll();
+      const kept = Object.fromEntries(Object.entries(items).filter(([, item]) => fresh(item)));
+      if (Object.keys(kept).length !== Object.keys(items).length) await storage("set", { [KEY]: { version: 1, items: kept } });
+      await storage("remove", LEGACY_KEYS);
+    });
+  }
+
+  return Object.freeze({ KEY, get, all, merge, prune });
+})();
+globalThis.QueueContextStore = QueueContextStore;
