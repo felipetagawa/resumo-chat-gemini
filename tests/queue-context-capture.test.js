@@ -1,0 +1,41 @@
+// tests/queue-context-capture.test.js
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { harness } = require('./queue-context-harness');
+
+const plain = value => JSON.parse(JSON.stringify(value));
+
+test('reads roles from the open transcript', () => {
+  const h = harness(); h.card('Sergio Murilo de Oliveira', 's-1', true);
+  h.message({ name: 'Sergio Murilo de Oliveira', text: 'foi renovado em agosto' });
+  h.message({ name: 'Automático', text: 'O seu atendimento será iniciado agora', side: 'sent' });
+  h.message({ name: 'Felipe', text: 'Olá, boa tarde', side: 'sent' });
+  h.message({ name: '', text: 'Triagem transferiu para o atendente Felipe', side: '' });
+  assert.deepEqual(plain(h.context.QueueContextCapture.read()), { chatId: 's-1', messages: [
+    { role: 'client', text: 'foi renovado em agosto' },
+    { role: 'system', text: 'O seu atendimento será iniciado agora' },
+    { role: 'agent', text: 'Olá, boa tarde' },
+    { role: 'system', text: 'Triagem transferiu para o atendente Felipe' }] });
+});
+
+test('first name of the customer is enough to confirm ownership', () => {
+  const h = harness(); h.card('Gisele Souza', 'g-1', true);
+  h.message({ name: 'Gisele', text: 'pois não' });
+  assert.equal(h.context.QueueContextCapture.read().chatId, 'g-1');
+});
+
+test('fails closed: no single active card, or transcript of another customer', () => {
+  const none = harness(); none.card('A', 'a'); none.message({ name: 'A', text: 'oi' });
+  assert.equal(none.context.QueueContextCapture.read(), null);
+  const two = harness(); two.card('A', 'a', true); two.card('B', 'b', true); two.message({ name: 'A', text: 'oi' });
+  assert.equal(two.context.QueueContextCapture.read(), null);
+  const swapped = harness(); swapped.card('Cássia', 'c', true); swapped.message({ name: 'Lucia', text: 'erro no xml' });
+  assert.equal(swapped.context.QueueContextCapture.read(), null);
+});
+
+test('messages owned by another chat id are skipped', () => {
+  const h = harness(); h.card('Lucia', 'l', true);
+  h.message({ name: 'Lucia', text: 'mensagem certa' });
+  h.message({ name: 'Lucia', text: 'mensagem de outro chat' }).setAttribute('data-chat-id', 'x');
+  assert.deepEqual(plain(h.context.QueueContextCapture.read().messages.map(m => m.text)), ['mensagem certa']);
+});
