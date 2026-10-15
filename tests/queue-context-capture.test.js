@@ -18,10 +18,18 @@ test('reads roles from the open transcript', () => {
     { role: 'system', text: 'Triagem transferiu para o atendente Felipe' }] });
 });
 
-test('first name of the customer is enough to confirm ownership', () => {
+test('a first name alone never confirms ownership', () => {
   const h = harness(); h.card('Gisele Souza', 'g-1', true);
   h.message({ name: 'Gisele', text: 'pois não' });
+  assert.equal(h.context.QueueContextCapture.read(), null);
+  h.message({ name: 'Gisele Souza', text: 'preciso de ajuda' });
   assert.equal(h.context.QueueContextCapture.read().chatId, 'g-1');
+});
+
+test('two cards with the same full name fail closed', () => {
+  const h = harness(); h.card('Ana Souza', 'a', true); h.card('Ana Souza', 'b');
+  h.message({ name: 'Ana Souza', text: 'oi' });
+  assert.equal(h.context.QueueContextCapture.read(), null);
 });
 
 test('fails closed: no single active card, or transcript of another customer', () => {

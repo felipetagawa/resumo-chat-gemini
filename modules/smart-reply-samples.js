@@ -4,9 +4,16 @@ const StyleSamplesModule = (() => {
   const MAX_ITEMS = 40, MAX_AGE = 60 * 24 * 60 * 60 * 1000, MIN_LEN = 15, MAX_LEN = 300, PER_REQUEST = 8;
   const CONFIRM_WINDOW = 10000, COUNT_DELAY = 250, TICK_DELAY = 300;
   // 9+ digits with single separators covers CPF, CNPJ, phones, AnyDesk codes and NF-e keys.
-  // Local 8-digit phones ("3456-7890", "(11) 3456-7890") and scheme-less domains are caught separately.
-  const SENSITIVE = [/\d(?:[\s.\-\/]?\d){8,}/, /\(\d{2}\)\s?\d{4,5}[-\s]?\d{4}/, /\b\d{4,5}-\d{4}\b/,
-    /[\w.+-]+@[\w-]+\.[\w.-]+/, /\bhttps?:\/\/|\bwww\./i, /\b[a-z0-9-]+\.(?:com|net|org|gov|edu|io|app|dev|br)\b/i];
+  // Local 8-digit phones ("34567890", "3456 7890", "3456-7890") and scheme-less domains are caught separately;
+  // slashes are excluded from the 8-digit rule so dates ("15/10/2026") stay acceptable.
+  // Any "name.letters" is treated as a domain unless it is a well-known file reference ("nota.xml"), so new
+  // suffixes (.support, .digital, ...) cannot slip through. Fails closed on lookalikes such as "ok.obrigado".
+  const FILE_EXT = "xml|pdf|txt|zip|rar|7z|png|jpe?g|gif|bmp|docx?|xlsx?|csv|exe|msi|log|bak|json|html?|ini|dll|sql|rtf|odt|ods|mp[34]|ofx|cer|pfx|p12|tmp|dat|lnk|bat";
+  const SENSITIVE = [/\d(?:[\s.\-\/]?\d){8,}/, /\(\d{2}\)\s?\d{4,5}[-\s]?\d{4}/, /(?<![\d\/.-])\d{4,5}[-\s.]?\d{4}(?![\d\/-])/,
+    /[\w.+-]+@[\w-]+\.[\w.-]+/, /\bhttps?:\/\/|\bwww\./i,
+    new RegExp(`\\b[a-z0-9-]+(?:\\.[a-z0-9-]+)*\\.(?!(?:${FILE_EXT})\\b)[a-z]{2,}\\b`, "i"),
+    /\b(?:[a-z0-9-]+\.){2,}[a-z]{2,}\b/i,
+    /\b[a-z0-9-]+\.[a-z]{2,}\/\S*/i];                              // host/path
   const empty = () => ({ version: 1, selfName: "", items: [] });
   const normalize = value => String(value || "").replace(/\s+/g, " ").trim();
   const key = value => normalize(value).toLocaleLowerCase("pt-BR");
@@ -32,7 +39,17 @@ const StyleSamplesModule = (() => {
       .slice(0, MAX_ITEMS).map(i => ({ text: normalize(i.text), at: i.at }));
     return { version: 1, selfName: typeof raw.selfName === "string" ? normalize(raw.selfName) : "", items };
   }
-  function load() { return enqueue(async () => { state = sanitize(await StorageHelper.get([KEY])); return state; }); }
+  function load() {
+    return enqueue(async () => {
+      const data = await StorageHelper.get([KEY]);
+      state = sanitize(data);
+      // Expired or no-longer-acceptable excerpts must leave storage too, not just memory.
+      if (data?.[KEY] && JSON.stringify(data[KEY]) !== JSON.stringify(state)) {
+        try { await StorageHelper.set({ [KEY]: state }); } catch (_) { /* memory state stays pruned */ }
+      }
+      return state;
+    });
+  }
   function clear() { return enqueue(async () => { state = empty(); await StorageHelper.set({ [KEY]: state }); }); }
   function record(author, text) {
     return enqueue(async () => {

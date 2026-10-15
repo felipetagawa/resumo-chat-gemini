@@ -199,3 +199,39 @@ test('final review: cards wrapped in their own container disable the feature', a
   await h.mount();
   assert.equal(h.strips().length, 0); assert.match(h.warns.join('\n'), /desligado/);
 });
+
+test('unsupported list layouts render no strips; the supported one still does', async () => {
+  const variants = {
+    'block parent': l => { l.parentElement.style.display = 'block'; },
+    'row flex parent': l => { l.parentElement.style.flexDirection = 'row'; },
+    'clipped overflow': l => { l.style.overflowY = 'hidden'; },
+    'non-shrinking list': l => { l.style.flexShrink = '0'; },
+    'too narrow': l => { l.getBoundingClientRect = () => ({ top: 0, bottom: 400, left: 0, right: 150, width: 150, height: 400 }); },
+    'too short': l => { l.getBoundingClientRect = () => ({ top: 0, bottom: 120, left: 0, right: 300, width: 300, height: 120 }); },
+    'right column': l => { l.getBoundingClientRect = () => ({ top: 0, bottom: 400, left: 900, right: 1200, width: 300, height: 400 }); }
+  };
+  for (const [name, change] of Object.entries(variants)) {
+    const h = harness({ store: { [KEY]: { version: 1, items: { l: item('111111111', 'L') } } } });
+    h.context.innerWidth = 1280;
+    h.card('Lucia', 'l'); change(h.list);
+    await h.mount();
+    assert.equal(h.strips().length, 0, name);
+  }
+  const ok = harness({ store: { [KEY]: { version: 1, items: { l: item('111111111', 'L') } } } });
+  ok.context.innerWidth = 1280;
+  ok.card('Lucia', 'l'); ok.list.getBoundingClientRect = () => ({ top: 0, bottom: 400, left: 0, right: 300, width: 300, height: 400 });
+  await ok.mount();
+  assert.equal(ok.strips().length, 1);
+});
+
+test('switching to a same-first-name customer never stores the previous transcript', async () => {
+  const h = harness();
+  const a = h.card('Ana Souza', 'a', true); const b = h.card('Ana Silva', 'b');
+  h.message({ name: 'Ana', text: 'Não emite DANFE' });
+  h.message({ name: 'Ana', text: '123 456 789' });
+  h.message({ name: 'Felipe', text: 'Olá, boa tarde', side: 'sent' });
+  a.className = 'sz_contact'; b.className = 'sz_contact active';
+  await h.mount();
+  assert.equal(h.store.atendeai_queue_context_v1?.items?.b, undefined);
+  assert.equal(h.sent.length, 0);
+});

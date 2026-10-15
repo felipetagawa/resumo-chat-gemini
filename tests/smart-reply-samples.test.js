@@ -5,7 +5,7 @@ const vm = require('node:vm');
 
 const KEY = 'atendeai_style_samples_v1';
 const plain = value => JSON.parse(JSON.stringify(value));
-function harness(store = {}, { deferTimers = false } = {}) {
+function harness(store = {}, { deferTimers = false, failSet = false } = {}) {
   const listeners = {}, timers = [];
   const composer = { value: '', textContent: '', isContentEditable: false, contains: n => n === composer };
   const chat = { token: 'chat:A', messages: [] };
@@ -15,7 +15,7 @@ function harness(store = {}, { deferTimers = false } = {}) {
     chrome: { storage: { onChanged: { addListener() {} } } },
     setTimeout: fn => { if (deferTimers) timers.push(fn); else fn(); return 1; }, clearTimeout() {},
     MutationObserver: class { observe() {} },
-    StorageHelper: { async get() { return plain(store); }, async set(data) { Object.assign(store, plain(data)); } },
+    StorageHelper: { async get() { return plain(store); }, async set(data) { if (failSet) throw new Error('quota'); Object.assign(store, plain(data)); } },
     ChatCaptureModule: { identificarAtendimentoResposta: () => chat.token,
       mensagensDaResposta: () => chat.messages.map(m => ({ ...m })), encontrarComposer: () => composer }
   };
@@ -119,4 +119,54 @@ test('envio rápido não confirma quando só existia a mesma frase de um colega'
   h.send('Carlos Suporte', TEXT);
   h.type(TEXT); h.clearComposer(); h.runTimers(); await h.tick(1000);
   assert.equal(h.store[KEY], undefined);
+});
+
+test('telefones locais e URLs sem esquema são rejeitados; datas e frases comuns continuam aceitas', () => {
+  const { M } = harness();
+  for (const bad of ['Me liga no 34567890 depois', 'Abra suporte.empresa.tech/login para conferir', 'Meu zap é 3456 7890 pode chamar',
+    'Entra em portal.empresa.com.br pra baixar', 'Baixa em empresa.com/download agora', 'Abra empresa.support para conferir', 'Acesse empresa.digital para baixar', 'Veja empresa.software para conferir', 'Fala no 11987654321 então ok'])
+    assert.equal(M.accept(bad), false, bad);
+  for (const good of ['Data: 15/10/2026, pode ser?', 'Vou enviar o arquivo nota.xml agora mesmo', 'Mandei o relatorio.pdf e o backup.zip pra você', 'Versão 2.4.1 instalada, tudo certo?',
+    'Consegue me mandar o print da tela agora?', 'Vence em 15.10.2026, ok pessoal?'])
+    assert.equal(M.accept(good), true, good);
+});
+
+test('amostras sensíveis já guardadas não entram no pedido e saem do armazenamento', async () => {
+  const now = Date.now();
+  const h = harness({ [KEY]: { version: 1, selfName: 'Felipe', items: [
+    { text: 'Me liga no 34567890 depois', at: now }, { text: 'Abra suporte.empresa.tech/login para conferir', at: now - 1 },
+    { text: TEXT, at: now - 2 }] } });
+  await h.M.load();
+  assert.deepEqual(plain(h.M.forRequest('')), [TEXT]);
+  assert.deepEqual(h.store[KEY].items.map(i => i.text), [TEXT]);
+});
+
+test('amostras vencidas são removidas do armazenamento ao carregar, sem perder gravações concorrentes', async () => {
+  const now = Date.now();
+  const h = harness({ [KEY]: { version: 1, selfName: 'Felipe Okamoto', items: [
+    { text: 'Amostra velha demais do técnico', at: now - 61 * 24 * 60 * 60 * 1000 }, { text: TEXT, at: now }] } });
+  const loading = h.M.load();
+  h.type('Pode me mandar o print da tela?'); h.clearComposer(); h.send('Felipe Okamoto', 'Pode me mandar o print da tela?');
+  await loading; await h.tick(1000);
+  const texts = h.store[KEY].items.map(i => i.text);
+  assert.equal(texts.includes('Amostra velha demais do técnico'), false);
+  assert.deepEqual(texts.sort(), ['Pode me mandar o print da tela?', TEXT].sort());
+});
+
+test('falha ao gravar a poda mantém a memória limpa e não lança', async () => {
+  const now = Date.now();
+  const h = harness({ [KEY]: { version: 1, selfName: 'Felipe', items: [
+    { text: 'Amostra velha demais do técnico', at: now - 61 * 24 * 60 * 60 * 1000 }, { text: TEXT, at: now }] } }, { failSet: true });
+  await h.M.load();
+  assert.equal(h.M.count(), 1);
+});
+
+test('domínios com sufixos fora de lista saem do armazenamento e do pedido', async () => {
+  const now = Date.now();
+  const h = harness({ [KEY]: { version: 1, selfName: 'Felipe', items: [
+    { text: 'Abra empresa.support para conferir', at: now }, { text: 'Veja empresa.software para conferir', at: now - 1 },
+    { text: 'Vou enviar o arquivo nota.xml agora mesmo', at: now - 2 }] } });
+  await h.M.load();
+  assert.deepEqual(plain(h.M.forRequest('')), ['Vou enviar o arquivo nota.xml agora mesmo']);
+  assert.deepEqual(h.store[KEY].items.map(i => i.text), ['Vou enviar o arquivo nota.xml agora mesmo']);
 });

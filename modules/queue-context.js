@@ -20,9 +20,20 @@ const QueueContextModule = (() => {
     }
     return false;
   }
+  // Same admission rules the previous list adapter used: a left-column, natively scrolling flex-column list.
+  function supportedLayout(list) {
+    const r = rect(list);
+    const half = Number(globalThis.innerWidth) / 2;
+    if (r && (r.width < 210 || r.height < 200 || (half > 0 && r.left > half))) return false;
+    if (!globalThis.getComputedStyle) return true;
+    const parentStyle = getComputedStyle(list.parentElement), listStyle = getComputedStyle(list);
+    return parentStyle.display === "flex" && parentStyle.flexDirection === "column"
+      && Number(listStyle.flexShrink) !== 0 && /auto|scroll/.test(String(listStyle.overflowY));
+  }
   function safeList() {
     for (const list of document.querySelectorAll(LIST_SELECTOR)) {
-      if (!list.parentElement || !list.querySelector(".sz_contact")) continue;
+      if (list === document.body || !list.parentElement || !list.querySelector(".sz_contact")) continue;
+      if (!supportedLayout(list)) continue;
       // Our own inline editor lives in a strip inside the list; only native fields disqualify it.
       if (Array.from(list.querySelectorAll("input, textarea, .msg")).some(node => !insideStrip(node))) continue;
       return list;

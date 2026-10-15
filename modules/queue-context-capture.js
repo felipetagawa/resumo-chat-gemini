@@ -29,8 +29,12 @@ const QueueContextCapture = (() => {
     const sameId = Array.from(document.querySelectorAll(".sz_contact")).filter(c => clean(c.getAttribute("data-chat-id")) === chatId);
     if (!chatId || sameId.length !== 1) return null;
     const customer = key(card.querySelector(".contact-name")?.textContent);
-    const first = customer.split(" ")[0];
-    const isCustomer = name => !!customer && (name === customer || (first.length >= 3 && name === first));
+    // A first name cannot identify an attendance ("Ana Souza" vs "Ana Silva"): only the full name counts,
+    // and only when no other card shares it.
+    const sameName = Array.from(document.querySelectorAll(".sz_contact"))
+      .filter(c => key(c.querySelector(".contact-name")?.textContent) === customer).length;
+    if (!customer || sameName !== 1) return null;
+    const isCustomer = name => name === customer;
     const messages = []; let customerSeen = false;
     for (const msg of document.querySelectorAll(".msg")) {
       if (foreign(msg, chatId)) continue;

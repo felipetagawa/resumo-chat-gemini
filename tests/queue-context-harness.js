@@ -19,8 +19,12 @@ function harness({ store = {}, send } = {}) {
       constructor(fn) { this.fn = fn; observers.push(this); }
       observe() {} disconnect() { this.disconnected = true; }
     },
+    // Defaults describe the supported SZ layout: body is a flex column holding a natively scrolling list.
     getComputedStyle: n => ({ position: n.style.position || 'static', transform: n.style.transform || 'none',
-      display: n.style.display || 'block', flexDirection: n.style.flexDirection || 'row' }),
+      display: n.style.display || (n.tagName === 'body' ? 'flex' : 'block'),
+      flexDirection: n.style.flexDirection || (n.tagName === 'body' ? 'column' : 'row'),
+      flexShrink: n.style.flexShrink ?? '1',
+      overflowY: n.style.overflowY || (n.className.includes('chats-list') ? 'auto' : 'visible') }),
     navigator: { clipboard: { async writeText(v) { copied.push(v); } } },
     MessagingHelper: { async send(message) { sent.push(message); return send ? send(message) : { success: false }; } },
     chrome: { runtime: {}, storage: {
