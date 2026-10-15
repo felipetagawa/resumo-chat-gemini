@@ -497,17 +497,9 @@
 
     <section id="sec-ia" class="page-section">
       <div class="card">
-        <h2>Estilo de Sugerir resposta</h2>
-
-        <label for="smartReplyProfile">Perfil padrão de Sugerir resposta</label>
-        <select id="smartReplyProfile">
-          <option value="DIRECT">Direta</option>
-          <option value="EMPATHETIC">Empática</option>
-          <option value="DIDACTIC">Didática</option>
-        </select>
-        <div class="hint">Salvo neste navegador. A resposta sempre passa por preview antes da inserção.</div>
-
-        <div class="hint">Para criar, editar ou duplicar estilos, abra Sugerir resposta e clique em Perfis.</div>
+        <h2>Sugerir resposta</h2>
+        <div class="hint">A sugestão imita o seu jeito de escrever usando mensagens que você mesmo enviou neste navegador. Elas ficam salvas só aqui e vão junto apenas quando você pede uma sugestão.</div>
+        <button id="clearStyleSamples" type="button">Limpar amostras de estilo (<span id="styleSamplesCount">0</span>)</button>
         <div class="hint">O antigo prompt global foi descontinuado. Seu conteúdo salvo permanece no navegador e não é usado nem convertido automaticamente.</div>
         <div id="status" role="status"></div>
       </div>
@@ -621,7 +613,6 @@
   </main>
 
   <script src="modules/theme.js"></script>
-  <script src="modules/smart-reply-profiles.js"></script>
   <script src="options.js"></script>
 
   <footer class="app-footer">

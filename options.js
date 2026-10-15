@@ -16,7 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
     openCredits: document.getElementById("openCredits"),
     creditsDialog: document.getElementById("creditsDialog"),
     closeCredits: document.getElementById("closeCredits"),
-    smartReplyProfile: document.getElementById("smartReplyProfile"),
+    clearStyleSamples: document.getElementById("clearStyleSamples"),
+    styleSamplesCount: document.getElementById("styleSamplesCount"),
     status: document.getElementById("status"),
     historyList: document.getElementById("historyList"),
     btnLimpar: document.getElementById("limparHistorico"),
@@ -1800,20 +1801,19 @@ document.addEventListener("DOMContentLoaded", () => {
     setNameUI(name);
 
     const base = await storageGet(["history", "chamado_manual_history", "customMessages", "versionHistory"]);
-    if (el.smartReplyProfile) {
-      await SmartReplyProfilesModule.load();
-      Array.from(el.smartReplyProfile.children).forEach(option => option.remove());
-      for (const profile of SmartReplyProfilesModule.list()) {
-        const option = document.createElement("option"); option.value = profile.id;
-        option.textContent = profile.builtin ? profile.name : `Meu: ${profile.name}`;
-        el.smartReplyProfile.appendChild(option);
-      }
-      el.smartReplyProfile.value = SmartReplyProfilesModule.defaultId();
-      el.smartReplyProfile.addEventListener("change", async () => {
-        const profile = el.smartReplyProfile.value;
-        if (!SmartReplyProfilesModule.get(profile)) { el.smartReplyProfile.value = SmartReplyProfilesModule.defaultId(); return; }
-        try { await SmartReplyProfilesModule.setDefault(profile); }
-        catch (err) { if (el.status) el.status.textContent = err.message; }
+    // Style samples: count and clear only; the content script owns collection.
+    if (el.clearStyleSamples) {
+      const STYLE_SAMPLES_KEY = "atendeai_style_samples_v1";
+      const paintStyleSamples = async () => {
+        const data = await storageGet([STYLE_SAMPLES_KEY]);
+        const items = data?.[STYLE_SAMPLES_KEY]?.items;
+        el.styleSamplesCount.textContent = String(Array.isArray(items) ? items.length : 0);
+      };
+      await paintStyleSamples();
+      el.clearStyleSamples.addEventListener("click", async () => {
+        await new Promise(resolve => chrome.storage.local.remove(STYLE_SAMPLES_KEY, resolve));
+        await paintStyleSamples();
+        if (el.status) el.status.textContent = "Amostras de estilo apagadas.";
       });
     }
 
