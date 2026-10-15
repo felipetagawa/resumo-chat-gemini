@@ -5,8 +5,8 @@ Nada foi enviado por push nem publicado; o deploy da API fica com você.
 
 ## Verificação automática (15/10/2026)
 
-- API: `./mvnw test` → `Tests run: 113, Failures: 0, Errors: 0, Skipped: 0` · `node --test eval/smart-reply/` → 53 pass, 0 fail.
-- Extensão: `node --test tests/` → 275 pass, 0 fail.
+- API: `./mvnw test` → `Tests run: 116, Failures: 0, Errors: 0, Skipped: 0` · `node --test eval/smart-reply/` → 53 pass, 0 fail.
+- Extensão: `node --test tests/` → 279 pass, 0 fail.
 
 ## Revisão visual (preview estático do card, tokens reais, claro e escuro, 85/100/115%)
 
@@ -14,6 +14,10 @@ Nada foi enviado por push nem publicado; o deploy da API fica com você.
 - Achado e correção: com o dock muito curto (altura 140) o botão **Inserir** ficava cortado. O card agora rola por dentro e a barra de ações fica fixada embaixo (`position: sticky`), então as ações continuam alcançáveis sem o card crescer.
 - Limite conhecido: a 140 px de altura sobra pouco espaço para o texto (rola); o dock só fica assim com poucos botões ativos. Confirme no QA 2.
 - Capturas: `side-session-notes/<sessão>/smart-reply-screenshots/` (antes/depois a 100%, 85%, 115%).
+
+## Corrigido na revisão final
+
+Envio rápido (balão renderizado antes do recontar) agora confirma; filtros de telefone de 8 dígitos e domínio sem `http`; balão enviado sem nome fica "Técnico"; mudar tamanho/minimizar/redimensionar o dock fecha o card; `ReplyPolish` só corta fecho que seja só fecho e remove aberturas como "Agradeço o contato!".
 
 ## Checklist (você no SZ real)
 
