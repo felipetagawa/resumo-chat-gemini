@@ -89,3 +89,48 @@ test('own strip mutations do not schedule work', async () => {
   h.notify([{ target: h.list, addedNodes: [], removedNodes: [] }]);
   assert.equal(h.timers.size, 1);
 });
+
+test('opening a chat stores heuristic + anydesk, then the AI line once', async () => {
+  const h = harness({ send: async () => ({ success: true, linha: 'Certificado novo, não emite DANFE.' }) });
+  const card = h.card('Sergio Murilo', 's-1', true);
+  h.message({ name: 'Sergio Murilo', text: 'Bom dia' });
+  h.message({ name: 'Sergio Murilo', text: 'Acabei de instalar um certificado e não emito danfe' });
+  h.message({ name: 'Triagem', text: 'Pode me passar o AnyDesk?', side: 'sent' });
+  h.message({ name: 'Sergio Murilo', text: '123 456 789' });
+  h.message({ name: '', text: 'Triagem transferiu para o atendente Felipe', side: '' });
+  await h.mount();
+  assert.equal(h.sent.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(h.sent[0])), { action: 'gerarLinhaProblema',
+    mensagens: 'Bom dia\nAcabei de instalar um certificado e não emito danfe\n123 456 789' });
+  const stored = h.store.atendeai_queue_context_v1.items['s-1'];
+  assert.equal(stored.anydesk, '123456789');
+  assert.deepEqual(stored.problem, { text: 'Certificado novo, não emite DANFE', source: 'ai' });
+  assert.equal(card.nextElementSibling.querySelector('.atendeai-queue-ctx-problem').textContent, 'Certificado novo, não emite DANFE');
+  await h.mutate(); await h.mutate();
+  assert.equal(h.sent.length, 1);
+});
+
+test('problem only after the transfer: heuristic line, no AI call', async () => {
+  const h = harness();
+  h.card('Gisele', 'g-1', true);
+  h.message({ name: '', text: 'Triagem transferiu para o atendente Felipe', side: '' });
+  h.message({ name: 'Gisele', text: 'oi' });
+  h.message({ name: 'Gisele', text: 'o pdv travou na venda' });
+  await h.mount();
+  assert.equal(h.sent.length, 0);
+  assert.deepEqual(h.store.atendeai_queue_context_v1.items['g-1'].problem, { text: 'o pdv travou na venda', source: 'heuristic' });
+});
+
+test('AI failure or rejected messaging keeps heuristic and never retries', async () => {
+  for (const send of [async () => ({ success: false }), async () => { throw new Error('Extension context invalidated'); }]) {
+    const h = harness({ send });
+    h.card('Lucia', 'l', true);
+    h.message({ name: 'Lucia', text: 'erro na rejeição 539' });
+    h.message({ name: 'Felipe', text: 'Olá', side: 'sent' });
+    await h.mount(); await h.mutate();
+    assert.equal(h.sent.length, 1);
+    const stored = h.store.atendeai_queue_context_v1.items.l;
+    assert.equal(stored.aiRequested, true);
+    assert.deepEqual(stored.problem, { text: 'erro na rejeição 539', source: 'heuristic' });
+  }
+});

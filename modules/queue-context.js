@@ -118,8 +118,35 @@ const QueueContextModule = (() => {
     if (disabled) return;
     clearTimeout(timer); timer = setTimeout(tick, 250);
   }
+  const pending = new Set();
+  async function capture() {
+    const snapshot = QueueContextCapture.read();
+    if (!snapshot) return;
+    const P = QueueContextParse, { chatId, messages } = snapshot;
+    const source = P.problemMessages(messages), heuristic = P.heuristicLine(source.texts);
+    const saved = await QueueContextStore.merge(chatId, {
+      anydesk: P.detectAnyDesk(messages),
+      problem: heuristic ? { text: heuristic, source: "heuristic" } : null
+    });
+    if (saved) items[chatId] = saved;
+    const input = source.beforeDivider ? P.buildAiInput(source.texts) : "";
+    if (!input || saved?.aiRequested || pending.has(chatId)) return;
+    pending.add(chatId);
+    items[chatId] = await QueueContextStore.merge(chatId, { aiRequested: true });
+    await requestLine(chatId, input).finally(() => pending.delete(chatId));
+  }
+  async function requestLine(chatId, mensagens) {
+    try {
+      const response = await MessagingHelper.send({ action: "gerarLinhaProblema", mensagens });
+      const text = response?.success ? QueueContextParse.normalizeLine(response.linha) : "";
+      if (text) items[chatId] = await QueueContextStore.merge(chatId, { problem: { text, source: "ai" } });
+    } catch (_) {
+      // Heuristic stays; one request per attendance, no retry and no visible error.
+    }
+  }
   async function tick() {
     if (disabled) return;
+    try { await capture(); } catch (error) { console.warn(`[AtendeAI] Contexto na fila: captura ignorada (${error?.message}).`); }
     reconcile();
   }
 

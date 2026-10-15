@@ -584,3 +584,26 @@ test('CUSTOM wire uses only styleInstruction while native requests omit it', asy
   await background.dispatch({ action: 'gerarResposta', conversation: 'CHAT', profile: 'DIRECT', styleInstruction: 'IGNORED' });
   assert.equal(Object.hasOwn(payloads[1], 'styleInstruction'), false);
 });
+
+test("linha do problema: envia somente mensagens e devolve a linha", async () => {
+  let url, body, signal;
+  const background = loadBackground({ fetchImpl: async (u, options) => {
+    url = u; body = JSON.parse(options.body); signal = options.signal;
+    return { ok: true, async json() { return { linha: "Certificado novo não emite DANFE" }; }, async text() { return ""; } };
+  } });
+  const response = await background.dispatch({ action: "gerarLinhaProblema", mensagens: " erro no xml " });
+  assert.match(url, /\/api\/gemini\/linha-problema$/);
+  assert.deepEqual(body, { mensagens: "erro no xml" });
+  assert.ok(signal);
+  assert.deepEqual(JSON.parse(JSON.stringify(response)), { success: true, linha: "Certificado novo não emite DANFE" });
+});
+
+test("linha do problema: entrada inválida ou falha da API devolvem success false sem chamar fetch indevidamente", async () => {
+  let calls = 0;
+  const background = loadBackground({ fetchImpl: async () => { calls++; throw new Error("rede"); } });
+  assert.deepEqual({ ...(await background.dispatch({ action: "gerarLinhaProblema", mensagens: "" })) }, { success: false });
+  assert.deepEqual({ ...(await background.dispatch({ action: "gerarLinhaProblema", mensagens: "x".repeat(1501) })) }, { success: false });
+  assert.equal(calls, 0);
+  assert.deepEqual({ ...(await background.dispatch({ action: "gerarLinhaProblema", mensagens: "erro" })) }, { success: false });
+  assert.equal(calls, 1);
+});

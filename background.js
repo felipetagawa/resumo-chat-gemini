@@ -180,6 +180,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request?.action === "gerarLinhaProblema") {
+    (async () => {
+      try {
+        const mensagens = typeof request.mensagens === "string" ? request.mensagens.trim() : "";
+        if (!mensagens || mensagens.length > 1500) {
+          safeSend({ success: false });
+          return;
+        }
+        const apiBaseUrl = await getApiBaseUrl();
+        const result = await apiFetchJson(`${apiBaseUrl}/api/gemini/linha-problema`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mensagens }),
+          signal: AbortSignal.timeout(10000)
+        });
+        const linha = typeof result?.linha === "string" ? result.linha.trim() : "";
+        safeSend(linha ? { success: true, linha } : { success: false });
+      } catch (_) {
+        safeSend({ success: false });
+      }
+    })();
+    return true;
+  }
+
   if (request?.action === "gerarResposta") {
     (async () => {
       try {
