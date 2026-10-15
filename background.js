@@ -207,19 +207,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       try {
         const conversation = typeof request.conversation === "string" ? request.conversation.trim() : "";
         const promptComplement = typeof request.promptComplement === "string" ? request.promptComplement.trim() : "";
-        const styleInstruction = typeof request.styleInstruction === "string" ? request.styleInstruction.trim() : "";
+        const replyInstruction = typeof request.replyInstruction === "string" ? request.replyInstruction.trim() : "";
+        const samples = request.styleSamples;
+        const samplesValid = samples == null || (Array.isArray(samples) && samples.length <= 8
+          && samples.every(s => typeof s === "string" && s.trim() && s.length <= 300));
         if (!conversation || conversation.length > 16000 || promptComplement.length > 2000
-          || !["DIRECT", "EMPATHETIC", "DIDACTIC", "CUSTOM"].includes(request.profile)
-          || (request.styleInstruction != null && typeof request.styleInstruction !== "string")
-          || (typeof request.styleInstruction === "string" && request.styleInstruction.length > 600)
-          || (request.profile === "CUSTOM" && !styleInstruction)
+          || (request.replyInstruction != null && typeof request.replyInstruction !== "string")
+          || replyInstruction.length > 600 || !samplesValid
           || (request.regenerate != null && typeof request.regenerate !== "boolean")) {
-          safeSend({ success: false, erro: "Contexto ou perfil inválido para sugerir resposta." });
+          safeSend({ success: false, erro: "Contexto inválido para sugerir resposta." });
           return;
         }
-        const payload = { conversation, profile: request.profile, regenerate: request.regenerate === true };
+        const payload = { conversation, regenerate: request.regenerate === true };
         if (promptComplement) payload.promptComplement = promptComplement;
-        if (request.profile === "CUSTOM") payload.styleInstruction = styleInstruction;
+        if (replyInstruction) payload.replyInstruction = replyInstruction;
+        if (samples?.length) payload.styleSamples = samples.map(s => s.trim());
         const apiBaseUrl = await getApiBaseUrl();
         const result = await apiFetchJson(`${apiBaseUrl}/api/gemini/responder`, {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),

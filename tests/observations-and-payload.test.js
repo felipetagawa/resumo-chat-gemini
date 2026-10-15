@@ -502,7 +502,7 @@ test('Smart Reply envia somente contrato dedicado sem privateNote, recovery ou h
   const background = loadBackground({ storageData: persisted, fetchImpl: async (url, options) => {
     calls++;
     assert.match(url, /\/api\/gemini\/responder$/);
-    assert.deepEqual(JSON.parse(options.body), { conversation: 'Cliente: oi', profile: 'EMPATHETIC', regenerate: true, promptComplement: 'observacao' });
+    assert.deepEqual(JSON.parse(options.body), { conversation: 'Cliente: oi', regenerate: true, promptComplement: 'observacao' });
     return { ok: true, async json() { return { reply: 'Resposta' }; } };
   } });
   const response = await background.dispatch({ action: 'gerarResposta', conversation: 'Cliente: oi', profile: 'EMPATHETIC',
@@ -559,7 +559,6 @@ test('Smart Reply valida localmente e propaga erro sem afetar composer', async (
   for (const request of [
     { conversation: '', profile: 'DIRECT' },
     { conversation: 'x'.repeat(16001), profile: 'DIRECT' },
-    { conversation: 'oi', profile: 'JEV' },
     { conversation: 'oi', profile: 'DIRECT', promptComplement: 'x'.repeat(2001) },
     { conversation: 'oi', profile: 'DIRECT', regenerate: 'prompt' }
   ]) assert.equal((await background.dispatch({ action: 'gerarResposta', ...request })).success, false);
@@ -568,21 +567,28 @@ test('Smart Reply valida localmente e propaga erro sem afetar composer', async (
   assert.match(response.erro, /Limite de sugestões/); assert.equal(calls, 1);
 });
 
-test('CUSTOM wire uses only styleInstruction while native requests omit it', async () => {
+test('gerarResposta envia direcionar e amostras e não envia mais perfil', async () => {
   const payloads = [];
   const background = loadBackground({ fetchImpl: async (url, options) => {
     payloads.push(JSON.parse(options.body)); return { ok: true, async json() { return { reply: 'OK' }; } };
   } });
-  for (const styleInstruction of [undefined, '', ' ', 'x'.repeat(601), 3, {}, true]) {
-    const response = await background.dispatch({ action: 'gerarResposta', conversation: 'CHAT', profile: 'CUSTOM', styleInstruction });
-    assert.equal(response.success, false);
+  const response = await background.dispatch({ action: 'gerarResposta', conversation: ' Cliente (Ana): oi ', promptComplement: 'ADENDO',
+    replyInstruction: ' peça o XML ', styleSamples: [' Opa, beleza? '], regenerate: true, profile: 'DIRECT', styleInstruction: 'LEGADO', privateNote: 'PRIVADO' });
+  assert.equal(response.success, true);
+  assert.deepEqual(payloads[0], { conversation: 'Cliente (Ana): oi', promptComplement: 'ADENDO', replyInstruction: 'peça o XML',
+    styleSamples: ['Opa, beleza?'], regenerate: true });
+});
+
+test('gerarResposta rejeita direcionar e amostras inválidos sem chamar a API', async () => {
+  let calls = 0;
+  const background = loadBackground({ fetchImpl: async () => { calls++; return { ok: true, async json() { return { reply: 'OK' }; } }; } });
+  for (const extra of [{ replyInstruction: 'x'.repeat(601) }, { replyInstruction: 3 }, { styleSamples: 'solto' },
+    { styleSamples: Array(9).fill('amostra válida') }, { styleSamples: ['x'.repeat(301)] }, { styleSamples: [' '] }, { styleSamples: [12] }]) {
+    assert.equal((await background.dispatch({ action: 'gerarResposta', conversation: 'oi', ...extra })).success, false);
   }
-  assert.equal(payloads.length, 0);
-  await background.dispatch({ action: 'gerarResposta', conversation: 'CHAT', promptComplement: 'ADDENDUM', profile: 'CUSTOM',
-    styleInstruction: 'x'.repeat(600), profileName: 'LOCAL_NAME', profileId: 'LOCAL_ID', privateNote: 'PRIVATE', summaryObservation: 'SUMMARY' });
-  assert.deepEqual(payloads[0], { conversation: 'CHAT', promptComplement: 'ADDENDUM', profile: 'CUSTOM', styleInstruction: 'x'.repeat(600), regenerate: false });
-  await background.dispatch({ action: 'gerarResposta', conversation: 'CHAT', profile: 'DIRECT', styleInstruction: 'IGNORED' });
-  assert.equal(Object.hasOwn(payloads[1], 'styleInstruction'), false);
+  assert.equal(calls, 0);
+  assert.equal((await background.dispatch({ action: 'gerarResposta', conversation: 'oi' })).success, true);
+  assert.equal(calls, 1);
 });
 
 test("linha do problema: envia somente mensagens e devolve a linha", async () => {
