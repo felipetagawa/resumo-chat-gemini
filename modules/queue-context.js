@@ -35,6 +35,35 @@ const QueueContextModule = (() => {
   function hasContent(item) { return !!(item?.anydesk || item?.problem?.text); }
   function signature(item) { return JSON.stringify([item?.anydesk || "", item?.problem?.text || "", item?.problem?.source || ""]); }
 
+  async function copy(button, digits) {
+    try { await navigator.clipboard.writeText(digits); } catch (_) { return; }
+    const label = button.textContent, done = "copiado ✓";
+    button.textContent = done;
+    setTimeout(() => { if (button.textContent === done) button.textContent = label; }, 1500);
+  }
+  function startEdit(strip, span) {
+    const id = strip.getAttribute("data-for-chat");
+    const input = document.createElement("input");
+    input.type = "text"; input.className = `${ROOT}-input`; input.maxLength = QueueContextParse.LIMIT;
+    input.value = span.textContent; input.setAttribute("aria-label", "Editar linha do problema");
+    let finished = false;
+    const finish = async save => {
+      if (finished) return; finished = true;
+      const text = save ? QueueContextParse.normalizeLine(input.value) : "";
+      if (text) items[id] = await QueueContextStore.merge(id, { problem: { text, source: "manual" } }) || items[id];
+      input.remove();
+      strip.setAttribute("data-signature", "");
+      reconcile();
+    };
+    input.addEventListener("keydown", event => {
+      event.stopPropagation?.(); // SZ global shortcuts must not see keys typed here.
+      if (event.key === "Enter") { event.preventDefault?.(); return finish(true); }
+      if (event.key === "Escape") { event.preventDefault?.(); return finish(false); }
+    });
+    input.addEventListener("blur", () => finish(false));
+    strip.insertBefore(input, span); span.remove();
+    input.focus(); input.select?.();
+  }
   function fill(strip, item) {
     Array.from(strip.children).forEach(child => child.remove());
     strip.setAttribute("data-signature", signature(item));
@@ -45,6 +74,7 @@ const QueueContextModule = (() => {
       code.title = "Copiar código AnyDesk";
       code.setAttribute("aria-label", `Copiar AnyDesk ${item.anydesk}`);
       strip.appendChild(code);
+      code.addEventListener("click", () => copy(code, item.anydesk));
     }
     if (item.problem?.text) {
       if (item.anydesk) {
@@ -55,6 +85,7 @@ const QueueContextModule = (() => {
       const line = document.createElement("span");
       line.className = `${ROOT}-problem`; line.setAttribute("data-source", item.problem.source);
       line.textContent = item.problem.text; line.title = item.problem.text;
+      line.addEventListener("dblclick", () => startEdit(strip, line));
       strip.appendChild(line);
     }
   }

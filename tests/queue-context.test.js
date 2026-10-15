@@ -134,3 +134,46 @@ test('AI failure or rejected messaging keeps heuristic and never retries', async
     assert.deepEqual(stored.problem, { text: 'erro na rejeição 539', source: 'heuristic' });
   }
 });
+
+test('clicking the code copies digits and shows a short confirmation', async () => {
+  const h = harness({ store: { [KEY]: { version: 1, items: { l: item('123456789', 'L') } } } });
+  const l = h.card('Lucia', 'l'); await h.mount();
+  const code = l.nextElementSibling.querySelector('.atendeai-queue-ctx-code');
+  await Promise.all(code.fire('click'));
+  assert.deepEqual(h.copied, ['123456789']);
+  assert.equal(code.textContent, 'copiado ✓');
+  await h.flush();
+  assert.equal(code.textContent, '🖥 123 456 789');
+});
+
+test('double click edits; Enter saves as manual and AI never overrides it', async () => {
+  const h = harness({ store: { [KEY]: { version: 1, items: { l: item(null, 'linha da ia') } } } });
+  const l = h.card('Lucia', 'l'); await h.mount();
+  const strip = l.nextElementSibling;
+  strip.querySelector('.atendeai-queue-ctx-problem').fire('dblclick');
+  const input = strip.querySelector('.atendeai-queue-ctx-input');
+  assert.equal(input.value, 'linha da ia');
+  input.value = 'Rejeição 539 na NF-e do cliente';
+  let propagated = true;
+  await Promise.all(input.fire('keydown', { key: 'Enter', stopPropagation() { propagated = false; } }));
+  await h.flush();
+  assert.equal(propagated, false);
+  assert.deepEqual(h.store[KEY].items.l.problem, { text: 'Rejeição 539 na NF-e do cliente', source: 'manual' });
+  assert.equal(strip.querySelector('.atendeai-queue-ctx-problem').textContent, 'Rejeição 539 na NF-e do cliente');
+  await h.context.QueueContextStore.merge('l', { problem: { text: 'outra ia', source: 'ai' } });
+  assert.equal(h.store[KEY].items.l.problem.text, 'Rejeição 539 na NF-e do cliente');
+});
+
+test('Escape and blur cancel without saving', async () => {
+  for (const finish of [i => i.fire('keydown', { key: 'Escape' }), i => i.fire('blur')]) {
+    const h = harness({ store: { [KEY]: { version: 1, items: { l: item(null, 'linha da ia') } } } });
+    const l = h.card('Lucia', 'l'); await h.mount();
+    const strip = l.nextElementSibling;
+    strip.querySelector('.atendeai-queue-ctx-problem').fire('dblclick');
+    const input = strip.querySelector('.atendeai-queue-ctx-input'); input.value = 'descartar';
+    await Promise.all(finish(input)); await h.flush();
+    assert.equal(h.store[KEY].items.l.problem.text, 'linha da ia');
+    assert.equal(strip.querySelector('.atendeai-queue-ctx-input'), null);
+    assert.equal(strip.querySelector('.atendeai-queue-ctx-problem').textContent, 'linha da ia');
+  }
+});
