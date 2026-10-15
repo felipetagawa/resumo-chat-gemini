@@ -4,7 +4,9 @@ const StyleSamplesModule = (() => {
   const MAX_ITEMS = 40, MAX_AGE = 60 * 24 * 60 * 60 * 1000, MIN_LEN = 15, MAX_LEN = 300, PER_REQUEST = 8;
   const CONFIRM_WINDOW = 10000, COUNT_DELAY = 250, TICK_DELAY = 300;
   // 9+ digits with single separators covers CPF, CNPJ, phones, AnyDesk codes and NF-e keys.
-  const SENSITIVE = [/\d(?:[\s.\-\/]?\d){8,}/, /[\w.+-]+@[\w-]+\.[\w.-]+/, /\bhttps?:\/\/|\bwww\./i];
+  // Local 8-digit phones ("3456-7890", "(11) 3456-7890") and scheme-less domains are caught separately.
+  const SENSITIVE = [/\d(?:[\s.\-\/]?\d){8,}/, /\(\d{2}\)\s?\d{4,5}[-\s]?\d{4}/, /\b\d{4,5}-\d{4}\b/,
+    /[\w.+-]+@[\w-]+\.[\w.-]+/, /\bhttps?:\/\/|\bwww\./i, /\b[a-z0-9-]+\.(?:com|net|org|gov|edu|io|app|dev|br)\b/i];
   const empty = () => ({ version: 1, selfName: "", items: [] });
   const normalize = value => String(value || "").replace(/\s+/g, " ").trim();
   const key = value => normalize(value).toLocaleLowerCase("pt-BR");
@@ -54,7 +56,8 @@ const StyleSamplesModule = (() => {
   }
 
   const composerText = el => normalize(el?.isContentEditable ? el.textContent : el?.value);
-  const sentMatches = text => ChatCaptureModule.mensagensDaResposta().filter(m => m.sent && key(m.message) === key(text));
+  const sentAll = () => ChatCaptureModule.mensagensDaResposta().filter(m => m.sent);
+  const sentMatches = text => sentAll().filter(m => key(m.message) === key(text));
   function onInput(event) {
     const el = ChatCaptureModule.encontrarComposer();
     if (!el || (event?.target !== el && !el.contains?.(event?.target))) return;
@@ -62,19 +65,27 @@ const StyleSamplesModule = (() => {
     if (!value) return; // SZ clears the composer programmatically on send; tick() detects that.
     const token = ChatCaptureModule.identificarAtendimentoResposta();
     if (!token) { draft = null; return; }
-    draft = { text: value, token, before: draft?.text === value ? draft.before : null };
+    // `base` (all sent bubbles when the draft began) lets a send that renders before the recount still confirm.
+    const sameDraft = draft?.token === token;
+    draft = { text: value, token, base: sameDraft ? draft.base : sentAll().length,
+      before: sameDraft && draft.text === value ? draft.before : null };
     clearTimeout(countTimer);
     // Count identical sends once typing pauses, so only a later, new one proves this send.
-    countTimer = setTimeout(() => { if (draft?.text === value) draft.before = sentMatches(value).length; }, COUNT_DELAY);
+    countTimer = setTimeout(() => {
+      if (draft?.text === value && composerText(ChatCaptureModule.encontrarComposer())) draft.before = sentMatches(value).length;
+    }, COUNT_DELAY);
   }
   function tick(now = Date.now()) {
-    if (draft && draft.before != null && !composerText(ChatCaptureModule.encontrarComposer())) {
+    if (draft && !composerText(ChatCaptureModule.encontrarComposer())) {
       pending = { ...draft, until: now + CONFIRM_WINDOW }; draft = null;
     }
     if (!pending) return;
     if (now > pending.until || ChatCaptureModule.identificarAtendimentoResposta() !== pending.token) { pending = null; return; }
     const matches = sentMatches(pending.text);
-    if (matches.length > pending.before) {
+    const all = sentAll();
+    const confirmed = pending.before != null ? matches.length > pending.before
+      : all.length > pending.base && key(all[all.length - 1].message) === key(pending.text);
+    if (confirmed) {
       const author = matches[matches.length - 1].author, text = pending.text;
       pending = null;
       void record(author, text).catch(() => {});

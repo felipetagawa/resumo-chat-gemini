@@ -544,6 +544,8 @@ async function initializeExtensionDock(container) {
   }
 
   function applySize() {
+    // The open Smart Reply card froze the dock's footprint; a size or minimize change would let it outlive that.
+    if (container.getAttribute("data-reply-open") === "true") globalThis.SmartReplyModule?.close?.();
     const nativeList = document.querySelector(".chats-list, .contacts-list, .contact-list");
     const listRect = nativeList?.getBoundingClientRect();
     // The visual QA found the full dock covering the left queue on narrow windows.

@@ -132,7 +132,7 @@ const ChatCaptureModule = (() => {
         const labeled = mensagensParaResposta().map(item => ({ ...item, name: item.customer
             ? (item.author ? `Cliente (${item.author})` : 'Cliente')
             : !item.sent ? item.name
-            : !self ? 'Técnico' : normalizeName(item.author) === self ? 'Você' : 'Outro técnico' }));
+            : !self || !item.author ? 'Técnico' : normalizeName(item.author) === self ? 'Você' : 'Outro técnico' }));
         return { conversation: limitarMensagensRecentes(labeled.slice(-12)),
             fullConversation: labeled.map(item => `${item.name}: ${item.message}`).join('\n') };
     }

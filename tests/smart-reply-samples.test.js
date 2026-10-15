@@ -5,15 +5,15 @@ const vm = require('node:vm');
 
 const KEY = 'atendeai_style_samples_v1';
 const plain = value => JSON.parse(JSON.stringify(value));
-function harness(store = {}) {
-  const listeners = {};
+function harness(store = {}, { deferTimers = false } = {}) {
+  const listeners = {}, timers = [];
   const composer = { value: '', textContent: '', isContentEditable: false, contains: n => n === composer };
   const chat = { token: 'chat:A', messages: [] };
   const context = {
     window: {}, navigator: {},
     document: { body: {}, addEventListener(k, fn) { (listeners[k] ||= []).push(fn); } },
     chrome: { storage: { onChanged: { addListener() {} } } },
-    setTimeout: fn => { fn(); return 1; }, clearTimeout() {},
+    setTimeout: fn => { if (deferTimers) timers.push(fn); else fn(); return 1; }, clearTimeout() {},
     MutationObserver: class { observe() {} },
     StorageHelper: { async get() { return plain(store); }, async set(data) { Object.assign(store, plain(data)); } },
     ChatCaptureModule: { identificarAtendimentoResposta: () => chat.token,
@@ -27,6 +27,7 @@ function harness(store = {}) {
     type(text) { composer.value = text; (listeners.input || []).forEach(fn => fn({ target: composer })); },
     clearComposer() { composer.value = ''; composer.textContent = ''; },
     send(author, message) { chat.messages.push({ author, message, sent: true }); },
+    runTimers() { timers.splice(0).forEach(fn => fn()); },
     async tick(now) { M._tick(now); await M._idle(); } };
 }
 const TEXT = 'Opa, consegue me mandar o XML dessa nota?';
@@ -37,7 +38,8 @@ test('filtros: tamanho e dados sensíveis', () => {
   assert.equal(M.accept('Data: 15/10/2026, pode ser?'), true);
   for (const bad of ['ok, beleza', 'x'.repeat(301), 'Meu CPF é 123.456.789-09 tá?', 'CNPJ 12.345.678/0001-90 confere?',
     'Chave 3524 1012 3456 7800 0123 5500 1000 0012 3410 0001 2345', 'Me liga no (11) 98765-4321 depois', 'Manda pra ana@empresa.com.br por favor',
-    'Acessa https://exemplo.com.br e me fala', 'Meu AnyDesk é 123 456 789, conecta aí']) assert.equal(M.accept(bad), false, bad);
+    'Acessa https://exemplo.com.br e me fala', 'Meu AnyDesk é 123 456 789, conecta aí',
+    'Pode ligar no (11) 3456-7890 que te atendo', 'Me liga no 3456-7890 ok pessoal?', 'Acessa sistema.com.br/login e me fala']) assert.equal(M.accept(bad), false, bad);
 });
 
 test('envio confirmado grava amostra e aprende selfName', async () => {
@@ -102,4 +104,19 @@ test('carga limita a 40, expira 60 dias e forRequest exclui o chat atual e limit
   assert.equal(picked[0], 'Amostra número 1 do técnico');
   await h.M.clear();
   assert.equal(h.M.count(), 0); assert.equal(h.M.selfName(), '');
+});
+
+test('envio rápido: mensagem renderizada e composer limpo antes do contador de 250 ms ainda confirma', async () => {
+  const h = harness({}, { deferTimers: true });
+  h.type(TEXT); h.clearComposer(); h.send('Felipe Okamoto', TEXT);
+  h.runTimers(); await h.tick(1000);
+  assert.equal(h.store[KEY].selfName, 'Felipe Okamoto');
+  assert.deepEqual(h.store[KEY].items.map(i => i.text), [TEXT]);
+});
+
+test('envio rápido não confirma quando só existia a mesma frase de um colega', async () => {
+  const h = harness({}, { deferTimers: true });
+  h.send('Carlos Suporte', TEXT);
+  h.type(TEXT); h.clearComposer(); h.runTimers(); await h.tick(1000);
+  assert.equal(h.store[KEY], undefined);
 });

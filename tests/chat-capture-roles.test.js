@@ -54,3 +54,12 @@ test('mensagensDaResposta expõe autor e direção sem dados extras', () => {
   const list = JSON.parse(JSON.stringify(h.capture.mensagensDaResposta()));
   assert.deepEqual(list, [{ author: 'Ana Silva', message: 'oi', sent: false }, { author: 'Felipe Okamoto', message: 'bom dia', sent: true }]);
 });
+
+test('mensagem enviada sem nome de autor continua Técnico mesmo com selfName conhecido', () => {
+  const h = fixture();
+  h.message('Ana Silva', 'oi');
+  h.message('Felipe Okamoto', 'bom dia', true);
+  h.message('', 'sigo olhando aqui', true);
+  const result = h.capture.capturarConversaRotulada('Felipe Okamoto');
+  assert.equal(result.conversation, 'Cliente (Ana Silva): oi\nVocê: bom dia\nTécnico: sigo olhando aqui');
+});

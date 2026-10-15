@@ -13,14 +13,15 @@ function harness() {
   const dock = el('div', { id: 'containerBotoesGemini' }); document.body.appendChild(dock);
   dock.getBoundingClientRect = () => ({ left: 1100, top: 100, width: (dock.getAttribute('data-minimized') === 'true' ? 72 : 188) * (Number(dock.style.zoom) || 1), height: 300 });
   const store = { atendeai_dock_preferences: structuredClone(saved) };
-  const context = { document, window, chrome: { runtime: {}, storage: { local: {
+  const reply = { closed: 0, close() { this.closed++; dock.setAttribute('data-reply-open', 'false'); } };
+  const context = { SmartReplyModule: reply, document, window, chrome: { runtime: {}, storage: { local: {
     get(keys, cb) { cb(structuredClone(store)); },
     set(data, cb) { Object.assign(store, structuredClone(data)); writes.push(data); cb(); }
   } } } };
   vm.createContext(context);
   const source = fs.readFileSync('content.js', 'utf8');
   vm.runInContext(source.slice(source.indexOf('async function initializeExtensionDock'), source.indexOf('function criarBotoesFlutuantes')), context);
-  return { dock, window, handlers, writes, store, saved, init: () => context.initializeExtensionDock(dock) };
+  return { dock, window, handlers, writes, store, saved, reply, init: () => context.initializeExtensionDock(dock) };
 }
 
 test('narrow viewport compacts dock temporarily and retains saved size, position and minimization', async () => {
@@ -42,4 +43,17 @@ test('all dock actions remain expandable on demand in compact viewport without p
   await Promise.all(toggle.click()); assert.equal(h.dock.getAttribute('data-minimized'), 'false');
   await Promise.all(toggle.click()); assert.equal(h.dock.getAttribute('data-minimized'), 'true');
   assert.deepEqual(h.store.atendeai_dock_preferences, h.saved); assert.equal(h.writes.length, 0);
+});
+
+test('size, minimize and window resize close an open Smart Reply card so the frozen footprint never outlives the dock', async () => {
+  const h = harness(); await h.init();
+  const open = () => h.dock.setAttribute('data-reply-open', 'true');
+  open(); await Promise.all(h.dock.querySelector('.gemini-dock-size').click());
+  assert.equal(h.reply.closed, 1);
+  open(); await Promise.all(h.dock.querySelector('.gemini-dock-toggle').click());
+  assert.equal(h.reply.closed, 2);
+  open(); h.handlers.resize();
+  assert.equal(h.reply.closed, 3);
+  h.handlers.resize();
+  assert.equal(h.reply.closed, 3, 'nothing to close when no card is open');
 });
