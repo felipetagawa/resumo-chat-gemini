@@ -34,7 +34,7 @@
         "styles/buttons.css",
         "styles/recovery.css",
         "styles/smart-reply.css",
-        "styles/support-focus.css",
+        "styles/queue-context.css",
         "styles/modals.css",
         "styles/calendar.css",
         "styles/called.css"
@@ -60,7 +60,10 @@
         "modules/smart-reply-profiles.js",
         "modules/smart-reply-profiles-ui.js",
         "modules/smart-reply.js",
-        "modules/support-focus.js",
+        "modules/queue-context-parse.js",
+        "modules/queue-context-store.js",
+        "modules/queue-context-capture.js",
+        "modules/queue-context.js",
         "content.js"
       ],
       "run_at": "document_end"

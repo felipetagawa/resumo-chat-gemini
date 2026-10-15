@@ -833,8 +833,8 @@ function criarBotoesFlutuantes(visibility, userSector) {
   const botaoSmartReply = createButton('btnSmartReply', 'Sugerir resposta', '',
     guardFeature(() => SmartReplyModule.open(smartReplyControl.consumeMode())));
   botaoSmartReply.type = 'button';
-  botaoSmartReply.className += ' atendeai-focus-primary';
-  botaoSmartReply.innerHTML = '<svg class="atendeai-focus-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14v10H8l-5 4V3Z"/><path d="M6 7h8M6 10h5"/></svg> Sugerir resposta';
+  botaoSmartReply.className += ' atendeai-reply-primary';
+  botaoSmartReply.innerHTML = '<svg class="atendeai-reply-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14v10H8l-5 4V3Z"/><path d="M6 7h8M6 10h5"/></svg> Sugerir resposta';
   const smartReplyControl = SmartReplyModule.mountContextControl(botaoSmartReply);
   botaoDocs.id = 'btnConsultarDocsLoop';
   botaoDocs.className = 'gemini-preserved-link';
@@ -908,7 +908,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
   document.body.appendChild(container);
   globalThis.ThemeModule?.apply?.(container);
   void globalThis.ThemeModule?.init?.()?.then?.(() => globalThis.ThemeModule.apply(container));
-  void SupportFocusModule.mount(container);
+  void QueueContextModule.mount();
   void initializeExtensionDock(container);
 }
 

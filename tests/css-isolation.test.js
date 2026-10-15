@@ -151,21 +151,19 @@ test("injected stylesheets do not style the host document", () => {
   assert.deepEqual(leaks, []);
 });
 
-test('F15: Focus selectors only target its namespace and never SZ classes', () => {
-  const selectors = extractSelectors(fs.readFileSync('styles/support-focus.css', 'utf8'));
-  assert.ok(injectedCss.includes('styles/support-focus.css'));
+test('F15: queue context selectors only target its namespace and never SZ classes', () => {
+  const selectors = extractSelectors(fs.readFileSync('styles/queue-context.css', 'utf8'));
+  assert.ok(injectedCss.includes('styles/queue-context.css'));
   for (const selector of selectors) {
-    assert.match(selector, /\.atendeai-focus-/);
+    assert.match(selector, /\.atendeai-queue-ctx/);
     assert.doesNotMatch(selector, /\.(?:sz_contact|contact-layout|content|name|contact-name)(?:\W|$)/);
   }
 });
 
-test('Central and editor stay bounded, use tokens and never style native cards',()=>{
- const css=fs.readFileSync('styles/support-focus.css','utf8');
- assert.match(css,/max-height: min\(200px, 25vh\)/); assert.match(css,/overflow-x: hidden/);
- assert.match(css,/aria-pressed="true"/); assert.doesNotMatch(css,/#[0-9a-f]{3,8}\b/i);
- assert.doesNotMatch(css,/sz_contact|contact-layout|atendeai-focus-badge/);
- assert.doesNotMatch(fs.readFileSync('options.html','utf8'),/supportFocusBadgesEnabled/);
+test('queue context strip stays one fixed line in normal flow', () => {
+  const css = fs.readFileSync('styles/queue-context.css', 'utf8');
+  assert.match(css, /height: 16px/); assert.match(css, /margin: 0/); assert.match(css, /white-space: nowrap/);
+  assert.doesNotMatch(css, /position:\s*(?:absolute|fixed)|transform|margin[^;]*-\d/);
 });
 
 test('dark Recovery overrides each light tone and avatar; private notes use a theme surface', () => {
