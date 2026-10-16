@@ -43,6 +43,19 @@ const SmartReplyModule = (() => {
     Array.from(s.preview.children).forEach(child => child.remove());
     s.preview.textContent = value;
     if (loading) for (let i = 0; i < 3; i++) s.preview.appendChild(node("span", "", "smart-reply-skeleton"));
+    // A shown suggestion is editable in place; Inserir uses whatever the technician left there.
+    const editable = !!value && !loading;
+    s.preview.contentEditable = editable ? "plaintext-only" : "false";
+    syncDirect(s, editable);
+  }
+  // With a suggestion on screen the field adjusts it; without one it directs a new one.
+  function syncDirect(s, hasReply) {
+    if (!s.direct) return;
+    const placeholder = hasReply ? "Ajustar: mais curto, mais formal…" : "Direcionar: o que dizer?";
+    if (s.direct.placeholder === placeholder) return;
+    s.direct.placeholder = placeholder;
+    s.direct.setAttribute("aria-label", hasReply ? "Ajustar esta sugestão. Enter reescreve."
+      : "Direcionar a resposta. Enter gera de novo.");
   }
   function showChoices(s, visible) { s.choices.hidden = !visible; s.actions.hidden = visible; }
   function lockDock(dock) {
@@ -87,6 +100,8 @@ const SmartReplyModule = (() => {
     syncChat(s);
     if (session !== s || s.busy || !current(s)) return;
     const instruction = text(s.direct.value).slice(0, 600);
+    // Enter with a suggestion on screen revises that text (hand edits included); ↻ Outra always starts over.
+    const currentReply = !regenerate && instruction ? String(s.reply || "").trim().slice(0, 1500) : "";
     s.busy = true; s.reply = ""; s.status.textContent = "";
     setPreview(s, "", true); showChoices(s, false);
     syncChat(s);
@@ -103,6 +118,7 @@ const SmartReplyModule = (() => {
       const payload = { action: "gerarResposta", conversation: snapshot.conversation, regenerate };
       if (promptComplement) payload.promptComplement = promptComplement;
       if (instruction) payload.replyInstruction = instruction;
+      if (currentReply) payload.currentReply = currentReply;
       const styleSamples = samples()?.forRequest?.(snapshot.fullConversation) || [];
       if (styleSamples.length) payload.styleSamples = styleSamples;
       const result = await MessagingHelper.send(payload);
@@ -113,9 +129,12 @@ const SmartReplyModule = (() => {
       if (!current(s) || s.stale) { setPreview(s, ""); return; }
       s.reply = result.reply.trim();
       setPreview(s, s.reply);
+      if (currentReply) s.direct.value = "";
     } catch (err) {
       if (session !== s) return;
-      setPreview(s, "");
+      // A failed adjustment must not throw away the text the technician was refining.
+      s.reply = currentReply && current(s) && !s.stale ? currentReply : "";
+      setPreview(s, s.reply);
       s.status.textContent = err?.message || GENERIC_ERROR;
     } finally {
       if (session === s) {
@@ -171,6 +190,13 @@ const SmartReplyModule = (() => {
     s.preview.setAttribute("tabindex", "0");
     s.preview.setAttribute("aria-label", "Texto sugerido");
     s.preview.setAttribute("aria-live", "polite");
+    s.preview.setAttribute("spellcheck", "true");
+    s.preview.addEventListener("input", () => { s.reply = String(s.preview.textContent || "").trim(); syncChat(s); });
+    s.preview.addEventListener("keydown", event => {
+      // SZ global shortcuts must not see keys typed here; Ctrl+Enter (insert) and Esc (close) still bubble.
+      if (event.key === "Escape" || (event.key === "Enter" && (event.ctrlKey || event.metaKey))) return;
+      event.stopPropagation?.();
+    });
     s.warning = node("div", "", "smart-reply-warning"); s.warning.setAttribute("role", "status");
     s.status = node("div", "", "smart-reply-status"); s.status.setAttribute("role", "status");
     s.direct = node("input", "", "smart-reply-direct");

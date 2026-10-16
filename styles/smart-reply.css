@@ -75,6 +75,19 @@
     font-size: var(--ai-font-size);
 }
 
+/* A shown suggestion is edited in place before Inserir. */
+#containerBotoesGemini .smart-reply-text[contenteditable="plaintext-only"] {
+    cursor: text;
+    border-radius: var(--ai-radius-sm);
+}
+#containerBotoesGemini .smart-reply-text[contenteditable="plaintext-only"]:hover {
+    background: var(--ai-surface-hover);
+}
+#containerBotoesGemini .smart-reply-text[contenteditable="plaintext-only"]:focus {
+    outline: none;
+    box-shadow: var(--ai-focus);
+}
+
 #containerBotoesGemini .smart-reply-skeleton {
     display: block;
     height: 0.7em;

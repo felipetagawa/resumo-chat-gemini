@@ -146,9 +146,53 @@ test('rotula Você e Outro técnico, envia amostras e o Direcionar com Enter', a
   await direct.emit('keydown', { key: 'Enter' });
   assert.equal(h.sent[1].replyInstruction, 'peça o XML e diga que vou verificar');
   assert.equal(h.sent[1].regenerate, false);
+  // A suggestion was on screen: Enter revises it, then the field is free for the next adjustment.
+  assert.equal(h.sent[1].currentReply, 'Pode informar o erro exibido?');
+  assert.equal(direct.value, '');
   await h.button('↻ Outra').emit('click');
   assert.equal(h.sent[2].regenerate, true);
-  assert.equal(h.sent[2].replyInstruction, 'peça o XML e diga que vou verificar');
+  assert.equal(h.sent[2].currentReply, undefined);
+});
+
+test('a sugestão é editável e Inserir usa o texto editado', async () => {
+  const h = harness();
+  await h.module.open();
+  const preview = h.byClass('smart-reply-text');
+  assert.equal(preview.contentEditable, 'plaintext-only');
+  assert.equal(h.byClass('smart-reply-direct').placeholder, 'Ajustar: mais curto, mais formal…');
+  preview.textContent = 'Pode me mandar um print do erro?';
+  await preview.emit('input');
+  await h.button('Inserir').emit('click');
+  assert.equal(h.composer.value, 'Pode me mandar um print do erro?');
+  assert.equal(h.live.inserted, 'Pode me mandar um print do erro?');
+});
+
+test('ajustar envia o texto editado e uma falha não apaga o rascunho', async () => {
+  const h = harness();
+  await h.module.open();
+  const preview = h.byClass('smart-reply-text'), direct = h.byClass('smart-reply-direct');
+  preview.textContent = 'Consigo sim, me passa o AnyDesk do segundo PC?';
+  await preview.emit('input');
+  h.fail();
+  direct.value = 'mais formal';
+  await direct.emit('keydown', { key: 'Enter' });
+  assert.deepEqual([h.sent[1].currentReply, h.sent[1].replyInstruction],
+    ['Consigo sim, me passa o AnyDesk do segundo PC?', 'mais formal']);
+  assert.equal(preview.textContent, 'Consigo sim, me passa o AnyDesk do segundo PC?');
+  assert.equal(direct.value, 'mais formal', 'the instruction stays for a retry');
+  assert.match(h.status(), /Falha temporária/);
+});
+
+test('sem sugestão na tela, Enter só direciona uma nova', async () => {
+  const h = harness(); h.fail();
+  await h.module.open();
+  assert.equal(h.byClass('smart-reply-text').contentEditable, 'false');
+  assert.equal(h.byClass('smart-reply-direct').placeholder, 'Direcionar: o que dizer?');
+  h.succeed();
+  const direct = h.byClass('smart-reply-direct'); direct.value = 'peça o XML';
+  await direct.emit('keydown', { key: 'Enter' });
+  assert.equal(h.sent[1].currentReply, undefined);
+  assert.equal(h.sent[1].replyInstruction, 'peça o XML');
 });
 
 test('sem selfName as mensagens enviadas saem como Técnico e sem amostras', async () => {
