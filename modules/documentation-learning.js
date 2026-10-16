@@ -7,6 +7,12 @@ const DocumentationLearningModule = (() => {
   const MAX_DOCS = 300;
   const MAX_FEATURES_PER_DOC = 24;
   const MAX_FEATURE_COUNT = 50;
+  // Confirmed "problem → documentation" pairs, shown to Jev as reference cases.
+  const MAX_EXAMPLES = 200;
+  const MAX_EXAMPLE_KEYWORDS = 16;
+  const MAX_SIMILAR_EXAMPLES = 3;
+  const MIN_EXAMPLE_SIMILARITY = 0.34;
+  const MIN_SHARED_TOKENS = 2;
 
   const STOP_WORDS = new Set([
     "cliente", "esta", "está", "com", "uma", "para", "por", "que",
@@ -43,7 +49,7 @@ const DocumentationLearningModule = (() => {
   }
 
   function emptyMemory() {
-    return { version: VERSION, docs: {} };
+    return { version: VERSION, docs: {}, examples: [] };
   }
 
   function looksLikePii(token) {
@@ -159,7 +165,82 @@ const DocumentationLearningModule = (() => {
       for (const id of rankedIds.slice(MAX_DOCS)) delete kept[id];
     }
 
-    return { version: VERSION, docs: kept };
+    const examples = (Array.isArray(memory?.examples) ? memory.examples : [])
+      .filter((example) => example && typeof example === "object"
+        && example.docId && typeof example.keywords === "string"
+        && now - Number(example.at || 0) <= TTL_MS)
+      .map((example) => ({
+        keywords: example.keywords.split(" ").filter(Boolean).slice(0, MAX_EXAMPLE_KEYWORDS).join(" "),
+        docId: String(example.docId),
+        label: String(example.label || ""),
+        at: Number(example.at)
+      }))
+      .filter((example) => example.keywords)
+      .sort((a, b) => b.at - a.at)
+      .slice(0, MAX_EXAMPLES);
+
+    return { version: VERSION, docs: kept, examples };
+  }
+
+  // The problem is never stored as written: only its distinct keywords in
+  // alphabetical order, without capitalised words inside a sentence (names),
+  // e-mails or numbers other than 3–4 digit codes (CPF/CNPJ, phones and
+  // protocols are longer).
+  function problemKeywords(value) {
+    const words = String(value || "")
+      .replace(/\S+@\S+/g, " ")
+      .replace(/\d[\d.\-/() ]*\d/g, (match) => (match.replace(/\D/g, "").length > 4 ? " " : match))
+      .split(/\s+/)
+      .filter(Boolean);
+    const keywords = [];
+    words.forEach((word, index) => {
+      const startsSentence = index === 0 || /[.!?:;]$/.test(words[index - 1]);
+      if (!startsSentence && /^\p{Lu}\p{Ll}/u.test(word)) return;
+      for (const token of normalizeText(word).split(" ")) {
+        if (!token || STOP_WORDS.has(token) || keywords.includes(token)) continue;
+        if (/^\d+$/.test(token) ? (token.length < 3 || token.length > 4) : token.length < 3) continue;
+        keywords.push(token);
+      }
+    });
+    return keywords.slice(0, MAX_EXAMPLE_KEYWORDS).sort().join(" ");
+  }
+
+  function exampleTokens(keywords) {
+    return new Set(String(keywords || "").split(" ").filter(Boolean));
+  }
+
+  function rememberExample(memory, { docId, label, context }) {
+    const keywords = problemKeywords(context);
+    if (exampleTokens(keywords).size < MIN_SHARED_TOKENS) return;
+    const others = (memory.examples || []).filter((example) => example.keywords !== keywords);
+    memory.examples = [{ keywords, docId: String(docId), label: String(label || ""), at: Date.now() }, ...others]
+      .slice(0, MAX_EXAMPLES);
+  }
+
+  /**
+   * Past confirmed cases closest to the current problem, limited to documentations
+   * the CRM currently offers. A newer confirmation of the same problem replaces the older one.
+   */
+  function findSimilarExamples(memory, context, candidateIds, limit = MAX_SIMILAR_EXAMPLES) {
+    const examples = Array.isArray(memory?.examples) ? memory.examples : [];
+    const allowed = candidateIds ? new Set([...candidateIds].map(String)) : null;
+    const current = exampleTokens(problemKeywords(context));
+    if (!current.size || !examples.length) return [];
+
+    const scored = [];
+    for (const example of examples) {
+      if (allowed && !allowed.has(String(example.docId))) continue;
+      const tokens = exampleTokens(example.keywords);
+      let shared = 0;
+      for (const token of tokens) if (current.has(token)) shared += 1;
+      if (shared < MIN_SHARED_TOKENS) continue;
+      const similarity = shared / Math.min(current.size, tokens.size);
+      if (similarity < MIN_EXAMPLE_SIMILARITY) continue;
+      scored.push({ example, similarity });
+    }
+
+    scored.sort((a, b) => (b.similarity - a.similarity) || (b.example.at - a.example.at));
+    return scored.slice(0, limit).map(({ example, similarity }) => ({ ...example, similarity }));
   }
 
   function memoriesEqual(left, right) {
@@ -183,7 +264,7 @@ const DocumentationLearningModule = (() => {
     const data = await storageGet([STORAGE_KEY]);
     const raw = data[STORAGE_KEY];
     const incoming = raw && raw.version === VERSION && raw.docs && typeof raw.docs === "object"
-      ? { version: VERSION, docs: raw.docs }
+      ? { version: VERSION, docs: raw.docs, examples: Array.isArray(raw.examples) ? raw.examples : [] }
       : emptyMemory();
     const cleaned = cleanup(incoming);
     if (raw && !memoriesEqual(cleaned, incoming)) {
@@ -219,6 +300,7 @@ const DocumentationLearningModule = (() => {
     doc.confirmations = Math.min(MAX_FEATURE_COUNT, (Number(doc.confirmations) || 0) + 1);
     doc.updatedAt = Date.now();
     doc.positiveFeatures = bumpFeatures(doc.positiveFeatures, extractSafeFeatures(context, label), 1);
+    rememberExample(memory, { docId, label, context });
     await saveMemory(memory);
   }
 
@@ -306,7 +388,9 @@ const DocumentationLearningModule = (() => {
     containsTerm,
     clearLearning,
     countDocs,
-    memoryBoostFor
+    memoryBoostFor,
+    findSimilarExamples,
+    problemKeywords
   };
 })();
 

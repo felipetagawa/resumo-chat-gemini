@@ -304,3 +304,84 @@ test("M5. confirmações + feature matching => boost contextual > 0", () => {
   };
   assert.ok(module.memoryBoostFor(doc, "IE ausente no destinatário") > 0);
 });
+
+test("E1. confirmação guarda só palavras-chave do problema, sem nome, e-mail ou números longos", async () => {
+  const { module, store } = loadLearning();
+  await module.recordPositive({
+    docId: "539",
+    label: "REJEIÇÃO 539: DUPLICIDADE DE NF-E",
+    context: "Ao emitir a NF-e o Marcos recebe rejeição 539 duplicidade, CNPJ 12.345.678/0001-90 marcos@empresa.com"
+  });
+  const [example] = store[KEY].examples;
+  assert.equal(example.docId, "539");
+  assert.equal(example.keywords, "539 cnpj duplicidade emitir recebe rejeicao");
+  assert.doesNotMatch(JSON.stringify(store[KEY]), /marcos|12\.345|0001|empresa/i);
+});
+
+test("E2. correção substitui o exemplo do mesmo problema", async () => {
+  const { module, store } = loadLearning();
+  const context = "Rejeição 539 duplicidade ao emitir";
+  await module.recordPositive({ docId: "A", label: "Duplicidade NFC-e", context });
+  await module.recordCorrection({
+    previousId: "A",
+    previousLabel: "Duplicidade NFC-e",
+    selectedId: "B",
+    selectedLabel: "Duplicidade NF-e",
+    context
+  });
+  assert.equal(store[KEY].examples.length, 1);
+  assert.equal(store[KEY].examples[0].docId, "B");
+});
+
+test("E3. exemplos semelhantes: só documentações oferecidas pelo CRM, mais parecidos primeiro", async () => {
+  const { module } = loadLearning();
+  await module.recordPositive({ docId: "B", label: "Duplicidade NF-e", context: "Rejeição 539 duplicidade ao emitir" });
+  await module.recordPositive({ docId: "X", label: "Outro produto", context: "Rejeição 539 duplicidade ao emitir pedido" });
+  await module.recordPositive({ docId: "C", label: "Certificado", context: "Certificado digital vencido" });
+  const memory = await module.loadMemory();
+
+  const found = module.findSimilarExamples(memory, "cliente com duplicidade da rejeição 539", ["B", "C"]);
+  assert.deepEqual([...found.map((example) => example.docId)], ["B"]);
+  assert.equal(module.findSimilarExamples(memory, "impressora não imprime", ["B", "C"]).length, 0);
+});
+
+test("E4. exemplos respeitam TTL e somem ao limpar o aprendizado", async () => {
+  const now = 1_700_000_000_000;
+  const { module, store } = loadLearning({
+    now,
+    store: {
+      [KEY]: {
+        version: 1,
+        docs: {},
+        examples: [
+          { keywords: "539 duplicidade", docId: "old", label: "x", at: now - (91 * DAY) },
+          { keywords: "certificado vencido", docId: "fresh", label: "y", at: now - DAY }
+        ]
+      }
+    }
+  });
+  const memory = await module.loadMemory();
+  assert.deepEqual([...memory.examples.map((example) => example.docId)], ["fresh"]);
+  await module.clearLearning();
+  assert.equal(store[KEY], undefined);
+});
+
+test("E5. Jev recebe os casos semelhantes e as documentações deles", async () => {
+  const { module } = loadLearning();
+  await module.recordPositive({ docId: "B", label: "Duplicidade NF-e", context: "Rejeição 539 duplicidade ao emitir" });
+  const memory = await module.loadMemory();
+  const api = loadSuggestionWithLearning(module);
+  const all = [{ id: "A", label: "Duplicidade NFC-e" }, { id: "B", label: "Duplicidade NF-e" }];
+
+  const request = api.withLearnedExamples(all, [all[0]], "Rejeição 539 duplicidade", memory);
+  assert.deepEqual([...request.candidates.map((candidate) => candidate.id)], ["A", "B"]);
+  assert.match(request.context, /^Rejeição 539 duplicidade\n\nCasos anteriores/);
+  assert.match(request.context, /termos: 539 duplicidade emitir rejeicao → Duplicidade NF-e/);
+
+  const none = api.withLearnedExamples(all, [all[0]], "impressora travada", memory);
+  assert.equal(none.context, "impressora travada");
+  assert.equal(none.candidates.length, 1);
+
+  const long = "Rejeição 539 duplicidade ".repeat(320);
+  assert.equal(api.withLearnedExamples(all, [all[0]], long, memory).context, long);
+});

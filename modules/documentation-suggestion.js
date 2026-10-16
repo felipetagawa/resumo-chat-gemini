@@ -14,6 +14,10 @@ const DocumentationSuggestionModule = (() => {
   const SELECT_CONFIRM_POLL_MS = 25;
   const AUTOFILL_KEY = "atendeai_documentation_autofill_enabled";
   const LEARNING_ENABLED_KEY = "atendeai_documentation_learning_enabled";
+  // The API rejects contexts above 8000 characters.
+  const MAX_CONTEXT_CHARS = 7800;
+  const LEARNED_EXAMPLES_HEADER =
+    "Casos anteriores semelhantes (palavras-chave do problema → documentação escolhida pelo técnico; referência, não regra):";
 
   const cache = new Map();
   let manualSelectionCleanup = null;
@@ -354,6 +358,38 @@ const DocumentationSuggestionModule = (() => {
 
     const codes = extractExplicitCodes(context);
     return takeCandidatesForJev(ranked, { strong: hasStrongRankingEvidence(ranked, codes) });
+  }
+
+  /**
+   * Adds the technician's own past confirmations for similar problems: their
+   * documentations are always sent to Jev, and the cases go after the problem
+   * text as reference. Stays within the API context limit or sends no examples.
+   */
+  function withLearnedExamples(allCandidates, candidates, context, memory) {
+    const learning = window.DocumentationLearningModule;
+    const examples = learning?.findSimilarExamples
+      ? learning.findSimilarExamples(memory, context, allCandidates.map((candidate) => candidate.id))
+      : [];
+    if (!examples.length) return { candidates, context, examples: [] };
+
+    const byId = new Map(allCandidates.map((candidate) => [String(candidate.id), candidate]));
+    const sentIds = new Set(candidates.map((candidate) => String(candidate.id)));
+    const extra = [];
+    for (const example of examples) {
+      const id = String(example.docId);
+      if (sentIds.has(id) || !byId.has(id)) continue;
+      sentIds.add(id);
+      extra.push(byId.get(id));
+    }
+
+    const lines = examples.map((example) => {
+      const label = byId.get(String(example.docId))?.label || example.label;
+      return `- termos: ${example.keywords} → ${label}`;
+    });
+    const enriched = `${context}\n\n${LEARNED_EXAMPLES_HEADER}\n${lines.join("\n")}`;
+    if (enriched.length > MAX_CONTEXT_CHARS) return { candidates, context, examples: [] };
+
+    return { candidates: [...candidates, ...extra], context: enriched, examples };
   }
 
   function shouldAutofill(response, settings = {}) {
@@ -785,14 +821,20 @@ const DocumentationSuggestionModule = (() => {
         memory = await window.DocumentationLearningModule?.loadMemory?.() || memory;
       }
 
-      const candidates = prefilterCandidates(allCandidates, context, { memory });
+      const request = withLearnedExamples(
+        allCandidates,
+        prefilterCandidates(allCandidates, context, { memory }),
+        context,
+        memory
+      );
+      const candidates = request.candidates;
 
       button.textContent = "Analisando...";
       renderMessage(result, `Analisando ${candidates.length} de ${allCandidates.length} documentações...`);
 
       const response = await sendMessage({
         action: "classificarDocumentacao",
-        context,
+        context: request.context,
         candidates
       });
 
@@ -913,6 +955,7 @@ const DocumentationSuggestionModule = (() => {
       takeCandidatesForJev,
       hasStrongRankingEvidence,
       shouldAutofill,
+      withLearnedExamples,
       shouldLearnFromSelection,
       rememberAutofillOutcome,
       selectDocumentation,
