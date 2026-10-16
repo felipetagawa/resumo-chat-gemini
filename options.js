@@ -57,6 +57,8 @@ document.addEventListener("DOMContentLoaded", () => {
     themeLight: document.getElementById("themeLight"),
     themeSystem: document.getElementById("themeSystem"),
     documentationAutofillEnabled: document.getElementById("documentationAutofillEnabled"),
+    queueContextAnydesk: document.getElementById("queueContextAnydesk"),
+    queueContextProblem: document.getElementById("queueContextProblem"),
     documentationLearningEnabled: document.getElementById("documentationLearningEnabled"),
     documentationLearningCount: document.getElementById("documentationLearningCount"),
     clearDocumentationLearning: document.getElementById("clearDocumentationLearning"),
@@ -1760,6 +1762,19 @@ document.addEventListener("DOMContentLoaded", () => {
     el.documentationLearningCount.textContent = `Aprendizado local\n${total} documentações aprendidas`;
   }
 
+  // Read live by modules/queue-context.js through chrome.storage.onChanged; absent means on.
+  const QUEUE_CONTEXT_KEYS = { queueContextAnydesk: "atendeai_queue_context_anydesk", queueContextProblem: "atendeai_queue_context_problem" };
+
+  async function initQueueContextSettings() {
+    const data = await storageGet(Object.values(QUEUE_CONTEXT_KEYS));
+    for (const [id, key] of Object.entries(QUEUE_CONTEXT_KEYS)) {
+      const box = el[id];
+      if (!box) continue;
+      box.checked = data[key] !== false;
+      box.addEventListener("change", () => storageSet({ [key]: box.checked }));
+    }
+  }
+
   async function initDocumentationSettings() {
     if (!el.documentationAutofillEnabled || !el.documentationLearningEnabled) return;
 
@@ -1795,6 +1810,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderVisibilityUI();
     applyPreAtendimentoMessagesUI();
     await initAppearanceSettings();
+    await initQueueContextSettings();
     await initDocumentationSettings();
 
     const name = await loadUserName();

@@ -63,3 +63,30 @@ test('mensagem enviada sem nome de autor continua Técnico mesmo com selfName co
   const result = h.capture.capturarConversaRotulada('Felipe Okamoto');
   assert.equal(result.conversation, 'Cliente (Ana Silva): oi\nVocê: bom dia\nTécnico: sigo olhando aqui');
 });
+
+// Real SZ shape (2026-10-16): no ids, no sent/received classes, the platform icon marks the customer,
+// and SZ signs the technician's text with their name.
+test('bolhas reais do SZ: ícone marca o cliente, nome sozinho marca o técnico', () => {
+  const { el } = require('./mini-dom');
+  const document = createDocument();
+  document.body.appendChild(el('div', { class: 'sz_contact active' }, [
+    el('img', { alt: 'platform', src: '/assets/img/platform/mini/webchat.svg' }),
+    el('div', { class: 'contact-name', text: 'ROBERTA' }),
+    el('div', { class: 'contact-times', phase: 'attendance' }, [el('span', { class: 'times', title: '16/10/26 08:20', text: '08:28' })])]));
+  const bubble = (name, text, customer) => el('div', { class: 'msg' }, [el('div', { class: 'bubble' }, [
+    el('div', { class: 'txt' }, [el('div', { class: 'message-details' }, [
+      ...(customer ? [el('img', { class: 'icon-platform-mini', src: '/assets/img/platform/mini/webchat.svg' })] : []),
+      el('div', { class: 'name', title: name, text: name })])]),
+    el('div', { class: 'txt' }, [el('div', { class: 'message' }, [el('span', { text })])])])]);
+  const chat = el('div', { class: 'chat' }, [bubble('ROBERTA', 'Eu consigo conectar vcs 2?', true),
+    bubble('Felipe', 'Felipe: tem o whatsapp deles?', false)]);
+  document.body.appendChild(chat);
+  const context = { document, window: {}, MutationObserver: class { observe() {} } };
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync('modules/chat-capture.js', 'utf8'), context);
+  const capture = context.window.ChatCaptureModule;
+  assert.equal(capture.capturarConversaRotulada('felipe').conversation,
+    'Cliente (ROBERTA): Eu consigo conectar vcs 2?\nVocê: tem o whatsapp deles?');
+  assert.deepEqual(JSON.parse(JSON.stringify(capture.mensagensDaResposta().filter(m => m.sent))),
+    [{ author: 'Felipe', message: 'tem o whatsapp deles?', sent: true }]);
+});

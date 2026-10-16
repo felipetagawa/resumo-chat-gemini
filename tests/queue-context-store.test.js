@@ -72,3 +72,22 @@ test('concurrent merges from two tabs are both persisted', async () => {
   await Promise.all([a.S.merge('x', { anydesk: '123456789' }), b.S.merge('y', { anydesk: '987654321' })]);
   assert.deepEqual(Object.keys(store[KEY].items).sort(), ['x', 'y']);
 });
+
+test('one-time repair keeps only manual lines, since older captures could mix chats', async () => {
+  const at = 1_000_000_000;
+  const { S, store } = load({ [KEY]: { version: 1, items: {
+    junk: { anydesk: '363528019', problem: { text: 'Iniciar', source: 'heuristic' }, aiRequested: true, updatedAt: at },
+    empty: { anydesk: null, problem: { text: 'Iniciar', source: 'heuristic' }, aiRequested: true, updatedAt: at },
+    good: { anydesk: null, problem: { text: 'Não emite nota', source: 'heuristic' }, aiRequested: true, updatedAt: at },
+    ai: { anydesk: null, problem: { text: 'Nota rejeitada', source: 'ai' }, aiRequested: true, updatedAt: at },
+    mine: { anydesk: '111222333', problem: { text: 'Boleto não gera', source: 'manual' }, aiRequested: true, updatedAt: at } } } });
+  const isProblem = text => text !== 'Iniciar';
+  await S.prune(isProblem);
+  assert.equal(store[KEY].version, 3);
+  assert.deepEqual(Object.keys(store[KEY].items), ['mine']);
+  assert.deepEqual([store[KEY].items.mine.problem.text, store[KEY].items.mine.anydesk], ['Boleto não gera', null]);
+  // Runs once: data captured after the repair survives the next load.
+  await S.merge('good', { anydesk: '123456789' });
+  await S.prune(isProblem);
+  assert.equal(store[KEY].items.good.anydesk, '123456789');
+});

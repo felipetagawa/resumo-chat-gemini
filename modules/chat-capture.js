@@ -69,10 +69,16 @@ const ChatCaptureModule = (() => {
             if (msg.closest?.('[hidden], [aria-hidden="true"]')) return [];
             if (msg.getClientRects && !msg.getClientRects().length) return [];
             const name = msg.querySelector('.name')?.innerText?.trim() || '';
-            const message = msg.querySelector('.message span')?.innerText?.trim() || '';
+            let message = msg.querySelector('.message span')?.innerText?.trim() || '';
+            // SZ signs a message with its author ("Felipe: tem o whatsapp deles?").
+            if (name && normalize(message).startsWith(`${normalize(name)}:`)) message = message.slice(name.length + 1).trim();
             if (!message || /^autom[aá]tico\b/i.test(name)) return [];
-            const sent = msg.classList.contains('sent');
-            const received = msg.classList.contains('received');
+            // Real SZ bubbles are a bare .msg: the customer's carry the platform icon beside the name,
+            // the technician's only the name. Explicit sent/received classes still win.
+            const icon = !!msg.querySelector('.message-details .icon-platform-mini');
+            const received = msg.classList.contains('received') || (!msg.classList.contains('sent') && icon);
+            const sent = msg.classList.contains('sent')
+                || (!received && !!name && !!msg.querySelector('.message-details .name'));
             const knownCustomer = matchesCustomer(normalize(name));
             if (!sent && name && !knownCustomer && !scoped) return [];
             if (!sent && received && name && !knownCustomer) return [];

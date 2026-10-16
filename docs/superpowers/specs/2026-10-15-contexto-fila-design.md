@@ -32,12 +32,12 @@ Abaixo de cada card nativo da fila, como elemento **irmão** do card (nunca filh
   🖥 123 456 789 · Certificado novo, não emite DANFE   ← faixa da extensão
 ```
 
-- **Dimensões:** altura fixa de 16px, sem margens verticais, fonte de 11px (a mesma do "Squad D"), uma linha só, truncada com "…" e com o texto completo no `title`. O recuo fica alinhado ao nome do contato.
+- **Dimensões:** altura fixa de 16px, sem margens verticais, fonte de 11px (a mesma do "Squad D"), uma linha só, truncada com "…" e com o texto completo no `title`. A faixa começa na margem da lista (8px), não alinhada ao nome, para sobrar espaço ao rótulo. A captura ignora mensagens ocultas e não salva nada se aparecer mensagem de outro cliente na conversa aberta (troca de chat no meio da leitura).
 - **Código AnyDesk:** em fonte monoespaçada, agrupado de 3 em 3. Um clique copia os dígitos sem espaços e mostra "copiado ✓" por 1,5s. Sem código, esse trecho não aparece.
-- **Linha do problema:** até 70 caracteres.
-  - Origem heurística: cor secundária (mais clara).
-  - Origem IA ou manual: cor normal.
-  - Um duplo clique abre a edição ali mesmo (Enter salva, Esc cancela, limite de 70 caracteres). A edição manual nunca é sobrescrita pela IA.
+- **Linha do problema:** um rótulo de até 32 caracteres no estilo etiqueta ("NF-e rejeição 539", "Certificado vencido"), para caber na coluna da fila (~286px) ao lado do código sem precisar de hover. *Revisão 2026-10-16: antes eram 70 caracteres, quase sempre cortados.*
+  - Só aparecem rótulos da IA ou manuais. *Revisão 2026-10-16: a heurística (primeiras palavras do cliente, cortadas) quase nunca dizia qual era o problema; continua salva, mas não é exibida.*
+  - Opções → "Contexto na fila": um interruptor para o código AnyDesk e outro para o resumo do problema, ambos ligados por padrão e aplicados na hora. Com o resumo desligado, a IA não é chamada.
+  - Um duplo clique abre a edição ali mesmo (Enter salva, Esc cancela, limite de 32 caracteres). A edição manual nunca é sobrescrita pela IA.
 - Sem código e sem linha, a faixa não é inserida.
 - Cores vêm de `styles/tokens.css` e respeitam os temas claro e escuro. Não há cor de prioridade.
 - Cliques fora dos dois controles da faixa não são interceptados, e os cliques do card nativo continuam 100% nativos.
@@ -49,7 +49,10 @@ Abaixo de cada card nativo da fila, como elemento **irmão** do card (nunca filh
 3. **Lista virtualizada ou posicionada por coordenada:** se os cards tiverem `position: absolute` ou `transform` de posicionamento, ou se o contêiner da lista não for de fluxo normal, a funcionalidade inteira fica desligada naquela página.
 4. **Checagem pós-render:** depois de inserir, compara o `getBoundingClientRect` da faixa com o do card anterior e do seguinte. Qualquer interseção remove a faixa e desliga a funcionalidade até o recarregamento, registrando um aviso no console.
 5. **Re-render do SZ:** um `MutationObserver` (com debounce, sem laço) reconcilia as faixas pela **chave do chat** (`chatKey` existente), nunca pelo índice. O `ARQUITETURA.md` já registra que essa chave depende de metadados da página. Se não for possível derivar uma chave confiável para um card, ele fica sem faixa. Faixa órfã é removida. Faixa no lugar errado é movida.
-6. Usa o adaptador de lista que já existe (`.chats-list` / `.contacts-list` / `.contact-list` contendo `.sz_contact`) e as validações já implementadas no módulo atual (pai flex em coluna, rolagem vertical nativa, ausência de inputs).
+6. Lista da fila: `#contact-fields.contacts-field.contact-scroll` (o mesmo contêiner do `pre-controls.js`), com `.chats-list` / `.contacts-list` / `.contact-list` como reserva. Validações: largura ≥ 210px, altura ≥ 200px, coluna esquerda, ausência de inputs nativos e rolagem vertical nativa na própria lista **ou no primeiro ancestral que recorta** (no SZ real é `.active_contacts_list.scroll-list`). Cada card vive no seu próprio `.sz_contact-wrapper` nativo; a faixa entra depois desse wrapper, e qualquer outro contêiner por card desliga a funcionalidade. Quando a lista é recusada, um aviso explica o motivo no console.
+   - *Revisão 2026-10-16, DOM real:* o pai da lista é `display: block`, a lista tem `overflow-y: visible` e os cards não têm `data-chat-id`. A exigência anterior de "pai flex em coluna" nunca valeu no SZ e foi retirada.
+   - A chave do chat é a mesma do Smart Reply e do buffer de recuperação: `data-*` quando existir; senão `attendance:<plataforma>|<nome>|<início do atendimento>` (de `.contact-times[phase="attendance"] .times[title]`). Sem esses três dados, o card fica sem faixa.
+   - Mensagens reais são `.msg` sem `sent`/`received`: o ícone `.message-details .icon-platform-mini` marca o cliente; só o nome marca o técnico. O prefixo "Nome: " que o SZ põe no texto é removido. O botão "Iniciar" do webchat não conta como descrição do problema.
 
 ## 5. Captura de dados
 
@@ -73,8 +76,8 @@ A captura roda quando o chat está aberto, porque o SZ só tem o histórico no D
 ### 5.3 Linha do problema
 
 1. **Entrada:** mensagens do cliente anteriores ao divisor, de todos os setores, concatenadas e cortadas a partir das **mais recentes** até 1.500 caracteres.
-2. **Heurística (imediata):** a primeira mensagem do cliente na entrada que não seja só saudação ("bom dia", "boa tarde", "oi", "olá"...), só número ou só pontuação, truncada em 70 caracteres.
-3. **IA (uma vez por chat):** chamada ao backend com a entrada. Resposta esperada: uma frase de até 70 caracteres, sem saudação, sem nome do cliente e sem ponto final.
+2. **Heurística (imediata):** a primeira mensagem do cliente na entrada que não seja só saudação ("bom dia", "boa tarde", "oi", "olá"...), só número ou só pontuação, truncada em 32 caracteres, de preferência no fim de uma palavra.
+3. **IA (uma vez por chat):** chamada ao backend com a entrada. Resposta esperada: um rótulo de até 32 caracteres, sem saudação, sem nome do cliente e sem ponto final.
    - Timeout de 10s.
    - Em caso de falha, fica a heurística, sem retry automático e sem mensagem de erro visível.
    - Sem entrada (o cliente não escreveu antes do divisor): não chama a IA.
@@ -101,7 +104,7 @@ A captura roda quando o chat está aberto, porque o SZ só tem o histórico no D
 
 - Endpoint novo: `POST /api/gemini/linha-problema`, com corpo `{ mensagens: string }` e resposta `{ linha: string }`.
 - Modelo: o Flash-Lite mais barato disponível (hoje, Gemini 3.5 Flash-Lite: US$ 0,30/1M de entrada e US$ 2,50/1M de saída). **Thinking desligado ou no mínimo**, porque os tokens de raciocínio são cobrados como saída.
-- O backend corta a saída em 70 caracteres.
+- O backend corta a saída em 32 caracteres, de preferência no fim de uma palavra.
 - Estimativa: 50 chats/dia × 22 dias ≈ 1.100 chamadas por mês, com ~600 tokens de entrada e ~30 de saída cada. Isso dá cerca de US$ 0,30/mês (≈ R$ 1,70).
 - A extensão chama o backend pelo `background.js`, no mesmo padrão `apiFetchJson` dos endpoints existentes. Enquanto o endpoint não existir, a faixa funciona só com a heurística.
 
@@ -122,7 +125,7 @@ Padrão do repositório: `tests/*.test.js` com `tests/mini-dom.js`.
   - rejeita: telefone de 10 dígitos com "tel" ou "whats"; CNPJ; CPF; protocolo; número antes do pedido sem ser mensagem isolada;
   - com vários códigos, escolhe o mais recente.
 - **Divisor:** sem transferência, com uma e com várias. Inclui as fixtures reais coletadas.
-- **Heurística:** pula saudações, números e "?", e trunca em 70 caracteres.
+- **Heurística:** pula saudações, números e "?", e trunca em 32 caracteres.
 - **Persistência:** precedência de `source`, `aiRequested`, limpeza de 3 dias.
 - **Layout:**
   - a faixa é irmã do card, nunca filha;

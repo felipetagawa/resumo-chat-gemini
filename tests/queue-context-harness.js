@@ -7,7 +7,7 @@ const FILES = ['modules/queue-context-parse.js', 'modules/queue-context-store.js
   'modules/queue-context-capture.js', 'modules/queue-context.js'];
 
 function harness({ store = {}, send } = {}) {
-  const document = createDocument(), timers = new Map(), observers = [], warns = [], copied = [], sent = [];
+  const document = createDocument(), timers = new Map(), observers = [], warns = [], copied = [], sent = [], listeners = [];
   let seq = 0, clock = 1_000_000_000;
   const context = {
     document,
@@ -33,7 +33,7 @@ function harness({ store = {}, send } = {}) {
         set(data, cb) { Object.assign(store, structuredClone(data)); cb(); },
         remove(keys, cb) { [].concat(keys).forEach(k => delete store[k]); cb(); }
       },
-      onChanged: { addListener() {} }
+      onChanged: { addListener(fn) { listeners.push(fn); } }
     } }
   };
   vm.createContext(context);
@@ -63,7 +63,13 @@ function harness({ store = {}, send } = {}) {
   function mutate(records = [{ target: list, addedNodes: [], removedNodes: [] }]) { notify(records); return flush(); }
   async function mount() { await context.QueueContextModule.mount(); await flush(); }
   const strips = () => document.querySelectorAll('.atendeai-queue-ctx');
-  return { context, document, list, transcript, card, message, flush, notify, mutate, mount, strips,
+  // Simulates the options page writing a setting.
+  function setPref(key, value) {
+    const oldValue = store[key]; store[key] = value;
+    listeners.forEach(fn => fn({ [key]: { oldValue, newValue: value } }, 'local'));
+    return flush();
+  }
+  return { context, document, list, transcript, card, message, flush, notify, mutate, mount, strips, setPref,
     store, warns, copied, sent, timers, advance(ms) { clock += ms; } };
 }
 

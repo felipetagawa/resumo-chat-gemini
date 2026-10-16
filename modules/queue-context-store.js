@@ -1,7 +1,7 @@
 // modules/queue-context-store.js
 // Local per-attendance context. Only chrome.storage.local; never sent anywhere.
 const QueueContextStore = (() => {
-  const KEY = "atendeai_queue_context_v1", TTL = 3 * 86400000;
+  const KEY = "atendeai_queue_context_v1", VERSION = 3, TTL = 3 * 86400000;
   const LEGACY_KEYS = ["atendeai_support_focus_v1", "atendeai_support_focus_badges_enabled"];
   const RANK = Object.freeze({ heuristic: 1, ai: 2, manual: 3 });
   let queue = Promise.resolve();
@@ -44,15 +44,26 @@ const QueueContextStore = (() => {
       if (!current && !next.anydesk && !next.problem && !next.aiRequested) return null;
       if (current && JSON.stringify(shape(current)) === JSON.stringify(next)) return current;
       const saved = { ...next, updatedAt: Date.now() };
-      await storage("set", { [KEY]: { version: 1, items: { ...items, [id]: saved } } });
+      await storage("set", { [KEY]: { version: VERSION, items: { ...items, [id]: saved } } });
       return saved;
     });
   }
-  function prune() {
+  // Once: before 2026-10-16 a chat switch could mix two transcripts, so captured codes and lines
+  // (heuristic or AI) may belong to another chat. Only lines the technician typed by hand are kept.
+  function repair(items, isProblem) {
+    return Object.fromEntries(Object.entries(items)
+      .filter(([, item]) => item.problem?.source === "manual" && isProblem(item.problem.text))
+      .map(([id, item]) => [id, { ...item, anydesk: null, aiRequested: false }]));
+  }
+  function prune(isProblem) {
     return serial(async () => {
-      const items = await readAll();
-      const kept = Object.fromEntries(Object.entries(items).filter(([, item]) => fresh(item)));
-      if (Object.keys(kept).length !== Object.keys(items).length) await storage("set", { [KEY]: { version: 1, items: kept } });
+      const data = await storage("get", [KEY]), stored = data?.[KEY] || {}, items = stored.items || {};
+      let kept = Object.fromEntries(Object.entries(items).filter(([, item]) => fresh(item)));
+      const migrate = (stored.version || 1) < VERSION && typeof isProblem === "function";
+      if (migrate) kept = repair(kept, isProblem);
+      if (migrate || Object.keys(kept).length !== Object.keys(items).length) {
+        await storage("set", { [KEY]: { version: migrate ? VERSION : stored.version || 1, items: kept } });
+      }
       await storage("remove", LEGACY_KEYS);
     });
   }

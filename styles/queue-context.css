@@ -8,7 +8,7 @@
   box-sizing: border-box;
   height: 16px;
   margin: 0;
-  padding: 0 8px 0 72px;
+  padding: 0 8px;
   overflow: hidden;
   white-space: nowrap;
   font-size: 11px;
@@ -40,9 +40,6 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.atendeai-queue-ctx-problem[data-source="heuristic"] {
-  opacity: 0.6;
 }
 .atendeai-queue-ctx-input {
   flex: 1;

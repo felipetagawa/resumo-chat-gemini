@@ -72,11 +72,11 @@ test('divider: nothing before it falls back to client messages after it', () => 
   assert.deepEqual(r, { texts: ['oi', 'o pdv travou'], beforeDivider: false });
 });
 
-test('heuristic: skips greetings, numbers and punctuation; truncates at 70', () => {
+test('heuristic: skips greetings, numbers and punctuation; truncates at 32 on a word boundary', () => {
   assert.equal(P.heuristicLine(['Bom dia!', 'olá, tudo bem?', '123456789', '?',
-    'Acabei de instalar um certificado e não emite DANFE']), 'Acabei de instalar um certificado e não emite DANFE');
+    'Acabei de instalar um certificado e não emite DANFE']), 'Acabei de instalar um…');
   const long = P.heuristicLine(['erro '.repeat(30)]);
-  assert.equal(long.length, 70); assert.ok(long.endsWith('…'));
+  assert.ok(long.length <= 32); assert.ok(long.endsWith('…'));
   assert.equal(P.heuristicLine(['oi', 'boa tarde']), '');
 });
 
@@ -92,7 +92,7 @@ test('format and normalize', () => {
   assert.equal(P.formatAnyDesk('123456789'), '123 456 789');
   assert.equal(P.formatAnyDesk('1234567890'), '1 234 567 890');
   assert.equal(P.normalizeLine('"Certificado novo não emite DANFE."'), 'Certificado novo não emite DANFE');
-  assert.equal(P.normalizeLine('x'.repeat(90)).length, 70);
+  assert.equal(P.normalizeLine('x'.repeat(90)).length, 32);
 });
 
 test('final review: greeting-only messages before the divider are not AI input', () => {
@@ -103,4 +103,26 @@ test('final review: greeting-only messages before the divider are not AI input',
 test('final review: without transfer or technician message there is no divider yet, so no AI', () => {
   const r = plain(P.problemMessages([client('oi'), client('minha nota não sai')]));
   assert.deepEqual(r, { texts: ['oi', 'minha nota não sai'], beforeDivider: false });
+});
+
+test('the webchat start button is not a problem description', () => {
+  assert.equal(P.meaningful('Iniciar'), false);
+  assert.equal(P.meaningful('Começar'), false);
+  const source = P.problemMessages([{ role: 'client', text: 'Iniciar' }, { role: 'agent', text: 'Olá, sou o Felipe' },
+    { role: 'client', text: 'Eu consigo de alguma forma conectar vcs 2?' }]);
+  assert.deepEqual(plain(source), { texts: ['Eu consigo de alguma forma conectar vcs 2?'], beforeDivider: false });
+  assert.equal(P.heuristicLine(source.texts), 'Eu consigo de alguma forma…');
+});
+
+test('a sender name prefix never becomes the problem line', () => {
+  const source = P.problemMessages([{ role: 'client', text: 'Thiago Antonio Oliveira da Costa: Boleto não gera' }]);
+  assert.equal(P.heuristicLine(source.texts), 'Boleto não gera');
+  // One capitalized word before a colon is content, not a name.
+  assert.equal(P.heuristicLine(P.problemMessages([{ role: 'client', text: 'Erro: rejeição 539' }]).texts), 'Erro: rejeição 539');
+});
+
+test('stored lines are reusable only without button labels or sender prefixes', () => {
+  assert.equal(P.isProblemLine('Iniciar'), false);
+  assert.equal(P.isProblemLine('Thiago Antonio Oliveira da Costa: B…'), false);
+  assert.equal(P.isProblemLine('Não consigo emitir nota'), true);
 });
