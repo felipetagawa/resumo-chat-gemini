@@ -19,13 +19,27 @@ const QueueContextStore = (() => {
   }
   async function readAll() { const data = await storage("get", [KEY]); return data?.[KEY]?.items || {}; }
   function fresh(item) { return !!item && Number.isFinite(item.updatedAt) && Date.now() - item.updatedAt < TTL; }
+  // AI bookkeeping per chat: attempts so far, the input size of the last one (0 after a failure, so any
+  // input may retry) and the earliest time for the next. Pre-1.6.1 items only had aiRequested, sticky even
+  // after a failure: they count as one failed attempt and get their retries.
   function shape(item) {
-    return { anydesk: item?.anydesk ?? null, problem: item?.problem ?? null, aiRequested: item?.aiRequested === true };
+    const legacy = item?.aiRequested === true && !Number.isFinite(item?.aiAttempts);
+    return {
+      anydesk: item?.anydesk ?? null, problem: item?.problem ?? null,
+      aiAttempts: legacy ? 1 : Number(item?.aiAttempts) || 0,
+      aiSize: Number(item?.aiSize) || 0,
+      aiNextAt: Number(item?.aiNextAt) || 0
+    };
   }
   function mergeItem(current, patch) {
     const next = shape(current);
     if (patch.anydesk) next.anydesk = String(patch.anydesk);
-    if (patch.aiRequested === true) next.aiRequested = true;
+    if (patch.aiAttempt) {
+      next.aiAttempts += 1;
+      next.aiSize = Number(patch.aiAttempt.size) || 0;
+      next.aiNextAt = Number(patch.aiAttempt.nextAt) || 0;
+    }
+    if (patch.aiFailed === true) next.aiSize = 0;
     const p = patch.problem;
     if (p?.text && RANK[p.source] && (!next.problem || RANK[p.source] >= RANK[next.problem.source])) {
       next.problem = { text: String(p.text), source: p.source };
@@ -41,7 +55,7 @@ const QueueContextStore = (() => {
     return serial(async () => {
       const items = await readAll(), current = fresh(items[id]) ? items[id] : null;
       const next = mergeItem(current, patch || {});
-      if (!current && !next.anydesk && !next.problem && !next.aiRequested) return null;
+      if (!current && !next.anydesk && !next.problem && !next.aiAttempts) return null;
       if (current && JSON.stringify(shape(current)) === JSON.stringify(next)) return current;
       const saved = { ...next, updatedAt: Date.now() };
       await storage("set", { [KEY]: { version: VERSION, items: { ...items, [id]: saved } } });
@@ -53,7 +67,7 @@ const QueueContextStore = (() => {
   function repair(items, isProblem) {
     return Object.fromEntries(Object.entries(items)
       .filter(([, item]) => item.problem?.source === "manual" && isProblem(item.problem.text))
-      .map(([id, item]) => [id, { ...item, anydesk: null, aiRequested: false }]));
+      .map(([id, item]) => [id, { anydesk: null, problem: item.problem, updatedAt: item.updatedAt }]));
   }
   function prune(isProblem) {
     return serial(async () => {

@@ -2,7 +2,7 @@
 // Pure parsing for the queue context strip. No DOM, storage or network.
 const QueueContextParse = (() => {
   // A queue label, not a sentence: fits the ~286px SZ queue column beside the AnyDesk code.
-  const LIMIT = 32, AI_INPUT_LIMIT = 1500;
+  const LIMIT = 32, AI_INPUT_LIMIT = 1500, AFTER_DIVIDER_MIN_LETTERS = 15;
   const TRANSFER_RE = /transferi/i;
   const REQUEST_RE = /\b(?:any\s?desk|desk)\b|acesso remoto/i;
   const EXCLUDE_RE = /\b(?:cnpj|cpf|tel|telefone|fone|celular|whats|whatsapp|protocolo)\b/i;
@@ -58,7 +58,16 @@ const QueueContextParse = (() => {
     const before = texts(list.slice(0, index));
     // Greetings alone before the divider are not a problem description worth an AI call.
     if (before.some(meaningful)) return { texts: before, beforeDivider: true };
-    return { texts: texts(list.slice(index + 1)), beforeDivider: false };
+    return { texts: texts(list.slice(index + 1)), beforeDivider: false, afterDivider: true };
+  }
+  // Worth an AI call: the description before the divider, or, when there was none, enough the
+  // customer wrote to the technician afterwards (a greeting or "sim" is not a description).
+  function aiReady(source) {
+    if (source?.beforeDivider) return true;
+    if (!source?.afterDivider) return false;
+    const letters = source.texts.filter(meaningful)
+      .reduce((sum, t) => sum + clean(t).replace(GREETING_RE, "").replace(/[^\p{L}]/gu, "").length, 0);
+    return letters >= AFTER_DIVIDER_MIN_LETTERS;
   }
 
   function meaningful(text) {
@@ -90,7 +99,7 @@ const QueueContextParse = (() => {
     return truncate(clean(text).replace(/^["'“”]+|["'“”]+$/g, "").replace(/\.+$/, "").trim());
   }
 
-  return Object.freeze({ LIMIT, detectAnyDesk, problemMessages, heuristicLine, buildAiInput, formatAnyDesk, normalizeLine, meaningful,
+  return Object.freeze({ LIMIT, detectAnyDesk, problemMessages, aiReady, heuristicLine, buildAiInput, formatAnyDesk, normalizeLine, meaningful,
     // A stored line is still usable: real content, no sender prefix left in it.
     isProblemLine: text => meaningful(text) && withoutAuthor(text) === clean(text) });
 })();

@@ -5,6 +5,7 @@ const QueueContextModule = (() => {
   // #contact-fields is the real SZ queue (pre-controls uses it too); the class names are older adapters.
   const LIST_SELECTOR = "#contact-fields, .contacts-field.contact-scroll, .chats-list, .contacts-list, .contact-list";
   const WRAPPER = "sz_contact-wrapper";
+  const AI_MAX_ATTEMPTS = 3, AI_RETRY_MS = 2 * 60 * 1000;
   // Options page switches; both default on. Off hides that part and, for the problem, skips the AI call.
   const PREF_KEYS = Object.freeze({ anydesk: "atendeai_queue_context_anydesk", problem: "atendeai_queue_context_problem" });
   let observer, timer, disabled = false, items = {}, lastRejection = "", prefs = { anydesk: true, problem: true };
@@ -208,20 +209,33 @@ const QueueContextModule = (() => {
       problem: heuristic ? { text: heuristic, source: "heuristic" } : null
     });
     if (saved) items[chatId] = saved;
-    const input = source.beforeDivider ? P.buildAiInput(source.texts) : "";
-    if (!prefs.problem || !input || saved?.aiRequested || pending.has(chatId)) return;
+    const input = P.aiReady(source) ? P.buildAiInput(source.texts) : "";
+    if (!prefs.problem || !input || pending.has(chatId) || !aiDue(saved, input)) return;
     pending.add(chatId);
-    items[chatId] = await QueueContextStore.merge(chatId, { aiRequested: true });
+    items[chatId] = await QueueContextStore.merge(chatId,
+      { aiAttempt: { size: input.length, nextAt: Date.now() + AI_RETRY_MS } });
     await requestLine(chatId, input).finally(() => pending.delete(chatId));
   }
+  // A few tries per attendance, spaced out: after a failure any input may retry; after an answer
+  // without a usable line, only once the customer has written more.
+  function aiDue(saved, input) {
+    if (["ai", "manual"].includes(saved?.problem?.source)) return false;
+    const attempts = Number(saved?.aiAttempts) || (saved?.aiRequested ? 1 : 0);
+    if (attempts >= AI_MAX_ATTEMPTS) return false;
+    if (!attempts) return true;
+    return Date.now() >= (Number(saved.aiNextAt) || 0) && input.length > (Number(saved.aiSize) || 0);
+  }
   async function requestLine(chatId, mensagens) {
+    let failed = true;
     try {
       const response = await MessagingHelper.send({ action: "gerarLinhaProblema", mensagens });
+      failed = !response?.success;
       const text = response?.success ? QueueContextParse.normalizeLine(response.linha) : "";
       if (text) items[chatId] = await QueueContextStore.merge(chatId, { problem: { text, source: "ai" } });
     } catch (_) {
-      // Heuristic stays; one request per attendance, no retry and no visible error.
+      // No visible error: the next capture after AI_RETRY_MS tries again.
     }
+    if (failed) items[chatId] = await QueueContextStore.merge(chatId, { aiFailed: true });
   }
   async function tick() {
     if (disabled) return;

@@ -77,10 +77,12 @@ A captura roda quando o chat está aberto, porque o SZ só tem o histórico no D
 
 1. **Entrada:** mensagens do cliente anteriores ao divisor, de todos os setores, concatenadas e cortadas a partir das **mais recentes** até 1.500 caracteres.
 2. **Heurística (imediata):** a primeira mensagem do cliente na entrada que não seja só saudação ("bom dia", "boa tarde", "oi", "olá"...), só número ou só pontuação, truncada em 32 caracteres, de preferência no fim de uma palavra.
-3. **IA (uma vez por chat):** chamada ao backend com a entrada. Resposta esperada: um rótulo de até 32 caracteres, sem saudação, sem nome do cliente e sem ponto final.
+3. **IA (até 3 tentativas por chat):** chamada ao backend com a entrada. Resposta esperada: um rótulo de até 32 caracteres, sem saudação, sem nome do cliente e sem ponto final.
    - Timeout de 10s.
-   - Em caso de falha, fica a heurística, sem retry automático e sem mensagem de erro visível.
-   - Sem entrada (o cliente não escreveu antes do divisor): não chama a IA.
+   - Em caso de falha, sem mensagem de erro visível; nova tentativa na próxima captura depois de 2 minutos.
+   - Resposta sem rótulo (SEM_PROBLEMA): nova tentativa só depois de 2 minutos e com mais texto do cliente.
+   - Nada útil antes do divisor: usa o que o cliente escreveu depois dele, a partir de 15 letras além das saudações. Sem divisor ainda: não chama a IA.
+   - *Revisão 1.6.1: antes era uma chamada por chat, sem retry, e só com texto anterior ao divisor; muitos chats ficavam sem rótulo para sempre.*
 
 ## 6. Persistência
 
@@ -90,13 +92,15 @@ A captura roda quando o chat está aberto, porque o SZ só tem o histórico no D
 {
   anydesk: "123456789" | null,
   problem: { text: string, source: "heuristic" | "ai" | "manual" },
-  aiRequested: boolean,
+  aiAttempts: number,   // tentativas feitas (máx. 3)
+  aiSize: number,       // tamanho da entrada da última tentativa; 0 depois de falha
+  aiNextAt: number,     // não tenta de novo antes disso
   updatedAt: number
 }
 ```
 
 - Prioridade de `source`: `manual` > `ai` > `heuristic`. Uma fonte de prioridade menor nunca sobrescreve uma de prioridade maior.
-- `aiRequested` garante uma chamada por chat, mesmo se a anterior tiver falhado.
+- Com rótulo da IA ou manual, não há mais chamadas. Entradas da 1.6.0 com `aiRequested: true` contam como uma tentativa com falha e ganham as restantes.
 - Limpeza: entradas com `updatedAt` acima de 3 dias são removidas na inicialização.
 - Nenhum dado vai para o servidor além do texto enviado na chamada da IA.
 
@@ -126,7 +130,7 @@ Padrão do repositório: `tests/*.test.js` com `tests/mini-dom.js`.
   - com vários códigos, escolhe o mais recente.
 - **Divisor:** sem transferência, com uma e com várias. Inclui as fixtures reais coletadas.
 - **Heurística:** pula saudações, números e "?", e trunca em 32 caracteres.
-- **Persistência:** precedência de `source`, `aiRequested`, limpeza de 3 dias.
+- **Persistência:** precedência de `source`, tentativas da IA, limpeza de 3 dias.
 - **Layout:**
   - a faixa é irmã do card, nunca filha;
   - a funcionalidade desliga com lista absoluta ou com transform;

@@ -37,11 +37,22 @@ test('source precedence: manual > ai > heuristic', async () => {
   assert.equal((await S.merge('a', { problem: { text: 'ia2', source: 'ai' } })).problem.text, 'eu');
 });
 
-test('aiRequested is sticky and a null anydesk never clears a known one', async () => {
+test('AI attempts are counted, a failure reopens any input, and a null anydesk never clears a known one', async () => {
   const { S } = load();
-  await S.merge('a', { anydesk: '123456789', aiRequested: true });
-  const item = await S.merge('a', { anydesk: null, problem: null });
-  assert.equal(item.aiRequested, true); assert.equal(item.anydesk, '123456789');
+  await S.merge('a', { anydesk: '123456789', aiAttempt: { size: 40, nextAt: 500 } });
+  let item = await S.merge('a', { anydesk: null, problem: null });
+  assert.deepEqual([item.aiAttempts, item.aiSize, item.aiNextAt, item.anydesk], [1, 40, 500, '123456789']);
+  item = await S.merge('a', { aiFailed: true });
+  assert.equal(item.aiSize, 0);
+  item = await S.merge('a', { aiAttempt: { size: 60, nextAt: 900 } });
+  assert.deepEqual([item.aiAttempts, item.aiSize], [2, 60]);
+});
+
+test('pre-1.6.1 aiRequested items count as one failed attempt', async () => {
+  const { S } = load({ [KEY]: { version: 3, items: {
+    old: { anydesk: null, problem: { text: 'oi tudo', source: 'heuristic' }, aiRequested: true, updatedAt: 1_000_000_000 } } } });
+  const item = await S.merge('old', { aiAttempt: { size: 30, nextAt: 1 } });
+  assert.equal(item.aiAttempts, 2); assert.equal(item.aiRequested, undefined);
 });
 
 test('unchanged merge does not write; empty first merge stores nothing', async () => {

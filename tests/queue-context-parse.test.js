@@ -69,7 +69,16 @@ test('divider: client text containing "transferi" is not a divider', () => {
 
 test('divider: nothing before it falls back to client messages after it', () => {
   const r = plain(P.problemMessages([system('Triagem transferiu para Felipe'), client('oi'), client('o pdv travou')]));
-  assert.deepEqual(r, { texts: ['oi', 'o pdv travou'], beforeDivider: false });
+  assert.deepEqual(r, { texts: ['oi', 'o pdv travou'], beforeDivider: false, afterDivider: true });
+});
+
+test('ai readiness: before the divider always; after it only with a real description', () => {
+  const after = texts => P.problemMessages([system('Triagem transferiu para Felipe'), ...texts.map(client)]);
+  assert.equal(P.aiReady(P.problemMessages([client('não emite nota'), agent('Olá')])), true);
+  assert.equal(P.aiReady(after(['oi', 'o pdv travou na venda'])), true);
+  assert.equal(P.aiReady(after(['bom dia', 'sim'])), false);
+  assert.equal(P.aiReady(after(['o pdv travou'])), false);
+  assert.equal(P.aiReady(P.problemMessages([client('minha nota não sai, rejeição 539')])), false);
 });
 
 test('heuristic: skips greetings, numbers and punctuation; truncates at 32 on a word boundary', () => {
@@ -97,7 +106,7 @@ test('format and normalize', () => {
 
 test('final review: greeting-only messages before the divider are not AI input', () => {
   const r = plain(P.problemMessages([client('boa tarde'), system('Triagem transferiu para Felipe'), client('o pdv travou na venda')]));
-  assert.deepEqual(r, { texts: ['o pdv travou na venda'], beforeDivider: false });
+  assert.deepEqual(r, { texts: ['o pdv travou na venda'], beforeDivider: false, afterDivider: true });
 });
 
 test('final review: without transfer or technician message there is no divider yet, so no AI', () => {
@@ -110,7 +119,7 @@ test('the webchat start button is not a problem description', () => {
   assert.equal(P.meaningful('Começar'), false);
   const source = P.problemMessages([{ role: 'client', text: 'Iniciar' }, { role: 'agent', text: 'Olá, sou o Felipe' },
     { role: 'client', text: 'Eu consigo de alguma forma conectar vcs 2?' }]);
-  assert.deepEqual(plain(source), { texts: ['Eu consigo de alguma forma conectar vcs 2?'], beforeDivider: false });
+  assert.deepEqual(plain(source), { texts: ['Eu consigo de alguma forma conectar vcs 2?'], beforeDivider: false, afterDivider: true });
   assert.equal(P.heuristicLine(source.texts), 'Eu consigo de alguma forma…');
 });
 
