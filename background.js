@@ -218,7 +218,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           || replyInstruction.length > 600 || !samplesValid
           || (request.currentReply != null && typeof request.currentReply !== "string")
           || currentReply.length > 1500 || (currentReply && !replyInstruction)
-          || (request.regenerate != null && typeof request.regenerate !== "boolean")) {
+          || (request.regenerate != null && typeof request.regenerate !== "boolean")
+          || (request.intent != null && !["resolver", "pedir_info", "aviso", "cliente_dificil", "cobrar_retorno", "encerrar"].includes(request.intent))
+          || (request.notices != null && !(Array.isArray(request.notices) && request.notices.length <= 5
+            && request.notices.every(n => typeof n === "string" && n.trim() && n.length <= 500)))) {
           safeSend({ success: false, erro: "Contexto inválido para sugerir resposta." });
           return;
         }
@@ -227,6 +230,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (replyInstruction) payload.replyInstruction = replyInstruction;
         if (currentReply) payload.currentReply = currentReply;
         if (samples?.length) payload.styleSamples = samples.map(s => s.trim());
+        if (request.intent) payload.intent = request.intent;
+        if (request.notices?.length) payload.notices = request.notices.map(n => n.trim());
         const apiBaseUrl = await getApiBaseUrl();
         const result = await apiFetchJson(`${apiBaseUrl}/api/gemini/responder`, {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),

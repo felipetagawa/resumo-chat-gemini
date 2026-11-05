@@ -59,6 +59,7 @@
         "modules/recovery-buffer.js",
         "modules/smart-reply-context.js",
         "modules/smart-reply-samples.js",
+        "modules/daily-notices.js",
         "modules/smart-reply.js",
         "modules/queue-context-parse.js",
         "modules/queue-context-store.js",

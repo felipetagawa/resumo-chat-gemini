@@ -81,6 +81,7 @@ function harness(store = {}) {
       return { success: true, reply: 'Pode informar o erro exibido?' };
     } } };
   vm.createContext(context);
+  context.globalThis = context;
   vm.runInContext(fs.readFileSync('modules/chat-capture.js', 'utf8'), context);
   vm.runInContext(fs.readFileSync('modules/smart-reply.js', 'utf8'), context);
   const find = predicate => all(body).find(predicate);
@@ -89,7 +90,7 @@ function harness(store = {}) {
   const button = label => find(n => n.tagName === 'button' && n.textContent === label);
   // The card opens empty; these tests then click "Gerar sugestão" like the technician does.
   const open = async () => { await module.open(); const b = button('Gerar sugestão'); if (b && !b.disabled) await b.emit('click'); };
-  return { module: { ...module, open }, rawOpen: module.open, live, composer, dock, store, sent, byClass,
+  return { module: { ...module, open }, rawOpen: module.open, useNotices(fake) { context.DailyNoticesModule = fake; }, live, composer, dock, store, sent, byClass,
     panel: () => document.getElementById('atendeai-smart-reply'),
     button,
     status: () => ['smart-reply-warning', 'smart-reply-status'].map(c => byClass(c)?.textContent || '').join(' ').trim(),
@@ -294,4 +295,34 @@ test('abrir o card não chama a API; só o botão Gerar sugestão gera, e depois
   assert.equal(h.button('Gerar sugestão'), undefined);
   await h.button('↻ Outra').emit('click');
   assert.equal(h.sent.length, 2); assert.equal(h.sent[1].regenerate, true);
+});
+
+test('botões de intenção mandam a intenção e os avisos ativos; Aviso só aparece com aviso ativo', async () => {
+  const h = harness();
+  let active = [];
+  h.useNotices({
+    DURATIONS: [['today', 'Até o fim do dia']], MAX_TEXT: 500,
+    async list() { return active.map((text, i) => ({ id: `n${i}`, text, expiresAt: Date.now() + 3600000 })); },
+    async forRequest() { return active.slice(); },
+    async add(text) { active.push(text); }, async remove() { active = []; },
+    untilLabel: () => 'até 18:00'
+  });
+  await h.rawOpen(); await tick();
+  assert.equal(h.button('Aviso').hidden, true);
+  await h.button('Cliente difícil').emit('click');
+  assert.equal(h.sent.at(-1).intent, 'cliente_dificil');
+  assert.equal(h.sent.at(-1).notices, undefined);
+  assert.equal(h.button('Cliente difícil').getAttribute('aria-pressed'), 'true');
+  await h.button('↻ Outra').emit('click');
+  assert.equal(h.sent.at(-1).intent, 'cliente_dificil', '↻ Outra keeps the chosen intent');
+  assert.equal(h.sent.at(-1).regenerate, true);
+
+  const input = h.byClass('smart-reply-notice-input');
+  input.value = 'SEFAZ-MG instável desde 9h';
+  await h.button('Adicionar').emit('click'); await tick();
+  assert.equal(h.button('Aviso').hidden, false);
+  assert.equal(h.button('Avisos (1)').textContent, 'Avisos (1)');
+  await h.button('Aviso').emit('click');
+  assert.equal(h.sent.at(-1).intent, 'aviso');
+  assert.deepEqual(h.sent.at(-1).notices, ['SEFAZ-MG instável desde 9h']);
 });
