@@ -85,9 +85,13 @@ function harness(store = {}) {
   vm.runInContext(fs.readFileSync('modules/smart-reply.js', 'utf8'), context);
   const find = predicate => all(body).find(predicate);
   const byClass = cls => find(n => String(n.className || '').split(' ').includes(cls));
-  return { module: context.window.SmartReplyModule, live, composer, dock, store, sent, byClass,
+  const module = context.window.SmartReplyModule;
+  const button = label => find(n => n.tagName === 'button' && n.textContent === label);
+  // The card opens empty; these tests then click "Gerar sugestão" like the technician does.
+  const open = async () => { await module.open(); const b = button('Gerar sugestão'); if (b && !b.disabled) await b.emit('click'); };
+  return { module: { ...module, open }, rawOpen: module.open, live, composer, dock, store, sent, byClass,
     panel: () => document.getElementById('atendeai-smart-reply'),
-    button: label => find(n => n.tagName === 'button' && n.textContent === label),
+    button,
     status: () => ['smart-reply-warning', 'smart-reply-status'].map(c => byClass(c)?.textContent || '').join(' ').trim(),
     defer() { deferred = true; }, respond(reply = 'Resposta tardia') { resolveReply({ success: true, reply }); },
     fail() { fail = true; }, succeed() { fail = false; },
@@ -208,10 +212,11 @@ test('troca de atendimento durante a geração descarta a resposta e trava as a�
   h.live.name = 'Outra Pessoa'; h.live.time = '06/10/26 09:00'; h.live.conversation = 'Outra Pessoa: oi'; h.notify();
   h.respond(); await opening;
   assert.equal(h.byClass('smart-reply-text').textContent, '');
-  assert.equal(h.button('Inserir').disabled, true); assert.equal(h.button('↻ Outra').disabled, true);
+  // No suggestion was ever shown: Inserir stays hidden and the button still offers the first one.
+  assert.equal(h.button('Inserir').hidden, true); assert.equal(h.button('Gerar sugestão').disabled, true);
   assert.match(h.status(), /atendimento mudou/);
   h.live.name = 'Gabriel'; h.live.time = '06/10/26 08:14'; h.live.conversation = 'Gabriel: preciso de ajuda'; h.notify();
-  assert.equal(h.button('↻ Outra').disabled, true, 'identityChanged is sticky');
+  assert.equal(h.button('Gerar sugestão').disabled, true, 'identityChanged is sticky');
 });
 
 test('mensagem nova trava Inserir até ↻ Outra, que recaptura a conversa', async () => {
@@ -240,11 +245,11 @@ test('rascunho existente pede escolha e Acrescentar preserva o texto do técnico
   assert.equal(h.panel(), null);
 });
 
-test('falha mostra o erro da API e ↻ Outra tenta de novo', async () => {
+test('falha mostra o erro da API e Gerar sugestão tenta de novo', async () => {
   const h = harness(); h.fail(); await h.module.open();
   assert.match(h.status(), /Falha temporária/);
-  assert.equal(h.button('Inserir').disabled, true);
-  h.succeed(); await h.button('↻ Outra').emit('click');
+  assert.equal(h.button('Inserir').hidden, true);
+  h.succeed(); await h.button('Gerar sugestão').emit('click');
   assert.equal(h.byClass('smart-reply-text').textContent, 'Pode informar o erro exibido?');
   assert.equal(h.button('Inserir').disabled, false);
 });
@@ -273,4 +278,20 @@ test('retireLegacyProfiles apaga só as chaves de perfil antigas', () => {
     customInstructions: 'LEGACY_NO_MIGRATION' };
   harness(store).module.retireLegacyProfiles();
   assert.deepEqual(Object.keys(store), ['customInstructions']);
+});
+
+test('abrir o card não chama a API; só o botão Gerar sugestão gera, e depois vira ↻ Outra', async () => {
+  const h = harness(); await h.rawOpen();
+  assert.equal(h.panel().parent, h.dock);
+  assert.equal(h.sent.length, 0);
+  assert.equal(h.byClass('smart-reply-text').textContent, '');
+  assert.equal(h.byClass('smart-reply-hint').hidden, false);
+  assert.equal(h.button('Inserir').hidden, true);
+  await h.button('Gerar sugestão').emit('click');
+  assert.equal(h.sent.length, 1); assert.equal(h.sent[0].regenerate, false);
+  assert.equal(h.byClass('smart-reply-text').textContent, 'Pode informar o erro exibido?');
+  assert.equal(h.byClass('smart-reply-hint').hidden, true);
+  assert.equal(h.button('Gerar sugestão'), undefined);
+  await h.button('↻ Outra').emit('click');
+  assert.equal(h.sent.length, 2); assert.equal(h.sent[1].regenerate, true);
 });

@@ -203,3 +203,9 @@
 }
 
 #containerBotoesGemini .smart-reply-source:hover { text-decoration: underline; }
+
+#containerBotoesGemini .smart-reply-hint {
+    flex-shrink: 0;
+    color: var(--ai-text-muted);
+    font-size: var(--ai-font-size-xs);
+}

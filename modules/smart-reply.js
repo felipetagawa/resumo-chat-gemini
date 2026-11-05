@@ -107,6 +107,15 @@ const SmartReplyModule = (() => {
     const busy = s.busy ? "true" : "false";
     if (s.panel.getAttribute("aria-busy") !== busy) s.panel.setAttribute("aria-busy", busy);
     setDisabled(s.insert, changed || s.stale || s.busy || !s.reply);
+    // Nothing is generated on open: the first click asks for a suggestion, later ones for another.
+    const label = s.generated ? "↻ Outra" : "Gerar sugestão";
+    if (s.regenerate.textContent !== label) {
+      s.regenerate.textContent = label;
+      s.regenerate.className = s.generated ? "smart-reply-secondary" : "smart-reply-primary";
+    }
+    if (s.insert.hidden !== !s.generated) s.insert.hidden = !s.generated;
+    const showHint = !s.generated && !s.busy;
+    if (s.hint.hidden === showHint) s.hint.hidden = !showHint;
     setDisabled(s.regenerate, changed || s.busy);
     setDisabled(s.direct, changed || s.busy);
     if (s.badge.hidden === s.usedComplement) s.badge.hidden = !s.usedComplement;
@@ -144,6 +153,7 @@ const SmartReplyModule = (() => {
       // The chat may have changed while the API answered: never show a reply for another context.
       if (!current(s) || s.stale) { setPreview(s, ""); return; }
       s.reply = result.reply.trim();
+      s.generated = true;
       setPreview(s, s.reply);
       setSources(s, result.sources);
       if (currentReply) s.direct.value = "";
@@ -188,7 +198,7 @@ const SmartReplyModule = (() => {
     close();
     const dock = document.getElementById(DOCK_ID);
     if (!dock) return;
-    const s = { token, reply: "", busy: false, stale: false, identityChanged: false, usedComplement: false };
+    const s = { token, reply: "", busy: false, stale: false, identityChanged: false, usedComplement: false, generated: false };
     session = s;
     const panel = node("section", "", "smart-reply-card");
     panel.id = PANEL_ID;
@@ -215,6 +225,7 @@ const SmartReplyModule = (() => {
       event.stopPropagation?.();
     });
     s.sources = node("div", "", "smart-reply-sources"); s.sources.hidden = true;
+    s.hint = node("div", "Escreva no campo abaixo o que quer dizer (opcional) e clique em Gerar sugestão.", "smart-reply-hint");
     s.warning = node("div", "", "smart-reply-warning"); s.warning.setAttribute("role", "status");
     s.status = node("div", "", "smart-reply-status"); s.status.setAttribute("role", "status");
     s.direct = node("input", "", "smart-reply-direct");
@@ -226,7 +237,7 @@ const SmartReplyModule = (() => {
       return generate(s, false);
     });
     s.regenerate = node("button", "↻ Outra", "smart-reply-secondary"); s.regenerate.type = "button";
-    s.regenerate.addEventListener("click", () => generate(s, true));
+    s.regenerate.addEventListener("click", () => generate(s, s.generated));
     s.insert = node("button", "Inserir", "smart-reply-primary"); s.insert.type = "button";
     s.insert.addEventListener("click", () => insert(s));
     s.actions = node("div", "", "smart-reply-actions");
@@ -244,7 +255,7 @@ const SmartReplyModule = (() => {
     panel.addEventListener("keydown", event => {
       if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); insert(s); }
     });
-    for (const el of [header, s.preview, s.sources, s.warning, s.status, s.direct, s.actions, s.choices]) panel.appendChild(el);
+    for (const el of [header, s.hint, s.preview, s.sources, s.warning, s.status, s.direct, s.actions, s.choices]) panel.appendChild(el);
     s.unlock = lockDock(dock);
     dock.appendChild(panel);
     globalThis.ThemeModule?.apply?.(panel);
@@ -259,7 +270,8 @@ const SmartReplyModule = (() => {
       if (records.some(record => !s.panel.contains(record.target))) syncChat(s);
     });
     s.observer.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
-    await generate(s, false);
+    syncChat(s);
+    s.direct.focus();
   }
   function retireLegacyProfiles() {
     try { chrome.storage.local.remove(LEGACY_KEYS, () => void chrome.runtime?.lastError); }
