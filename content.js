@@ -890,6 +890,14 @@ function criarBotoesFlutuantes(visibility, userSector) {
     container.appendChild(productClassifierResult);
   }
 
+  // Gerar Relatório comes first; Sugerir resposta right below it.
+  if (isVisible("btnResumoGemini")) {
+    const reportGroup = document.createElement("div");
+    reportGroup.className = "gemini-report-group";
+    reportGroup.appendChild(botaoResumo);
+    reportGroup.appendChild(botaoConversasPreservadas);
+    container.appendChild(reportGroup);
+  }
   const showSmartReply = visibility?.btnSmartReply ?? visibility?.btnAssistenteIA ?? true;
   if (showSmartReply || isVisible('btnConsultarDocsLoop')) {
     const replyGroup = document.createElement('div');
@@ -897,13 +905,6 @@ function criarBotoesFlutuantes(visibility, userSector) {
     if (showSmartReply) replyGroup.appendChild(botaoSmartReply);
     if (isVisible('btnConsultarDocsLoop')) replyGroup.appendChild(botaoDocs);
     container.appendChild(replyGroup);
-  }
-  if (isVisible("btnResumoGemini")) {
-    const reportGroup = document.createElement("div");
-    reportGroup.className = "gemini-report-group";
-    reportGroup.appendChild(botaoResumo);
-    reportGroup.appendChild(botaoConversasPreservadas);
-    container.appendChild(reportGroup);
   }
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);
   if (isVisible("btnAgenda")) container.appendChild(botaoAgenda);
