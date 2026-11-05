@@ -57,6 +57,22 @@ const SmartReplyModule = (() => {
     s.direct.setAttribute("aria-label", hasReply ? "Ajustar esta sugestão. Enter reescreve."
       : "Direcionar a resposta. Enter gera de novo.");
   }
+  // Manual pages the suggestion was based on; only links to the official docs site.
+  function setSources(s, sources) {
+    Array.from(s.sources.children).forEach(child => child.remove());
+    const list = (Array.isArray(sources) ? sources : [])
+      .filter(item => item && typeof item.url === "string" && item.url.startsWith("https://docs.softensistemas.com.br/"))
+      .slice(0, 3);
+    s.sources.hidden = !list.length;
+    if (!list.length) return;
+    s.sources.appendChild(node("span", "Base:", "smart-reply-sources-label"));
+    for (const item of list) {
+      const link = node("a", text(item.title).slice(0, 80) || "Manual", "smart-reply-source");
+      link.href = item.url; link.target = "_blank"; link.rel = "noopener noreferrer";
+      link.title = text(item.title);
+      s.sources.appendChild(link);
+    }
+  }
   function showChoices(s, visible) { s.choices.hidden = !visible; s.actions.hidden = visible; }
   function lockDock(dock) {
     const previous = { width: dock.style.width, height: dock.style.height };
@@ -103,7 +119,7 @@ const SmartReplyModule = (() => {
     // Enter with a suggestion on screen revises that text (hand edits included); ↻ Outra always starts over.
     const currentReply = !regenerate && instruction ? String(s.reply || "").trim().slice(0, 1500) : "";
     s.busy = true; s.reply = ""; s.status.textContent = "";
-    setPreview(s, "", true); showChoices(s, false);
+    setPreview(s, "", true); showChoices(s, false); setSources(s, []);
     syncChat(s);
     try {
       await SmartReplyContextModule.sync();
@@ -129,6 +145,7 @@ const SmartReplyModule = (() => {
       if (!current(s) || s.stale) { setPreview(s, ""); return; }
       s.reply = result.reply.trim();
       setPreview(s, s.reply);
+      setSources(s, result.sources);
       if (currentReply) s.direct.value = "";
     } catch (err) {
       if (session !== s) return;
@@ -197,6 +214,7 @@ const SmartReplyModule = (() => {
       if (event.key === "Escape" || (event.key === "Enter" && (event.ctrlKey || event.metaKey))) return;
       event.stopPropagation?.();
     });
+    s.sources = node("div", "", "smart-reply-sources"); s.sources.hidden = true;
     s.warning = node("div", "", "smart-reply-warning"); s.warning.setAttribute("role", "status");
     s.status = node("div", "", "smart-reply-status"); s.status.setAttribute("role", "status");
     s.direct = node("input", "", "smart-reply-direct");
@@ -226,7 +244,7 @@ const SmartReplyModule = (() => {
     panel.addEventListener("keydown", event => {
       if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); insert(s); }
     });
-    for (const el of [header, s.preview, s.warning, s.status, s.direct, s.actions, s.choices]) panel.appendChild(el);
+    for (const el of [header, s.preview, s.sources, s.warning, s.status, s.direct, s.actions, s.choices]) panel.appendChild(el);
     s.unlock = lockDock(dock);
     dock.appendChild(panel);
     globalThis.ThemeModule?.apply?.(panel);

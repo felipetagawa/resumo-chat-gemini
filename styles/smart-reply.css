@@ -181,3 +181,25 @@
     outline: none;
     box-shadow: var(--ai-focus);
 }
+
+/* "Base:" manual pages the suggestion drew on (docs.softensistemas.com.br). */
+#containerBotoesGemini .smart-reply-sources {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 6px;
+    flex-shrink: 0;
+    font-size: var(--ai-font-size-xs);
+    color: var(--ai-text-muted);
+}
+
+#containerBotoesGemini .smart-reply-source {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ai-primary);
+    text-decoration: none;
+}
+
+#containerBotoesGemini .smart-reply-source:hover { text-decoration: underline; }

@@ -232,10 +232,40 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
           signal: AbortSignal.timeout(15000)
         });
-        safeSend({ success: true, reply: result.reply });
+        safeSend({ success: true, reply: result.reply, sources: Array.isArray(result.sources) ? result.sources : [] });
       } catch (err) {
         safeSend({ success: false, erro: err?.name === "TimeoutError"
           ? "A sugestão demorou para responder. Tente novamente." : err?.message || "Não foi possível sugerir uma resposta." });
+      }
+    })();
+    return true;
+  }
+
+  if (request?.action === "docsChat") {
+    (async () => {
+      try {
+        const messages = Array.isArray(request.messages) ? request.messages : null;
+        const product = request.product == null ? null : request.product;
+        const valid = messages && messages.length >= 1 && messages.length <= 20
+          && messages.every((m, i) => m && m.role === (i % 2 === 0 ? "user" : "assistant")
+            && typeof m.content === "string" && m.content.trim() && m.content.length <= 2000)
+          && messages[messages.length - 1].role === "user"
+          && (product === null || ["Soften SIEM", "GerencieAqui", "SoftenFood"].includes(product));
+        if (!valid) {
+          safeSend({ success: false, erro: "Conversa inválida para consultar a documentação." });
+          return;
+        }
+        const apiBaseUrl = await getApiBaseUrl();
+        const result = await apiFetchJson(`${apiBaseUrl}/api/docs/chat`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: messages.map(m => ({ role: m.role, content: m.content.trim() })), product }),
+          signal: AbortSignal.timeout(40000)
+        });
+        safeSend({ success: true, answer: result.answer, sources: result.sources || [], model: result.model });
+      } catch (err) {
+        safeSend({ success: false, erro: err?.name === "TimeoutError"
+          ? "A documentação demorou para responder. Tente novamente."
+          : err?.message || "Não foi possível consultar a documentação agora." });
       }
     })();
     return true;

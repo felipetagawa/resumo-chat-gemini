@@ -178,10 +178,13 @@ test('dark Recovery overrides each light tone and avatar; private notes use a th
   assert.match(privateNote, /background:\s*var\(--ai-surface-muted\)/);
 });
 
-test('Docs popup uses themed surfaces, foregrounds and explicit shared placeholders', () => {
+test('Docs chat uses themed surfaces, foregrounds and explicit shared placeholders', () => {
   const docs = fs.readFileSync('modules/docs.js', 'utf8');
-  assert.doesNotMatch(docs, /#[0-9a-f]{3,8}\b|background:\s*white|color:\s*white/i);
-  assert.ok(docs.includes('background:var(--ai-primary); color:var(--ai-on-primary)'));
+  assert.doesNotMatch(docs, /#[0-9a-f]{3,8}\b|background:\s*white|color:\s*white|innerHTML/i);
+  const chatCss = fs.readFileSync('styles/docs-chat.css', 'utf8');
+  assert.ok(injectedCss.includes('styles/docs-chat.css'));
+  assert.doesNotMatch(stripComments(chatCss), /#[a-f\d]{3,8}\b|rgba?\(|:\s*(?:white|black)\b/i);
+  for (const selector of extractSelectors(chatCss)) assert.match(selector, /^#geminiDocsPopup(?:\s|$|\s*\[)/);
   const css = fs.readFileSync('styles/tokens.css', 'utf8');
   assert.match(css, /#geminiDocsPopup[^{}]+::placeholder\s*\{\s*color: var\(--ai-text-muted\);\s*opacity: 1;/);
 });

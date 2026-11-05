@@ -1,0 +1,201 @@
+/* Consultar Docs: chat with the SoftenDocs manual (modules/docs.js). */
+#geminiDocsPopup {
+    position: fixed;
+    right: 20px;
+    bottom: 130px;
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-sizing: border-box;
+    width: min(460px, calc(100vw - 40px));
+    height: min(620px, calc(100vh - 160px));
+    padding: 12px;
+    background: var(--ai-surface);
+    color: var(--ai-text);
+    border: 1px solid var(--ai-border-strong);
+    border-radius: var(--ai-radius-lg);
+    box-shadow: var(--ai-shadow-md);
+    font-family: var(--ai-font);
+    font-size: var(--ai-font-size-sm);
+    line-height: 1.5;
+}
+
+#geminiDocsPopup [hidden] { display: none !important; }
+
+#geminiDocsPopup .gemini-docs-header { display: flex; align-items: center; gap: 4px; }
+#geminiDocsPopup .gemini-docs-title { flex: 1 1 auto; font-size: var(--ai-font-size-md); font-weight: var(--ai-weight-bold); }
+
+#geminiDocsPopup .gemini-docs-link {
+    padding: 4px 8px;
+    border: 1px solid transparent;
+    border-radius: var(--ai-radius-sm);
+    background: transparent;
+    color: var(--ai-primary);
+    font: inherit;
+    cursor: pointer;
+}
+#geminiDocsPopup .gemini-docs-link:hover { background: var(--ai-primary-soft); }
+
+#geminiDocsPopup .gemini-docs-close {
+    width: 28px; height: 28px; padding: 0;
+    border: 0; border-radius: var(--ai-radius-sm);
+    background: transparent; color: var(--ai-text-secondary);
+    font-size: 18px; line-height: 1; cursor: pointer;
+}
+#geminiDocsPopup .gemini-docs-close:hover { background: var(--ai-surface-hover); }
+
+#geminiDocsPopup .gemini-docs-product {
+    align-self: flex-start;
+    padding: 4px 8px;
+    border: 1px solid var(--ai-border);
+    border-radius: var(--ai-radius-sm);
+    background: var(--ai-surface);
+    color: var(--ai-text);
+    font: inherit;
+}
+
+#geminiDocsPopup .gemini-docs-messages,
+#geminiDocsPopup .gemini-docs-history {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 4px 2px;
+}
+
+#geminiDocsPopup .gemini-docs-msg { max-width: 100%; overflow-wrap: anywhere; }
+#geminiDocsPopup .gemini-docs-user {
+    align-self: flex-end;
+    max-width: 85%;
+    padding: 6px 10px;
+    border-radius: var(--ai-radius-md);
+    background: var(--ai-primary);
+    color: var(--ai-on-primary);
+    white-space: pre-wrap;
+}
+#geminiDocsPopup .gemini-docs-bot {
+    padding: 8px 10px;
+    border: 1px solid var(--ai-border);
+    border-radius: var(--ai-radius-md);
+    background: var(--ai-surface-muted);
+}
+#geminiDocsPopup .gemini-docs-error { border-color: var(--ai-danger-border); background: var(--ai-danger-soft); color: var(--ai-danger); }
+#geminiDocsPopup .gemini-docs-typing { color: var(--ai-text-muted); font-style: italic; }
+
+#geminiDocsPopup .gemini-docs-answer p,
+#geminiDocsPopup .gemini-docs-answer ol,
+#geminiDocsPopup .gemini-docs-answer ul { margin: 0 0 6px; }
+#geminiDocsPopup .gemini-docs-answer ol,
+#geminiDocsPopup .gemini-docs-answer ul { padding-left: 20px; }
+#geminiDocsPopup .gemini-docs-answer li { margin: 2px 0; }
+#geminiDocsPopup .gemini-docs-heading { display: block; margin: 4px 0; }
+
+#geminiDocsPopup .gemini-docs-cite {
+    display: inline-block;
+    min-width: 16px;
+    margin: 0 1px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--ai-primary-soft);
+    color: var(--ai-primary);
+    font-size: var(--ai-font-size-xs);
+    line-height: 16px;
+    text-align: center;
+    text-decoration: none;
+    vertical-align: 1px;
+}
+
+#geminiDocsPopup .gemini-docs-sources {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--ai-border);
+}
+#geminiDocsPopup .gemini-docs-source {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 6px;
+    padding: 3px 4px;
+    border-radius: var(--ai-radius-sm);
+    color: var(--ai-text);
+    text-decoration: none;
+}
+#geminiDocsPopup .gemini-docs-source:hover { background: var(--ai-surface-hover); }
+#geminiDocsPopup .gemini-docs-source-n { grid-row: span 2; color: var(--ai-primary); font-weight: var(--ai-weight-bold); }
+#geminiDocsPopup .gemini-docs-source-title { color: var(--ai-primary); }
+#geminiDocsPopup .gemini-docs-source-meta { color: var(--ai-text-muted); font-size: var(--ai-font-size-xs); }
+#geminiDocsPopup .gemini-docs-msg-actions { display: flex; justify-content: flex-end; }
+
+#geminiDocsPopup .gemini-docs-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 8px 2px; color: var(--ai-text-secondary); }
+#geminiDocsPopup .gemini-docs-empty p { margin: 0 0 4px; }
+#geminiDocsPopup .gemini-docs-example {
+    padding: 4px 10px;
+    border: 1px solid var(--ai-border);
+    border-radius: 999px;
+    background: var(--ai-surface);
+    color: var(--ai-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+#geminiDocsPopup .gemini-docs-example:hover { border-color: var(--ai-primary-border); }
+
+#geminiDocsPopup .gemini-docs-history-row { display: flex; gap: 6px; align-items: stretch; }
+#geminiDocsPopup .gemini-docs-history-open {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 6px 8px;
+    border: 1px solid var(--ai-border);
+    border-radius: var(--ai-radius-sm);
+    background: var(--ai-surface);
+    color: var(--ai-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+#geminiDocsPopup .gemini-docs-history-open:hover { background: var(--ai-surface-hover); }
+#geminiDocsPopup .gemini-docs-history-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#geminiDocsPopup .gemini-docs-history-meta { color: var(--ai-text-muted); font-size: var(--ai-font-size-xs); }
+#geminiDocsPopup .gemini-docs-history-delete {
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: var(--ai-radius-sm);
+    background: transparent;
+    color: var(--ai-danger);
+    font: inherit;
+    cursor: pointer;
+}
+#geminiDocsPopup .gemini-docs-history-delete:hover { background: var(--ai-danger-soft); }
+#geminiDocsPopup .gemini-docs-empty-history { color: var(--ai-text-muted); }
+
+#geminiDocsPopup .gemini-docs-form { display: flex; gap: 6px; align-items: flex-end; }
+#geminiDocsPopup .gemini-docs-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    resize: none;
+    padding: 8px 10px;
+    border: 1px solid var(--ai-border-strong);
+    border-radius: var(--ai-radius-md);
+    background: var(--ai-surface);
+    color: var(--ai-text);
+    font: inherit;
+}
+#geminiDocsPopup .gemini-docs-send {
+    padding: 8px 14px;
+    border: 0;
+    border-radius: var(--ai-radius-md);
+    background: var(--ai-primary);
+    color: var(--ai-on-primary);
+    font: inherit;
+    font-weight: var(--ai-weight-bold);
+    cursor: pointer;
+}
+#geminiDocsPopup .gemini-docs-send:hover { background: var(--ai-primary-hover); }
