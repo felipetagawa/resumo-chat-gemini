@@ -9,7 +9,7 @@ const SmartReplyModule = (() => {
   const INTENTS = [
     ["resolver", "Resolver", "Resolver o problema com o manual e os avisos"],
     ["pedir_info", "Pedir info", "Pedir o que falta para avançar (print, XML, erro)"],
-    ["aviso", "Aviso", "Explicar o aviso do dia relacionado ao caso"],
+    ["aviso", "Aviso", "Explicar o aviso relacionado ao caso"],
     ["cliente_dificil", "Cliente difícil", "Responder com calma e firmeza a um cliente irritado"],
     ["cobrar_retorno", "Cobrar", "Cobrar retorno do cliente que parou de responder"],
     ["encerrar", "Encerrar", "Confirmar o que foi resolvido e se despedir"]
@@ -90,7 +90,7 @@ const SmartReplyModule = (() => {
   }
   function buildNoticesPanel(s) {
     const panel = node("div", "", "smart-reply-notices"); panel.hidden = true;
-    panel.appendChild(node("div", "Avisos do dia: a sugestão leva em conta quando o cliente fala do assunto. Ficam só neste navegador.", "smart-reply-notices-help"));
+    panel.appendChild(node("div", "Avisos: a sugestão leva em conta quando o cliente fala do assunto. Ficam só neste navegador; remova quando a situação normalizar.", "smart-reply-notices-help"));
     s.noticesList = node("div", "", "smart-reply-notice-list");
     panel.appendChild(s.noticesList);
     const text = node("textarea", "", "smart-reply-notice-input");
@@ -295,7 +295,7 @@ const SmartReplyModule = (() => {
     s.badge.title = "O Adendo para resposta foi usado"; s.badge.hidden = true;
     header.appendChild(s.badge);
     s.noticesToggle = node("button", "Avisos", "smart-reply-notices-toggle"); s.noticesToggle.type = "button";
-    s.noticesToggle.setAttribute("aria-label", "Avisos do dia");
+    s.noticesToggle.setAttribute("aria-label", "Avisos");
     header.appendChild(s.noticesToggle);
     const x = node("button", "×", "smart-reply-close"); x.type = "button";
     x.setAttribute("aria-label", "Fechar sugestão");

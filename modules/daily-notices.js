@@ -1,21 +1,26 @@
-// "Avisos do dia": situations the technician wants every suggestion to know about
-// (SEFAZ unstable, system maintenance, a new technical note). Kept in this browser only;
-// expired notices are dropped on every read.
+// "Avisos": situations the technician wants every suggestion to know about (SEFAZ unstable
+// for days, system maintenance, a new technical note). Kept in this browser only; expired
+// notices are dropped on every read, and "Até eu remover" never expires.
 const DailyNoticesModule = (() => {
   const STORAGE_KEY = "atendeai_daily_notices_v1";
   const MAX_NOTICES = 5, MAX_TEXT = 500;
-  const HOUR = 60 * 60 * 1000;
+  const HOUR = 60 * 60 * 1000, DAY = 24 * HOUR;
+  const NO_EXPIRY = 8.64e15; // the largest Date; JSON-safe
   const DURATIONS = [
     ["today", "Até hoje 23h59"],
-    ["2h", "Por 2 horas"],
     ["4h", "Por 4 horas"],
-    ["24h", "Por 24 horas"]
+    ["3d", "Por 3 dias"],
+    ["7d", "Por 1 semana"],
+    ["forever", "Até eu remover"]
   ];
 
   function expiryFor(duration, now = Date.now()) {
     if (duration === "2h") return now + 2 * HOUR;
     if (duration === "4h") return now + 4 * HOUR;
-    if (duration === "24h") return now + 24 * HOUR;
+    if (duration === "24h") return now + DAY;
+    if (duration === "3d") return now + 3 * DAY;
+    if (duration === "7d") return now + 7 * DAY;
+    if (duration === "forever") return NO_EXPIRY;
     const end = new Date(now);
     end.setHours(23, 59, 59, 999);
     return end.getTime();
@@ -73,6 +78,7 @@ const DailyNoticesModule = (() => {
   }
 
   function untilLabel(expiresAt) {
+    if (Number(expiresAt) >= NO_EXPIRY) return "até você remover";
     const date = new Date(expiresAt);
     const sameDay = date.toDateString() === new Date().toDateString();
     const time = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });

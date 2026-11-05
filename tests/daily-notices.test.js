@@ -12,12 +12,15 @@ function load(store = {}) {
   return { notices: context.window.DailyNoticesModule, store };
 }
 
-test('validity: 2h/4h/24h from now and "today" ends at 23:59 local', () => {
+test('validity: hours, days, a week, no expiry, and and "today" ends at 23:59 local', () => {
   const { expiryFor } = load().notices._test;
   const now = new Date(2026, 10, 5, 10, 0, 0).getTime();
   assert.equal(expiryFor('2h', now) - now, 2 * 3600000);
   assert.equal(expiryFor('4h', now) - now, 4 * 3600000);
   assert.equal(expiryFor('24h', now) - now, 24 * 3600000);
+  assert.equal(expiryFor('3d', now) - now, 3 * 86400000);
+  assert.equal(expiryFor('7d', now) - now, 7 * 86400000);
+  assert.ok(expiryFor('forever', now) > now + 100 * 365 * 86400000, '"Até eu remover" never expires');
   const end = new Date(expiryFor('today', now));
   assert.equal(end.getDate(), 5); assert.equal(end.getHours(), 23); assert.equal(end.getMinutes(), 59);
 });
@@ -37,4 +40,12 @@ test('expired notices disappear from storage and from requests; at most five are
   assert.equal((await notices.list()).length, 4);
   await notices.add('   ', 'today');
   assert.equal((await notices.list()).length, 4, 'blank notices are ignored');
+});
+
+test('a notice without expiry survives reads and says "até você remover"', async () => {
+  const { notices } = load();
+  await notices.add('SEFAZ-MG instável esta semana', 'forever');
+  const [item] = await notices.list();
+  assert.equal(notices.untilLabel(item.expiresAt), 'até você remover');
+  assert.deepEqual([...await notices.forRequest()], ['SEFAZ-MG instável esta semana']);
 });
