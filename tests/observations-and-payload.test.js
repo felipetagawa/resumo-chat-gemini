@@ -613,3 +613,34 @@ test("linha do problema: entrada inválida ou falha da API devolvem success fals
   assert.deepEqual({ ...(await background.dispatch({ action: "gerarLinhaProblema", mensagens: "erro" })) }, { success: false });
   assert.equal(calls, 1);
 });
+
+test('gerarResposta envia o histórico do chat aparado', async () => {
+  const payloads = [];
+  const background = loadBackground({ fetchImpl: async (url, options) => {
+    payloads.push(JSON.parse(options.body)); return { ok: true, async json() { return { reply: 'OK', sources: [] }; } };
+  } });
+  const response = await background.dispatch({ action: 'gerarResposta', conversation: 'Cliente: oi', intent: 'resolver',
+    messages: [{ role: 'user', content: ' Resolver ' }, { role: 'assistant', content: 'Me manda um print?' }, { role: 'user', content: 'ela mandou' }] });
+  assert.equal(response.success, true);
+  assert.deepEqual(payloads[0].messages, [{ role: 'user', content: 'Resolver' }, { role: 'assistant', content: 'Me manda um print?' },
+    { role: 'user', content: 'ela mandou' }]);
+  assert.equal(payloads[0].intent, 'resolver');
+});
+
+test('gerarResposta rejeita histórico inválido sem chamar a API', async () => {
+  let calls = 0;
+  const background = loadBackground({ fetchImpl: async () => { calls++; return { ok: true, async json() { return { reply: 'OK' }; } }; } });
+  const turn = (role, content) => ({ role, content });
+  const alternating = (count, content) => Array.from({ length: count }, (_, i) => turn(i % 2 ? 'assistant' : 'user', content));
+  for (const messages of [
+    [turn('assistant', 'oi'), turn('user', 'a')], [turn('user', 'a'), turn('assistant', 'b')], [turn('user', 'a'), turn('user', 'b')],
+    alternating(13, 'a'), [turn('user', 'x'.repeat(1501))], alternating(7, 'x'.repeat(1500)), [turn('user', ' ')], [turn('user', 3)],
+    'solto', []
+  ]) assert.equal((await background.dispatch({ action: 'gerarResposta', conversation: 'oi', messages })).success, false, JSON.stringify(messages).slice(0, 80));
+  const one = [turn('user', 'Resolver')];
+  assert.equal((await background.dispatch({ action: 'gerarResposta', conversation: 'oi', messages: one, replyInstruction: 'curto' })).success, false);
+  assert.equal((await background.dispatch({ action: 'gerarResposta', conversation: 'oi', messages: one, regenerate: true })).success, false);
+  assert.equal(calls, 0);
+  assert.equal((await background.dispatch({ action: 'gerarResposta', conversation: 'oi', messages: alternating(11, 'a') })).success, true);
+  assert.equal(calls, 1);
+});

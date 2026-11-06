@@ -213,11 +213,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const samples = request.styleSamples;
         const samplesValid = samples == null || (Array.isArray(samples) && samples.length <= 8
           && samples.every(s => typeof s === "string" && s.trim() && s.length <= 300));
+        // The Sugerir resposta chat: alternating turns, technician first and last, within the API limits.
+        const chat = request.messages;
+        const chatValid = chat == null || (Array.isArray(chat) && chat.length >= 1 && chat.length <= 12
+          && chat.every((m, i) => m && m.role === (i % 2 === 0 ? "user" : "assistant")
+            && typeof m.content === "string" && m.content.trim() && m.content.trim().length <= 1500)
+          && chat[chat.length - 1].role === "user"
+          && chat.reduce((total, m) => total + m.content.trim().length, 0) <= 8000
+          && !replyInstruction && !currentReply && request.regenerate !== true);
         if (!conversation || conversation.length > 16000 || promptComplement.length > 2000
           || (request.replyInstruction != null && typeof request.replyInstruction !== "string")
           || replyInstruction.length > 600 || !samplesValid
           || (request.currentReply != null && typeof request.currentReply !== "string")
-          || currentReply.length > 1500 || (currentReply && !replyInstruction)
+          || currentReply.length > 1500 || (currentReply && !replyInstruction) || !chatValid
           || (request.regenerate != null && typeof request.regenerate !== "boolean")
           || (request.intent != null && !["resolver", "pedir_info", "aviso", "cliente_dificil", "cobrar_retorno", "encerrar"].includes(request.intent))
           || (request.notices != null && !(Array.isArray(request.notices) && request.notices.length <= 5
@@ -232,6 +240,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (samples?.length) payload.styleSamples = samples.map(s => s.trim());
         if (request.intent) payload.intent = request.intent;
         if (request.notices?.length) payload.notices = request.notices.map(n => n.trim());
+        if (chat?.length) payload.messages = chat.map(m => ({ role: m.role, content: m.content.trim() }));
         const apiBaseUrl = await getApiBaseUrl();
         const result = await apiFetchJson(`${apiBaseUrl}/api/gemini/responder`, {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
