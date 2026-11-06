@@ -1,10 +1,13 @@
-// Current-chat drafts only, rendered inside the AtendeAI dock. Never sends messages.
+// "Sugerir resposta": a chat window, like "Consultar Docs", where every answer is a message
+// ready for the customer. One conversation per attendance (ReplyChatStore). Never sends messages.
 const SmartReplyModule = (() => {
   const PANEL_ID = "atendeai-smart-reply";
-  const DOCK_ID = "containerBotoesGemini";
   const LEGACY_KEYS = ["atendeai_smart_reply_profiles_v1", "atendeai_smart_reply_profile"];
+  const DOCS_ORIGIN = "https://docs.softensistemas.com.br/";
   const GENERIC_ERROR = "Não foi possível sugerir uma resposta. Tente novamente.";
-  const CHANGED = "O atendimento mudou. Clique em Sugerir resposta no atendimento desejado.";
+  const NO_IDENTITY = "Não foi possível identificar com segurança o atendimento ativo. Reabra a conversa.";
+  const CHANGED = "O atendimento mudou antes de gerar. Envie de novo neste atendimento.";
+  const STALE = "O cliente mandou mensagem nova. Envie algo para atualizar.";
   // One-click kinds of message (sent as intent; the API keeps the rules for each).
   const INTENTS = [
     ["resolver", "Resolver", "Resolver o problema com o manual e os avisos"],
@@ -14,369 +17,309 @@ const SmartReplyModule = (() => {
     ["cobrar_retorno", "Cobrar", "Cobrar retorno do cliente que parou de responder"],
     ["encerrar", "Encerrar", "Confirmar o que foi resolvido e se despedir"]
   ];
+  const MAX_MESSAGE = 1500;
   const notices = () => globalThis.DailyNoticesModule;
+  const samples = () => globalThis.StyleSamplesModule;
+  const chats = () => ReplyChatStore;
   let session = null;
   const text = value => String(value || "").replace(/\s+/g, " ").trim();
   const chatToken = () => ChatCaptureModule.identificarAtendimentoResposta();
-  const samples = () => globalThis.StyleSamplesModule;
   const capture = () => ChatCaptureModule.capturarConversaRotulada(samples()?.selfName?.() || "");
 
-  const draftText = el => el.isContentEditable || el.contentEditable === "true" ? el.textContent || "" : el.value || "";
-  function setComposer(el, value) {
-    el.focus();
-    if (el.isContentEditable || el.contentEditable === "true") {
-      el.textContent = value;
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      range.collapse(false);
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-    } else {
-      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
-      if (setter) setter.call(el, value); else el.value = value;
-      el.setSelectionRange(value.length, value.length);
-    }
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-  }
   function node(tag, label, className) {
     const el = document.createElement(tag);
     if (label) el.textContent = label;
     if (className) el.className = className;
     return el;
   }
-  function setDisabled(el, value) {
-    // Avoid generating a new mutation for the card's own observer.
-    if (el.disabled !== value) el.disabled = value;
-  }
-  function setPreview(s, value, loading = false) {
-    Array.from(s.preview.children).forEach(child => child.remove());
-    s.preview.textContent = value;
-    if (loading) for (let i = 0; i < 3; i++) s.preview.appendChild(node("span", "", "smart-reply-skeleton"));
-    // A shown suggestion is editable in place; Inserir uses whatever the technician left there.
-    const editable = !!value && !loading;
-    s.preview.contentEditable = editable ? "plaintext-only" : "false";
-    syncDirect(s, editable);
-  }
-  // With a suggestion on screen the field adjusts it; without one it directs a new one.
-  function syncDirect(s, hasReply) {
-    if (!s.direct) return;
-    const placeholder = hasReply ? "Ajustar: mais curto, mais formal…" : "Direcionar: o que dizer?";
-    if (s.direct.placeholder === placeholder) return;
-    s.direct.placeholder = placeholder;
-    s.direct.setAttribute("aria-label", hasReply ? "Ajustar esta sugestão. Enter reescreve."
-      : "Direcionar a resposta. Enter gera de novo.");
-  }
   const clear = el => Array.from(el.children).forEach(child => child.remove());
-  async function refreshNotices(s) {
-    const list = (await notices()?.list?.()) || [];
-    if (session !== s) return;
-    s.noticeCount = list.length;
-    s.noticesToggle.textContent = list.length ? `Avisos (${list.length})` : "Avisos";
-    const avisoChip = s.intentButtons.aviso;
-    if (avisoChip) avisoChip.hidden = !list.length;
-    clear(s.noticesList);
-    if (!list.length) s.noticesList.appendChild(node("div", "Nenhum aviso ativo.", "smart-reply-notice-empty"));
-    for (const item of list) {
-      const row = node("div", "", "smart-reply-notice");
-      row.appendChild(node("span", item.text, "smart-reply-notice-text"));
-      row.appendChild(node("span", notices().untilLabel(item.expiresAt), "smart-reply-notice-until"));
-      const remove = node("button", "×", "smart-reply-notice-remove"); remove.type = "button";
-      remove.setAttribute("aria-label", "Remover aviso");
-      remove.addEventListener("click", async () => { await notices().remove(item.id); refreshNotices(s); });
-      row.appendChild(remove);
-      s.noticesList.appendChild(row);
-    }
+  function setDisabled(el, value) { if (el.disabled !== value) el.disabled = value; }
+  function setHidden(el, value) { if (el.hidden !== value) el.hidden = value; }
+  function setText(el, value) { if (el.textContent !== value) el.textContent = value; }
+
+  // What a reply was written from: the conversation as captured plus the addendum. A different basis = stale.
+  function basisOf(fullConversation, complement) {
+    const source = `${text(fullConversation)}\u0001${text(complement)}`;
+    let hash = 5381;
+    for (let i = 0; i < source.length; i++) hash = ((hash * 33) ^ source.charCodeAt(i)) >>> 0;
+    return `${source.length}:${hash.toString(36)}`;
   }
-  function buildNoticesPanel(s) {
-    const panel = node("div", "", "smart-reply-notices"); panel.hidden = true;
-    panel.appendChild(node("div", "Avisos: a sugestão leva em conta quando o cliente fala do assunto. Ficam só neste navegador; remova quando a situação normalizar.", "smart-reply-notices-help"));
-    s.noticesList = node("div", "", "smart-reply-notice-list");
-    panel.appendChild(s.noticesList);
-    const text = node("textarea", "", "smart-reply-notice-input");
-    text.rows = 2; text.maxLength = notices()?.MAX_TEXT || 500;
-    text.placeholder = "Ex.: SEFAZ-MG instável desde 9h, notas saindo em contingência";
-    text.setAttribute("aria-label", "Novo aviso");
-    text.addEventListener("keydown", event => { if (event.key !== "Escape") event.stopPropagation?.(); });
-    const duration = node("select", "", "smart-reply-notice-duration");
-    duration.setAttribute("aria-label", "Validade do aviso");
-    for (const [value, label] of notices()?.DURATIONS || []) {
-      const option = node("option", label); option.value = value; duration.appendChild(option);
-    }
-    duration.value = "today";
-    const add = node("button", "Adicionar", "smart-reply-secondary"); add.type = "button";
-    add.addEventListener("click", async () => {
-      if (!String(text.value || "").trim()) return;
-      await notices().add(text.value, duration.value);
-      text.value = "";
-      refreshNotices(s);
-    });
-    const row = node("div", "", "smart-reply-notice-add");
-    row.appendChild(duration); row.appendChild(add);
-    panel.appendChild(text); panel.appendChild(row);
-    return panel;
+  function currentBasis() {
+    return basisOf(capture().fullConversation, globalThis.SmartReplyContextModule?.getForCurrentChat?.() || "");
   }
-  function buildIntents(s) {
-    const wrap = node("div", "", "smart-reply-intents");
-    wrap.setAttribute("role", "group"); wrap.setAttribute("aria-label", "Tipo de resposta");
-    s.intentButtons = {};
+  function safeSources(sources) {
+    return (Array.isArray(sources) ? sources : [])
+      .filter(item => item && typeof item.url === "string" && item.url.startsWith(DOCS_ORIGIN))
+      .slice(0, 3)
+      .map(item => ({ title: text(item.title).slice(0, 80) || "Manual", url: item.url }));
+  }
+  const latestReply = conversation => {
+    const last = conversation?.messages?.[conversation.messages.length - 1];
+    return last && last.role === "assistant" && !last.error ? last : null;
+  };
+
+  // ---------- rendering ----------
+  function buildChips(s, className) {
+    const wrap = node("div", "", className);
+    wrap.setAttribute("role", "group");
+    wrap.setAttribute("aria-label", "Tipo de resposta");
     for (const [key, label, description] of INTENTS) {
-      const button = node("button", label, "smart-reply-intent"); button.type = "button";
+      const button = node("button", label, "smart-reply-chip"); button.type = "button";
       button.title = description;
-      button.setAttribute("aria-pressed", "false");
-      if (key === "aviso") button.hidden = true;
-      button.addEventListener("click", () => { s.intent = key; return generate(s, false); });
-      s.intentButtons[key] = button;
+      button.setAttribute("data-intent", key);
+      button.addEventListener("click", () => send(s, { text: label, intent: key }));
       wrap.appendChild(button);
     }
     return wrap;
   }
-
-  // Manual pages the suggestion was based on; only links to the official docs site.
-  function setSources(s, sources) {
-    Array.from(s.sources.children).forEach(child => child.remove());
-    const list = (Array.isArray(sources) ? sources : [])
-      .filter(item => item && typeof item.url === "string" && item.url.startsWith("https://docs.softensistemas.com.br/"))
-      .slice(0, 3);
-    s.sources.hidden = !list.length;
-    if (!list.length) return;
-    s.sources.appendChild(node("span", "Base:", "smart-reply-sources-label"));
-    for (const item of list) {
-      const link = node("a", text(item.title).slice(0, 80) || "Manual", "smart-reply-source");
+  function syncChips(s) {
+    const blocked = !s.token || s.busy.has(s.token);
+    for (const wrap of [s.emptyChips, s.compactChips]) {
+      if (!wrap) continue;
+      for (const button of wrap.children) {
+        // "Aviso" only makes sense while there is an active notice.
+        setHidden(button, button.getAttribute("data-intent") === "aviso" && !s.noticeCount);
+        setDisabled(button, blocked);
+      }
+    }
+  }
+  function renderSources(sources) {
+    const wrap = node("div", "", "smart-reply-sources");
+    wrap.appendChild(node("span", "Base:", "smart-reply-sources-label"));
+    for (const item of sources) {
+      const link = node("a", item.title, "smart-reply-source");
       link.href = item.url; link.target = "_blank"; link.rel = "noopener noreferrer";
-      link.title = text(item.title);
-      s.sources.appendChild(link);
+      link.title = item.title;
+      wrap.appendChild(link);
     }
+    return wrap;
   }
-  function showChoices(s, visible) { s.choices.hidden = !visible; s.actions.hidden = visible; }
-  function lockDock(dock) {
-    const previous = { width: dock.style.width, height: dock.style.height };
-    // Freeze the dock's footprint: the card may only use pixels the dock already covers.
-    dock.style.width = `${dock.offsetWidth}px`;
-    dock.style.height = `${dock.offsetHeight}px`;
-    dock.setAttribute("data-reply-open", "true");
-    return () => {
-      dock.style.width = previous.width; dock.style.height = previous.height;
-      dock.removeAttribute("data-reply-open");
-    };
+  function renderReply(s, m) {
+    const msg = node("div", "", "smart-reply-msg smart-reply-bot");
+    msg.appendChild(node("span", "Resposta para o cliente", "smart-reply-label"));
+    msg.appendChild(node("div", m.content, "smart-reply-reply"));
+    const actions = node("div", "", "smart-reply-msg-actions");
+    msg.appendChild(actions);
+    const sources = safeSources(m.sources);
+    if (sources.length) msg.appendChild(renderSources(sources));
+    return msg;
   }
-  function close() {
-    const s = session, panel = document.getElementById(PANEL_ID);
-    const restoreFocus = panel && document.activeElement && panel.contains(document.activeElement);
-    s?.observer?.disconnect(); s?.unsubscribe?.(); s?.unlock?.();
-    session = null;
-    panel?.remove();
-    if (restoreFocus) document.getElementById("btnSmartReply")?.focus();
+  function renderError(s, m, isLast) {
+    const msg = node("div", "", "smart-reply-msg smart-reply-bot smart-reply-error");
+    msg.appendChild(node("p", m.content));
+    if (isLast) {
+      const retry = node("button", "Tentar de novo", "smart-reply-link"); retry.type = "button";
+      retry.addEventListener("click", () => {
+        const conversation = s.conversation;
+        conversation.messages.pop();
+        const ask = conversation.messages.pop();
+        if (!ask || ask.role !== "user") { render(s); return; }
+        return send(s, { text: ask.content, intent: ask.intent });
+      });
+      msg.appendChild(retry);
+    }
+    return msg;
   }
-  function current(s) { return session === s && !s.identityChanged && !!s.token && chatToken() === s.token; }
-  function syncChat(s) {
+  function render(s) {
     if (session !== s) return;
-    if (s.token && chatToken() !== s.token) s.identityChanged = true;
-    const changed = !current(s);
-    if (!changed && s.freshness && !s.stale && !s.busy) {
-      s.stale = text(capture().fullConversation) !== s.freshness.conversation
-        || text(SmartReplyContextModule.getForCurrentChat()) !== s.freshness.promptComplement;
+    const { list } = s;
+    const messages = s.conversation?.messages || [];
+    clear(list);
+    s.emptyChips = null;
+    if (!messages.length) {
+      const empty = node("div", "", "smart-reply-empty");
+      s.emptyChips = buildChips(s, "smart-reply-chips");
+      empty.appendChild(s.emptyChips);
+      empty.appendChild(node("p", "Escolha o tipo de resposta, ou escreva o que quer dizer ao cliente.", "smart-reply-hint"));
+      list.appendChild(empty);
     }
-    const warning = !s.token ? "" : changed ? CHANGED : s.stale ? "Mensagem nova. Use ↻ Outra." : "";
-    if (s.warning.textContent !== warning) s.warning.textContent = warning;
-    const busy = s.busy ? "true" : "false";
-    if (s.panel.getAttribute("aria-busy") !== busy) s.panel.setAttribute("aria-busy", busy);
-    setDisabled(s.insert, changed || s.stale || s.busy || !s.reply);
-    // Nothing is generated on open: the first click asks for a suggestion, later ones for another.
-    const label = s.generated ? "↻ Outra" : "Gerar sugestão";
-    if (s.regenerate.textContent !== label) {
-      s.regenerate.textContent = label;
-      s.regenerate.className = s.generated ? "smart-reply-secondary" : "smart-reply-primary";
+    messages.forEach((m, index) => {
+      if (m.role === "user") list.appendChild(node("div", m.content, "smart-reply-msg smart-reply-user"));
+      else if (m.error) list.appendChild(renderError(s, m, index === messages.length - 1));
+      else list.appendChild(renderReply(s, m));
+    });
+    if (s.token && s.busy.has(s.token)) {
+      const typing = node("div", "Escrevendo a resposta…", "smart-reply-msg smart-reply-bot smart-reply-typing");
+      typing.setAttribute("role", "status");
+      list.appendChild(typing);
     }
-    if (s.insert.hidden !== !s.generated) s.insert.hidden = !s.generated;
-    for (const [key, button] of Object.entries(s.intentButtons || {})) {
-      setDisabled(button, changed || s.busy);
-      const pressed = s.generated && s.intent === key ? "true" : "false";
-      if (button.getAttribute("aria-pressed") !== pressed) button.setAttribute("aria-pressed", pressed);
-    }
-    const showHint = !s.generated && !s.busy;
-    if (s.hint.hidden === showHint) s.hint.hidden = !showHint;
-    setDisabled(s.regenerate, changed || s.busy);
-    setDisabled(s.direct, changed || s.busy);
-    if (s.badge.hidden === s.usedComplement) s.badge.hidden = !s.usedComplement;
-    if ((changed || s.stale) && !s.choices.hidden) showChoices(s, false);
+    list.scrollTop = list.scrollHeight;
+    sync(s);
   }
-  async function generate(s, regenerate) {
-    syncChat(s);
-    if (session !== s || s.busy || !current(s)) return;
-    const instruction = text(s.direct.value).slice(0, 600);
-    // Enter with a suggestion on screen revises that text (hand edits included); ↻ Outra always starts over.
-    const currentReply = !regenerate && instruction ? String(s.reply || "").trim().slice(0, 1500) : "";
-    s.busy = true; s.reply = ""; s.status.textContent = "";
-    setPreview(s, "", true); showChoices(s, false); setSources(s, []);
-    syncChat(s);
+  function renderContext(s) {
+    clear(s.context);
+    if (!s.token) return;
+    s.context.appendChild(node("span", "Lendo o atendimento de "));
+    s.context.appendChild(node("strong", ChatCaptureModule.capturarNomeCliente?.() || "cliente"));
+  }
+
+  // ---------- state ----------
+  /** Keeps buttons, the stale note and the identity status in step with the page; no DOM churn when unchanged. */
+  function sync(s) {
+    if (session !== s) return;
+    const token = chatToken();
+    if (token && token !== s.token) { void switchTo(s, token); return; }
+    setText(s.status, token ? "" : NO_IDENTITY);
+    const busy = !!s.token && s.busy.has(s.token);
+    const reply = latestReply(s.conversation);
+    s.stale = !!reply && !busy && token === s.token && reply.basis !== currentBasis();
+    setHidden(s.staleNote, !s.stale);
+    setHidden(s.compactChips, !(s.conversation?.messages?.length));
+    setDisabled(s.input, !token);
+    setDisabled(s.sendButton, !token || busy);
+    const ariaBusy = busy ? "true" : "false";
+    if (s.panel.getAttribute("aria-busy") !== ariaBusy) s.panel.setAttribute("aria-busy", ariaBusy);
+    syncChips(s);
+  }
+  async function conversationFor(s, token) {
+    if (!s.cache.has(token)) {
+      const loaded = await chats().load(token);
+      // Another load for the same token may have finished first: keep a single object per attendance.
+      if (!s.cache.has(token)) s.cache.set(token, loaded);
+    }
+    return s.cache.get(token);
+  }
+  async function switchTo(s, token) {
+    const request = ++s.switchRequest;
+    s.token = token;
+    s.conversation = null;
+    renderContext(s);
+    const conversation = await conversationFor(s, token);
+    if (session !== s || request !== s.switchRequest) return;
+    s.conversation = conversation;
+    render(s);
+  }
+
+  async function send(s, { text: ask, intent }) {
+    const token = s.token, conversation = s.conversation;
+    const content = String(ask || "").trim().slice(0, MAX_MESSAGE);
+    if (session !== s || !token || !conversation || !content || s.busy.has(token)) return;
+    if (chatToken() !== token) { sync(s); return; }
+    conversation.messages.push(intent ? { role: "user", content, intent, at: Date.now() } : { role: "user", content, at: Date.now() });
+    if (!intent) s.input.value = "";
+    s.busy.add(token);
+    render(s);
+    void chats().save(conversation);
     try {
-      await SmartReplyContextModule.sync();
-      if (session !== s || !current(s)) return;
+      await globalThis.SmartReplyContextModule?.sync?.();
+      // The capture below must read the attendance this conversation belongs to.
+      if (chatToken() !== token) throw new Error(CHANGED);
       const snapshot = capture();
-      const promptComplement = SmartReplyContextModule.getForCurrentChat();
+      const promptComplement = globalThis.SmartReplyContextModule?.getForCurrentChat?.() || "";
       if (!snapshot.conversation) throw new Error("Abra uma conversa com mensagens para sugerir uma resposta.");
       if (promptComplement.length > 2000) throw new Error("O adendo excede o limite de 2.000 caracteres.");
-      // Every generation reads the chat as it is now; freshness then guards the shown reply.
-      s.freshness = { conversation: text(snapshot.fullConversation), promptComplement: text(promptComplement) };
-      s.stale = false; s.usedComplement = !!promptComplement;
-      const payload = { action: "gerarResposta", conversation: snapshot.conversation, regenerate };
+      const basis = basisOf(snapshot.fullConversation, promptComplement);
+      const payload = { action: "gerarResposta", conversation: snapshot.conversation, messages: chats().forApi(conversation.messages) };
+      if (intent) payload.intent = intent;
       if (promptComplement) payload.promptComplement = promptComplement;
-      if (instruction) payload.replyInstruction = instruction;
-      if (currentReply) payload.currentReply = currentReply;
-      if (s.intent) payload.intent = s.intent;
       const activeNotices = (await notices()?.forRequest?.()) || [];
-      if (session !== s) return;
       if (activeNotices.length) payload.notices = activeNotices;
       const styleSamples = samples()?.forRequest?.(snapshot.fullConversation) || [];
       if (styleSamples.length) payload.styleSamples = styleSamples;
       const result = await MessagingHelper.send(payload);
-      if (session !== s) return;
       if (!result?.success || !String(result.reply || "").trim()) throw new Error(result?.erro || GENERIC_ERROR);
-      s.busy = false; syncChat(s);
-      // The chat may have changed while the API answered: never show a reply for another context.
-      if (!current(s) || s.stale) { setPreview(s, ""); return; }
-      s.reply = result.reply.trim();
-      s.generated = true;
-      setPreview(s, s.reply);
-      setSources(s, result.sources);
-      if (currentReply) s.direct.value = "";
+      conversation.messages.push({ role: "assistant", content: result.reply.trim(), sources: safeSources(result.sources),
+        basis, usedComplement: !!promptComplement, at: Date.now() });
     } catch (err) {
-      if (session !== s) return;
-      // A failed adjustment must not throw away the text the technician was refining.
-      s.reply = currentReply && current(s) && !s.stale ? currentReply : "";
-      setPreview(s, s.reply);
-      s.status.textContent = err?.message || GENERIC_ERROR;
+      conversation.messages.push({ role: "assistant", error: true, content: err?.message || GENERIC_ERROR, at: Date.now() });
     } finally {
-      if (session === s) {
-        if (s.busy && !s.reply && !s.status.textContent) setPreview(s, "");
-        s.busy = false; syncChat(s);
-      }
+      s.busy.delete(token);
+      // Saved to the attendance it was asked for, even if the technician moved on.
+      await chats().save(conversation);
+      if (session === s && s.token === token) { render(s); s.input.focus(); }
     }
   }
-  function insert(s, mode, expected) {
-    syncChat(s);
-    if (!current(s) || s.stale || s.busy || !s.reply) return;
-    const el = ChatCaptureModule.encontrarComposer();
-    if (!el || !capture().conversation.trim()) {
-      s.status.textContent = "Não foi possível localizar com segurança o campo de mensagem deste atendimento.";
-      return;
-    }
-    const value = draftText(el);
-    if (value.trim() && (!mode || expected?.el !== el || expected.value !== value)) {
-      showChoices(s, true);
-      s.pendingDraft = { el, value };
-      s.status.textContent = "Já existe um rascunho. Escolha substituir, acrescentar ou cancelar.";
-      return;
-    }
-    // Recheck immediately before mutation; choices never retain a different composer.
-    syncChat(s);
-    if (!current(s) || s.stale || ChatCaptureModule.encontrarComposer() !== el) return;
-    setComposer(el, mode === "append" && value ? `${value}\n${s.reply}` : s.reply);
-    samples()?.noteInserted?.(s.reply);
-    close();
+
+  // ---------- window ----------
+  function close() {
+    const s = session, panel = document.getElementById(PANEL_ID);
+    const restoreFocus = panel && document.activeElement && panel.contains(document.activeElement);
+    s?.observer?.disconnect(); s?.unsubscribe?.();
+    session = null;
+    panel?.remove();
+    if (restoreFocus) document.getElementById("btnSmartReply")?.focus();
   }
+
   async function open() {
-    const token = chatToken();
-    if (session && session.token === token && current(session)) { session.panel.focus(); return; }
-    close();
-    const dock = document.getElementById(DOCK_ID);
-    if (!dock) return;
-    const s = { token, reply: "", busy: false, stale: false, identityChanged: false, usedComplement: false, generated: false, intent: null };
+    if (session) { close(); return; }
+    const s = { token: "", conversation: null, cache: new Map(), busy: new Set(), switchRequest: 0, noticeCount: 0, stale: false };
     session = s;
-    const panel = node("section", "", "smart-reply-card");
+    const panel = node("section", "", "smart-reply-window");
     panel.id = PANEL_ID;
-    panel.setAttribute("aria-label", "Sugestão de resposta");
+    panel.setAttribute("aria-label", "Sugerir resposta");
     panel.setAttribute("tabindex", "-1");
     s.panel = panel;
+
     const header = node("div", "", "smart-reply-header");
-    header.appendChild(node("strong", "Sugestão"));
-    s.badge = node("span", "adendo", "smart-reply-badge");
-    s.badge.title = "O Adendo para resposta foi usado"; s.badge.hidden = true;
-    header.appendChild(s.badge);
-    s.noticesToggle = node("button", "Avisos", "smart-reply-notices-toggle"); s.noticesToggle.type = "button";
-    s.noticesToggle.setAttribute("aria-label", "Avisos");
-    header.appendChild(s.noticesToggle);
+    header.appendChild(node("strong", "Sugerir resposta", "smart-reply-title"));
+    const fresh = node("button", "Nova", "smart-reply-link"); fresh.type = "button";
+    fresh.addEventListener("click", async () => {
+      if (!s.token) return;
+      const token = s.token;
+      await chats().clear(token);
+      s.cache.set(token, { token, messages: [], updatedAt: 0 });
+      if (session === s && s.token === token) { s.conversation = s.cache.get(token); render(s); s.input.focus(); }
+    });
     const x = node("button", "×", "smart-reply-close"); x.type = "button";
-    x.setAttribute("aria-label", "Fechar sugestão");
-    x.addEventListener("click", close); header.appendChild(x);
-    s.preview = node("div", "", "smart-reply-text");
-    s.preview.setAttribute("tabindex", "0");
-    s.preview.setAttribute("aria-label", "Texto sugerido");
-    s.preview.setAttribute("aria-live", "polite");
-    s.preview.setAttribute("spellcheck", "true");
-    s.preview.addEventListener("input", () => { s.reply = String(s.preview.textContent || "").trim(); syncChat(s); });
-    s.preview.addEventListener("keydown", event => {
-      // SZ global shortcuts must not see keys typed here; Ctrl+Enter (insert) and Esc (close) still bubble.
-      if (event.key === "Escape" || (event.key === "Enter" && (event.ctrlKey || event.metaKey))) return;
-      event.stopPropagation?.();
-    });
-    s.sources = node("div", "", "smart-reply-sources"); s.sources.hidden = true;
-    s.hint = node("div", "Escolha o tipo de resposta abaixo, ou escreva o que quer dizer e clique em Gerar sugestão.", "smart-reply-hint");
-    s.warning = node("div", "", "smart-reply-warning"); s.warning.setAttribute("role", "status");
+    x.setAttribute("aria-label", "Fechar");
+    x.addEventListener("click", close);
+    header.appendChild(fresh); header.appendChild(x);
+
+    s.context = node("div", "", "smart-reply-context");
     s.status = node("div", "", "smart-reply-status"); s.status.setAttribute("role", "status");
-    s.direct = node("input", "", "smart-reply-direct");
-    s.direct.type = "text"; s.direct.maxLength = 600; s.direct.placeholder = "Direcionar: o que dizer?";
-    s.direct.setAttribute("aria-label", "Direcionar a resposta. Enter gera de novo.");
-    s.direct.addEventListener("keydown", event => {
-      if (event.key !== "Enter" || event.shiftKey || event.ctrlKey || event.metaKey) return;
-      event.preventDefault();
-      return generate(s, false);
+    s.list = node("div", "", "smart-reply-messages");
+    s.list.setAttribute("aria-live", "polite");
+    s.staleNote = node("div", STALE, "smart-reply-stale"); s.staleNote.hidden = true;
+    s.staleNote.setAttribute("role", "status");
+    s.compactChips = buildChips(s, "smart-reply-chips smart-reply-chips-compact");
+    s.compactChips.hidden = true;
+
+    const form = node("form", "", "smart-reply-form");
+    s.input = node("textarea", "", "smart-reply-input");
+    s.input.rows = 2; s.input.maxLength = MAX_MESSAGE;
+    s.input.placeholder = "Diga o que responder, ou corrija a última… (Enter envia)";
+    s.input.setAttribute("aria-label", "O que responder ao cliente");
+    s.sendButton = node("button", "Enviar", "smart-reply-send"); s.sendButton.type = "submit";
+    form.appendChild(s.input); form.appendChild(s.sendButton);
+    form.addEventListener("submit", event => { event.preventDefault(); return send(s, { text: s.input.value }); });
+    s.input.addEventListener("keydown", event => {
+      if (event.key === "Escape") return;
+      // SZ's global shortcuts must not see what is typed here.
+      event.stopPropagation?.();
+      if (event.key === "Enter" && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+        event.preventDefault();
+        return send(s, { text: s.input.value });
+      }
     });
-    s.regenerate = node("button", "↻ Outra", "smart-reply-secondary"); s.regenerate.type = "button";
-    s.regenerate.addEventListener("click", () => {
-      if (!s.generated) s.intent = null;
-      return generate(s, s.generated);
-    });
-    s.insert = node("button", "Inserir", "smart-reply-primary"); s.insert.type = "button";
-    s.insert.addEventListener("click", () => insert(s));
-    s.actions = node("div", "", "smart-reply-actions");
-    s.actions.appendChild(s.regenerate); s.actions.appendChild(s.insert);
-    s.choices = node("div", "", "smart-reply-draft-choices"); s.choices.hidden = true;
-    for (const [label, mode, cls] of [["Substituir", "replace", "smart-reply-primary"],
-      ["Acrescentar", "append", "smart-reply-secondary"], ["Cancelar", "cancel", "smart-reply-secondary"]]) {
-      const button = node("button", label, cls); button.type = "button";
-      button.addEventListener("click", () => {
-        if (mode === "cancel") { showChoices(s, false); s.status.textContent = ""; }
-        else insert(s, mode, s.pendingDraft);
-      });
-      s.choices.appendChild(button);
-    }
-    panel.addEventListener("keydown", event => {
-      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); insert(s); }
-    });
-    s.intentsRow = buildIntents(s);
-    s.noticesPanel = buildNoticesPanel(s);
-    s.noticesToggle.addEventListener("click", () => {
-      s.noticesPanel.hidden = !s.noticesPanel.hidden;
-      s.noticesToggle.setAttribute("aria-expanded", String(!s.noticesPanel.hidden));
-    });
-    for (const el of [header, s.noticesPanel, s.hint, s.preview, s.sources, s.warning, s.status, s.direct, s.intentsRow, s.actions, s.choices]) panel.appendChild(el);
-    s.unlock = lockDock(dock);
-    dock.appendChild(panel);
+
+    for (const el of [header, s.context, s.status, s.list, s.staleNote, s.compactChips, form]) panel.appendChild(el);
+    document.body.appendChild(panel);
     globalThis.ThemeModule?.apply?.(panel);
-    panel.focus();
-    if (!token) {
-      s.status.textContent = "Não foi possível identificar com segurança o atendimento ativo. Reabra a conversa.";
-      syncChat(s); return;
+
+    const token = chatToken();
+    if (token) {
+      s.token = token;
+      renderContext(s);
+      s.conversation = await conversationFor(s, token);
+      if (session !== s) return;
     }
-    ChatCaptureModule.observarAtendimentoResposta();
-    s.unsubscribe = SmartReplyContextModule.onChanged(() => syncChat(s));
+    ChatCaptureModule.observarAtendimentoResposta?.();
+    s.unsubscribe = globalThis.SmartReplyContextModule?.onChanged?.(() => sync(s));
     s.observer = new MutationObserver(records => {
-      if (records.some(record => !s.panel.contains(record.target))) syncChat(s);
+      if (records.some(record => !s.panel.contains(record.target))) sync(s);
     });
     s.observer.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
-    syncChat(s);
-    refreshNotices(s);
-    s.direct.focus();
+    render(s);
+    s.input.focus();
   }
+
   function retireLegacyProfiles() {
     try { chrome.storage.local.remove(LEGACY_KEYS, () => void chrome.runtime?.lastError); }
     catch { /* Extension context invalidated: nothing to retire now. */ }
   }
   document.addEventListener("keydown", event => { if (event.key === "Escape" && session) close(); });
-  // Textarea value edits do not create DOM mutations; capture input without intercepting it.
-  document.addEventListener("input", () => { if (session) syncChat(session); }, true);
+  // Textarea value edits (the addendum) do not create DOM mutations; capture input without intercepting it.
+  document.addEventListener("input", () => { if (session) sync(session); }, true);
   return { open, close, retireLegacyProfiles };
 })();
 window.SmartReplyModule = SmartReplyModule;

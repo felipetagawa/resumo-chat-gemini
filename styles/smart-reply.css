@@ -1,310 +1,178 @@
-/* Smart Reply card: occupies only the dock's frozen footprint (see SmartReplyModule.lockDock). */
-#containerBotoesGemini[data-reply-open="true"] > :not(.gemini-dock-toolbar):not(#atendeai-smart-reply) {
-    display: none !important;
-}
-
-#containerBotoesGemini[data-reply-open="true"] {
-    overflow: hidden !important;
-}
-
-#containerBotoesGemini .smart-reply-card {
-    flex: 1 1 auto;
-    min-height: 0;
+/* Sugerir resposta: chat window, same place and size as Consultar Docs (modules/smart-reply.js). */
+#atendeai-smart-reply {
+    position: fixed;
+    right: 20px;
+    bottom: 130px;
+    z-index: 999999;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     box-sizing: border-box;
-    padding: 8px;
-    overflow-y: auto;
+    width: min(460px, calc(100vw - 40px));
+    height: min(620px, calc(100vh - 160px));
+    padding: 12px;
     background: var(--ai-surface);
     color: var(--ai-text);
     border: 1px solid var(--ai-border-strong);
-    border-radius: var(--ai-radius-md);
+    border-radius: var(--ai-radius-lg);
+    box-shadow: var(--ai-shadow-md);
     font-family: var(--ai-font);
     font-size: var(--ai-font-size-sm);
-    line-height: 1.45;
+    line-height: 1.5;
 }
 
-#containerBotoesGemini .smart-reply-card [hidden] { display: none; }
+#atendeai-smart-reply [hidden] { display: none !important; }
 
-#containerBotoesGemini .smart-reply-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-}
+#atendeai-smart-reply .smart-reply-header { display: flex; align-items: center; gap: 4px; }
+#atendeai-smart-reply .smart-reply-title { flex: 1 1 auto; font-size: var(--ai-font-size-md); font-weight: var(--ai-weight-bold); }
 
-#containerBotoesGemini .smart-reply-header strong {
-    flex: 1 1 auto;
-    font-size: var(--ai-font-size);
-    font-weight: var(--ai-weight-bold);
-}
-
-#containerBotoesGemini .smart-reply-badge {
-    padding: 1px 6px;
-    border-radius: 999px;
-    background: var(--ai-primary-soft);
-    color: var(--ai-primary);
-    font-size: var(--ai-font-size-xs);
-}
-
-#containerBotoesGemini .smart-reply-close {
-    width: 28px;
-    height: 28px;
-    min-height: 28px;
-    padding: 0;
-    border: 0;
+#atendeai-smart-reply .smart-reply-link {
+    padding: 4px 8px;
+    border: 1px solid transparent;
     border-radius: var(--ai-radius-sm);
     background: transparent;
-    color: var(--ai-text-secondary);
-    font-size: 18px;
-    line-height: 1;
+    color: var(--ai-primary);
+    font: inherit;
     cursor: pointer;
 }
+#atendeai-smart-reply .smart-reply-link:hover { background: var(--ai-primary-soft); }
 
-#containerBotoesGemini .smart-reply-close:hover { background: var(--ai-surface-hover); }
+#atendeai-smart-reply .smart-reply-close {
+    width: 28px; height: 28px; padding: 0;
+    border: 0; border-radius: var(--ai-radius-sm);
+    background: transparent; color: var(--ai-text-secondary);
+    font-size: 18px; line-height: 1; cursor: pointer;
+}
+#atendeai-smart-reply .smart-reply-close:hover { background: var(--ai-surface-hover); }
 
-#containerBotoesGemini .smart-reply-text {
+#atendeai-smart-reply .smart-reply-context {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+    padding: 6px 8px;
+    border: 1px solid var(--ai-border);
+    border-radius: var(--ai-radius-md);
+    background: var(--ai-surface-muted);
+    color: var(--ai-text-muted);
+}
+#atendeai-smart-reply .smart-reply-context strong { color: var(--ai-text); }
+#atendeai-smart-reply .smart-reply-context:empty { display: none; }
+
+#atendeai-smart-reply .smart-reply-status:empty { display: none; }
+#atendeai-smart-reply .smart-reply-status { color: var(--ai-danger); }
+
+#atendeai-smart-reply .smart-reply-messages {
     flex: 1 1 auto;
-    min-height: 3em;
+    min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    color: var(--ai-text);
-    font-size: var(--ai-font-size);
-}
-
-/* A shown suggestion is edited in place before Inserir. */
-#containerBotoesGemini .smart-reply-text[contenteditable="plaintext-only"] {
-    cursor: text;
-    border-radius: var(--ai-radius-sm);
-}
-#containerBotoesGemini .smart-reply-text[contenteditable="plaintext-only"]:hover {
-    background: var(--ai-surface-hover);
-}
-#containerBotoesGemini .smart-reply-text[contenteditable="plaintext-only"]:focus {
-    outline: none;
-    box-shadow: var(--ai-focus);
-}
-
-#containerBotoesGemini .smart-reply-skeleton {
-    display: block;
-    height: 0.7em;
-    margin: 0.4em 0;
-    border-radius: 4px;
-    background: var(--ai-surface-hover);
-    animation: smart-reply-pulse 1.2s ease-in-out infinite;
-}
-
-#containerBotoesGemini .smart-reply-skeleton:nth-child(2) { width: 85%; }
-#containerBotoesGemini .smart-reply-skeleton:nth-child(3) { width: 60%; }
-
-@keyframes smart-reply-pulse { 50% { opacity: 0.45; } }
-
-@media (prefers-reduced-motion: reduce) {
-    #containerBotoesGemini .smart-reply-skeleton { animation: none; }
-}
-
-#containerBotoesGemini .smart-reply-warning,
-#containerBotoesGemini .smart-reply-status {
-    flex-shrink: 0;
-    font-size: var(--ai-font-size-xs);
-}
-
-#containerBotoesGemini .smart-reply-warning { color: var(--ai-warning); }
-#containerBotoesGemini .smart-reply-status { color: var(--ai-danger); }
-#containerBotoesGemini .smart-reply-warning:not(:empty)::before,
-#containerBotoesGemini .smart-reply-status:not(:empty)::before { content: "⚠ "; }
-#containerBotoesGemini .smart-reply-warning:empty,
-#containerBotoesGemini .smart-reply-status:empty { display: none; }
-
-#containerBotoesGemini .smart-reply-direct {
-    flex-shrink: 0;
-    width: 100%;
-    min-height: 28px;
-    box-sizing: border-box;
-    padding: 4px 8px;
-    border: 1px solid var(--ai-border-strong);
-    border-radius: var(--ai-radius-sm);
-    background: var(--ai-surface-muted);
-    color: var(--ai-text);
-    font: inherit;
-}
-
-#containerBotoesGemini .smart-reply-direct::placeholder { color: var(--ai-text-muted); }
-
-#containerBotoesGemini .smart-reply-actions,
-#containerBotoesGemini .smart-reply-draft-choices {
-    flex-shrink: 0;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 6px;
-    /* In a very short dock the card scrolls; the actions stay reachable. */
-    position: sticky;
-    bottom: 0;
-    padding-top: 2px;
-    background: var(--ai-surface);
-}
-
-#containerBotoesGemini .smart-reply-primary,
-#containerBotoesGemini .smart-reply-secondary {
-    min-height: 28px;
-    padding: 4px 10px;
-    border-radius: var(--ai-radius-sm);
-    font: inherit;
-    cursor: pointer;
-}
-
-#containerBotoesGemini .smart-reply-primary {
-    border: 0;
-    background: var(--ai-primary);
-    color: var(--ai-on-primary);
-    font-weight: var(--ai-weight-bold);
-}
-
-#containerBotoesGemini .smart-reply-secondary {
-    border: 1px solid var(--ai-border);
-    background: transparent;
-    color: var(--ai-text-secondary);
-}
-
-#containerBotoesGemini .smart-reply-secondary:hover { background: var(--ai-surface-hover); }
-
-#containerBotoesGemini .smart-reply-card :is(button, input):disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-#containerBotoesGemini .smart-reply-card :is(button, input, [tabindex]):focus-visible {
-    outline: none;
-    box-shadow: var(--ai-focus);
-}
-
-/* "Base:" manual pages the suggestion drew on (docs.softensistemas.com.br). */
-#containerBotoesGemini .smart-reply-sources {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 2px 6px;
-    flex-shrink: 0;
-    font-size: var(--ai-font-size-xs);
-    color: var(--ai-text-muted);
-}
-
-#containerBotoesGemini .smart-reply-source {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--ai-primary);
-    text-decoration: none;
-}
-
-#containerBotoesGemini .smart-reply-source:hover { text-decoration: underline; }
-
-#containerBotoesGemini .smart-reply-hint {
-    flex-shrink: 0;
-    color: var(--ai-text-muted);
-    font-size: var(--ai-font-size-xs);
-}
-
-/* One-click intents: Resolver, Pedir informação, Aviso do dia, Cliente difícil... */
-#containerBotoesGemini .smart-reply-intents {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    flex-shrink: 0;
-}
-
-#containerBotoesGemini .smart-reply-intent {
-    padding: 2px 7px;
-    white-space: nowrap;
-    border: 1px solid var(--ai-border);
-    border-radius: 999px;
-    background: var(--ai-surface);
-    color: var(--ai-text);
-    font: inherit;
-    font-size: var(--ai-font-size-xs);
-    cursor: pointer;
-}
-
-#containerBotoesGemini .smart-reply-intent:hover { border-color: var(--ai-primary-border); }
-#containerBotoesGemini .smart-reply-intent[aria-pressed="true"] {
-    border-color: var(--ai-primary);
-    background: var(--ai-primary-soft);
-    color: var(--ai-primary);
-}
-
-#containerBotoesGemini .smart-reply-notices-toggle {
-    padding: 2px 6px;
-    white-space: nowrap;
-    border: 0;
-    border-radius: var(--ai-radius-sm);
-    background: transparent;
-    color: var(--ai-primary);
-    font: inherit;
-    font-size: var(--ai-font-size-xs);
-    cursor: pointer;
-}
-
-#containerBotoesGemini .smart-reply-notices-toggle:hover { background: var(--ai-primary-soft); }
-
-#containerBotoesGemini .smart-reply-notices {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    flex-shrink: 0;
-    padding: 6px;
-    border: 1px solid var(--ai-border);
-    border-radius: var(--ai-radius-sm);
-    background: var(--ai-surface-muted);
+    gap: 10px;
+    padding: 4px 2px;
 }
 
-#containerBotoesGemini .smart-reply-notice-list { display: flex; flex-direction: column; gap: 4px; }
+#atendeai-smart-reply .smart-reply-empty { display: flex; flex-direction: column; gap: 8px; color: var(--ai-text-muted); }
+#atendeai-smart-reply .smart-reply-hint { margin: 0; }
 
-#containerBotoesGemini .smart-reply-notice {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    column-gap: 4px;
-    padding: 4px 6px;
-    border-radius: var(--ai-radius-sm);
+#atendeai-smart-reply .smart-reply-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+#atendeai-smart-reply .smart-reply-chip {
+    min-height: 28px;
+    padding: 3px 10px;
+    border: 1px solid var(--ai-border-strong);
+    border-radius: 999px;
     background: var(--ai-surface);
-    font-size: var(--ai-font-size-xs);
-}
-
-#containerBotoesGemini .smart-reply-notice-text { overflow-wrap: anywhere; color: var(--ai-text); }
-#containerBotoesGemini .smart-reply-notice-until { grid-column: 1; color: var(--ai-text-muted); }
-
-#containerBotoesGemini .smart-reply-notice-remove {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    align-self: start;
-    padding: 0 4px;
-    border: 0;
-    background: transparent;
     color: var(--ai-text-secondary);
-    font-size: 14px;
-    line-height: 1;
+    font: inherit;
     cursor: pointer;
 }
+#atendeai-smart-reply .smart-reply-chip:hover:not(:disabled) { border-color: var(--ai-primary-border); color: var(--ai-primary); }
+#atendeai-smart-reply .smart-reply-chip:disabled { opacity: 0.55; cursor: default; }
+#atendeai-smart-reply .smart-reply-chips-compact .smart-reply-chip { min-height: 24px; padding: 1px 8px; font-size: var(--ai-font-size-xs); }
 
-#containerBotoesGemini .smart-reply-notices-help { color: var(--ai-text-muted); font-size: var(--ai-font-size-xs); }
-#containerBotoesGemini .smart-reply-notice-empty { color: var(--ai-text-muted); font-size: var(--ai-font-size-xs); }
+#atendeai-smart-reply .smart-reply-msg { max-width: 100%; overflow-wrap: anywhere; }
+#atendeai-smart-reply .smart-reply-user {
+    align-self: flex-end;
+    max-width: 85%;
+    padding: 6px 10px;
+    border-radius: var(--ai-radius-md);
+    background: var(--ai-primary);
+    color: var(--ai-on-primary);
+    white-space: pre-wrap;
+}
+#atendeai-smart-reply .smart-reply-bot {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--ai-border);
+    border-radius: var(--ai-radius-md);
+    background: var(--ai-surface-muted);
+}
+#atendeai-smart-reply .smart-reply-label { color: var(--ai-text-muted); font-size: var(--ai-font-size-xs); }
+#atendeai-smart-reply .smart-reply-reply {
+    padding: 8px 10px;
+    border: 1px solid var(--ai-primary-border);
+    border-radius: var(--ai-radius-md);
+    background: var(--ai-surface);
+    color: var(--ai-text);
+    white-space: pre-wrap;
+}
+#atendeai-smart-reply .smart-reply-msg-actions { display: flex; justify-content: flex-end; gap: 6px; }
+#atendeai-smart-reply .smart-reply-msg-actions:empty { display: none; }
+#atendeai-smart-reply .smart-reply-error { border-color: var(--ai-danger-border); background: var(--ai-danger-soft); color: var(--ai-danger); }
+#atendeai-smart-reply .smart-reply-error p { margin: 0; }
+#atendeai-smart-reply .smart-reply-typing { color: var(--ai-text-muted); font-style: italic; }
 
-#containerBotoesGemini .smart-reply-notice-input,
-#containerBotoesGemini .smart-reply-notice-duration {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 4px 6px;
-    border: 1px solid var(--ai-border-strong);
+#atendeai-smart-reply .smart-reply-sources { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: var(--ai-font-size-xs); color: var(--ai-text-muted); }
+#atendeai-smart-reply .smart-reply-source {
+    max-width: 100%;
+    overflow: hidden;
+    padding: 1px 6px;
     border-radius: var(--ai-radius-sm);
+    background: var(--ai-primary-soft);
+    color: var(--ai-primary);
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#atendeai-smart-reply .smart-reply-source:hover { text-decoration: underline; }
+
+#atendeai-smart-reply .smart-reply-stale {
+    padding: 4px 8px;
+    border-radius: var(--ai-radius-sm);
+    background: var(--ai-warning-soft);
+    color: var(--ai-warning);
+}
+
+#atendeai-smart-reply .smart-reply-form { display: flex; gap: 6px; align-items: flex-end; }
+#atendeai-smart-reply .smart-reply-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    resize: none;
+    padding: 8px 10px;
+    border: 1px solid var(--ai-border-strong);
+    border-radius: var(--ai-radius-md);
     background: var(--ai-surface);
     color: var(--ai-text);
     font: inherit;
-    font-size: var(--ai-font-size-xs);
 }
+#atendeai-smart-reply .smart-reply-input::placeholder { color: var(--ai-text-muted); opacity: 1; }
+#atendeai-smart-reply .smart-reply-send {
+    padding: 8px 14px;
+    border: 0;
+    border-radius: var(--ai-radius-md);
+    background: var(--ai-primary);
+    color: var(--ai-on-primary);
+    font: inherit;
+    font-weight: var(--ai-weight-bold);
+    cursor: pointer;
+}
+#atendeai-smart-reply .smart-reply-send:hover:not(:disabled) { background: var(--ai-primary-hover); }
+#atendeai-smart-reply .smart-reply-send:disabled { opacity: 0.55; cursor: default; }
 
-#containerBotoesGemini .smart-reply-notice-input { resize: vertical; }
-#containerBotoesGemini .smart-reply-notice-add { display: flex; flex-direction: column; gap: 4px; }
+#atendeai-smart-reply :is(button, a, textarea, input, select, [tabindex]):focus-visible {
+    outline: none;
+    box-shadow: var(--ai-focus);
+}
