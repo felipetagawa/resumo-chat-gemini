@@ -60,6 +60,7 @@
         "modules/smart-reply-context.js",
         "modules/smart-reply-samples.js",
         "modules/daily-notices.js",
+        "modules/reply-chat-store.js",
         "modules/smart-reply.js",
         "modules/queue-context-parse.js",
         "modules/queue-context-store.js",
