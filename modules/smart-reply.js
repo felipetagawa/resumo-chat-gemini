@@ -24,6 +24,7 @@ const SmartReplyModule = (() => {
   let session = null;
   // Per attendance, shared by every opening of the window: a reply on its way outlives the window that asked.
   const cache = new Map(), busy = new Set();
+  const IDLE_LIMIT = 24 * 60 * 60 * 1000; // same as ReplyChatStore's TTL
   const text = value => String(value || "").replace(/\s+/g, " ").trim();
   const chatToken = () => ChatCaptureModule.identificarAtendimentoResposta();
   const capture = () => ChatCaptureModule.capturarConversaRotulada(samples()?.selfName?.() || "");
@@ -296,6 +297,9 @@ const SmartReplyModule = (() => {
     syncChips(s);
   }
   async function conversationFor(s, token) {
+    // The cache lasts as long as the SZ page, but a conversation idle for a day is over, as in storage.
+    const cached = cache.get(token), lastAt = Math.max(0, ...(cached?.messages || []).map(m => m.at || 0));
+    if (cached?.messages.length && !busy.has(token) && Date.now() - lastAt > IDLE_LIMIT) cache.delete(token);
     if (!cache.has(token)) {
       const loaded = await chats().load(token);
       // Another load for the same token may have finished first: keep a single object per attendance.

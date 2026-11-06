@@ -445,6 +445,15 @@ test('resposta a caminho sobrevive a fechar e reabrir a janela e Nova não traz 
   assert.deepEqual(Object.keys(h.store.atendeai_reply_chats_v1.items), [], 'nor does storage bring it back');
 });
 
+test('conversa parada há mais de um dia não volta ao reabrir, como no armazenamento', async () => {
+  const h = harness(); await openAndResolve(h);
+  h.module.close();
+  vm.runInContext('{ const real = Date.now; Date.now = () => real() + 25 * 60 * 60 * 1000; }', h.context);
+  await h.module.open(); await settle();
+  assert.deepEqual(h.replies(), []);
+  assert.ok(h.byClass('smart-reply-empty'));
+});
+
 test('um botão rápido logo depois de Nova vai para a conversa nova e fica salvo', async () => {
   const h = harness(); await openAndResolve(h);
   const clearing = h.button('Nova').emit('click');
