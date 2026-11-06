@@ -108,6 +108,24 @@
         "modules/crm-automation.js"
       ],
       "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "https://sistemaempresarialweb.com.br/crm-chamado-por-tecnico*",
+        "https://www.sistemaempresarialweb.com.br/crm-chamado-por-tecnico*"
+      ],
+      "css": [
+        "styles/tokens.css",
+        "styles/retornos.css"
+      ],
+      "js": [
+        "modules/retornos-schedule.js",
+        "modules/retornos-store.js",
+        "modules/retornos-list.js",
+        "modules/retornos-alert.js",
+        "modules/retornos-strip.js"
+      ],
+      "run_at": "document_end"
     }
   ],
   "web_accessible_resources": [
