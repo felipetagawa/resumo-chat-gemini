@@ -161,3 +161,14 @@ test('the alert lives in a stack container that is a sibling layer, with a CRM p
   assert.equal(stack.parentElement, doc.body);
   assert.ok(stack.contains(doc.getElementById('atendeai-retornos-alert')));
 });
+
+test('starting the alert migrates the old agenda once, so an event for today alerts without opening the tab', async () => {
+  const { A, R } = load({ atendeai_user_sector: 'suporte', usuarioAgendaEventsV2: {
+    hoje: { id: 'hoje', title: 'Ligar para a Padaria', date: '2026-11-09', time: '07:00', status: 'todo' }
+  } });
+  const doc = createDocument(); const c = clock();
+  await A.start(doc, { now: () => c.now(), setTimer: (f, m) => c.setTimer(f, m), clearTimer: () => {} });
+  assert.match(textOf(doc.getElementById('atendeai-retornos-alert')), /Ligar para a Padaria/);
+  assert.match(textOf(doc.getElementById('atendeai-retornos-alert')), /anotado à mão/);
+  assert.equal((await R.list()).length, 1);
+});

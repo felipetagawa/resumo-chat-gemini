@@ -103,6 +103,8 @@ const RetornosAlert = (() => {
       }
     }
 
+    // Old manual agenda events (today onwards) must alert without anyone opening the Retornos tab first.
+    try { await store.migrateAgenda(now()); } catch { /* never block the alert */ }
     const unsubscribe = store.onChange(() => { void refresh(); });
     // The timer is not enough alone: the computer may sleep, or its clock may change.
     safety = setTimer(function tick() { void refresh(); safety = setTimer(tick, SAFETY_MS); }, SAFETY_MS);
