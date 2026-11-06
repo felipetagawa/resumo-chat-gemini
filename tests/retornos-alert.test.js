@@ -90,6 +90,24 @@ test('× marks it seen (the return stays in the list), and Adiar moves it to the
   assert.equal((await R.pending(T0 + 3600000)).length, 0);
 });
 
+test('Adiar counts from the click, not from when the alert appeared', async () => {
+  const { A, R } = load();
+  await R.upsertCrm(crm('1', T0), T0);
+  const doc = createDocument(); const c = clock();
+  const h = await A.start(doc, { now: () => c.now(), setTimer: (f, m) => c.setTimer(f, m), clearTimer: () => {} });
+  await h.refresh();
+  c.t = T0 + 40 * 60000;
+  buttonsOf(doc.getElementById('atendeai-retornos-alert')).find((b) => b.textContent === '15 min').click();
+  await settle();
+  assert.equal((await R.list())[0].alertAt, T0 + 55 * 60000, '15 min after the click, not 08:15 (already past)');
+  assert.equal(doc.getElementById('atendeai-retornos-alert'), null, 'so it does not come back at once');
+  c.t = T0 + 55 * 60000; await h.refresh();
+  c.t = T0 + 80 * 60000;
+  buttonsOf(doc.getElementById('atendeai-retornos-alert')).find((b) => b.textContent === '1 h').click();
+  await settle();
+  assert.equal((await R.list())[0].alertAt, T0 + 140 * 60000, 'a full hour after the click');
+});
+
 test('two returns due together become one grouped alert with a line each and "Fechar todos"', async () => {
   const { A, R } = load();
   await R.upsertCrm(crm('1', T0 - 60000), T0 - 86400000);

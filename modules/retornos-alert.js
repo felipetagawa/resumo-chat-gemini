@@ -18,7 +18,7 @@ const RetornosAlert = (() => {
     return node;
   }
 
-  function line(doc, store, item, now, onDone) {
+  function line(doc, store, item, now, clock, onDone) {
     const L = globalThis.RetornosList, S = globalThis.RetornosSchedule;
     const manual = item.kind === "manual";
     const title = manual ? item.text : item.cliente || "Cliente sem nome";
@@ -32,7 +32,12 @@ const RetornosAlert = (() => {
     ]);
     S.snoozeOptions(new Date(now)).forEach((option) => {
       const button = L.make(doc, "button", { type: "button", class: "atendeai-retornos-btn", text: option.label });
-      button.addEventListener("click", async () => { await store.snooze(item.key, option.at); onDone(); });
+      // The alert can stay on screen for a long time: the chosen delay counts from the click.
+      button.addEventListener("click", async () => {
+        const at = S.snoozeOptions(new Date(clock())).find((o) => o.id === option.id).at;
+        await store.snooze(item.key, at);
+        onDone();
+      });
       snooze.appendChild(button);
     });
     return L.make(doc, "div", { class: "atendeai-retornos-alert-item" }, [
@@ -47,7 +52,7 @@ const RetornosAlert = (() => {
     ]);
   }
 
-  function render(doc, store, items, now, placement, onDone) {
+  function render(doc, store, items, now, clock, placement, onDone) {
     const existing = doc.getElementById(ALERT_ID);
     if (!items.length) {
       existing?.remove();
@@ -65,7 +70,7 @@ const RetornosAlert = (() => {
       head.appendChild(all);
     }
     const alert = L.make(doc, "div", { id: ALERT_ID, class: "atendeai-retornos-alert", role: "alert" }, [head]);
-    items.forEach((item) => alert.appendChild(line(doc, store, item, now, onDone)));
+    items.forEach((item) => alert.appendChild(line(doc, store, item, now, clock, onDone)));
     stack(doc, placement).appendChild(alert);
     globalThis.ThemeModule?.apply?.(alert);
   }
@@ -90,7 +95,7 @@ const RetornosAlert = (() => {
         const shown = doc.getElementById(ALERT_ID);
         if (!due.length) shown?.remove();
         else if (!shown || shown._signature !== signature) {
-          render(doc, store, due, t, options.placement, () => { void refresh(); });
+          render(doc, store, due, t, now, options.placement, () => { void refresh(); });
           const node = doc.getElementById(ALERT_ID);
           if (node) node._signature = signature;
         }
