@@ -8,6 +8,7 @@ const RetornosDiagnostic = (() => {
   const MAX_ENTRIES = 40;
   const KEEP_PARAM = /^javax\.faces\.(source|partial\.|behavior\.event|event)|lblOnOf|agendamento/i;
   const KEEP_TEXT_ID = /msg|message|growl|dialog|confirm/i;
+  const ERROR_RE = /ui-messages-(?:error|fatal)|ui-message-(?:error|fatal)|ui-growl-(?:item[^"]*)?(?:error|fatal)|ui-state-error/;
   const MESSAGE_TEXT = /ui-(?:messages-(?:error|warn|info|fatal)-(?:summary|detail)|growl-title|growl-message)[^>]*>([^<]*)</g;
 
   const mask = (text) => String(text ?? "").replace(/[A-Za-zÀ-ÿ]/g, "a").replace(/\d/g, "9");
@@ -49,7 +50,7 @@ const RetornosDiagnostic = (() => {
 
   function redactResponse(xml) {
     const text = String(xml ?? "");
-    const out = { updates: [], messages: [], redirect: null, args: null, evals: [] };
+    const out = { updates: [], messages: [], redirect: null, args: null, evals: [], hasError: ERROR_RE.test(text) };
     for (const m of text.matchAll(/<update id="([^"]*)">([\s\S]*?)<\/update>/g)) {
       const body = m[2].replace(/^<!\[CDATA\[/, "").replace(/\]\]>$/, "");
       for (const msg of body.matchAll(MESSAGE_TEXT)) if (msg[1].trim()) out.messages.push(msg[1].trim());
