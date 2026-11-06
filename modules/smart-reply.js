@@ -77,6 +77,8 @@ const SmartReplyModule = (() => {
     const last = conversation?.messages?.[conversation.messages.length - 1];
     return last && last.role === "assistant" && !last.error ? last : null;
   };
+  // The latest chip's kind of message carries on in the free-text asks after it, until another chip or Nova.
+  const currentIntent = conversation => [...(conversation?.messages || [])].reverse().find(m => m.role === "user" && m.intent)?.intent || "";
 
   // ---------- rendering ----------
   function buildChips(s, className) {
@@ -333,7 +335,8 @@ const SmartReplyModule = (() => {
       if (promptComplement.length > 2000) throw new Error("O adendo excede o limite de 2.000 caracteres.");
       const basis = basisOf(snapshot.fullConversation, promptComplement);
       const payload = { action: "gerarResposta", conversation: snapshot.conversation, messages: chats().forApi(conversation.messages) };
-      if (intent) payload.intent = intent;
+      const kind = currentIntent(conversation);
+      if (kind) payload.intent = kind;
       if (promptComplement) payload.promptComplement = promptComplement;
       const activeNotices = (await notices()?.forRequest?.()) || [];
       if (activeNotices.length) payload.notices = activeNotices;

@@ -166,7 +166,7 @@ test('mensagem livre com Enter manda o histórico inteiro com a resposta anterio
   await h.input().emit('keydown', { key: 'Enter' }); await settle();
   assert.deepEqual(h.sent[1].messages, [{ role: 'user', content: 'Resolver' }, { role: 'assistant', content: 'Pode informar o erro exibido?' },
     { role: 'user', content: 'ela já tentou' }]);
-  assert.equal(h.sent[1].intent, undefined);
+  assert.equal(h.sent[1].intent, 'resolver', 'a follow-up keeps the kind of message the chip asked for');
   assert.equal(h.sent[1].regenerate, undefined);
   assert.equal(h.input().value, '');
   assert.equal(h.replies().length, 2);
@@ -453,4 +453,21 @@ test('um botão rápido logo depois de Nova vai para a conversa nova e fica salv
   assert.deepEqual(h.replies(), ['Pode informar o erro exibido?']);
   assert.deepEqual(Object.values(h.store.atendeai_reply_chats_v1.items).map(item => item.messages.map(m => m.content)),
     [['Pedir info', 'Pode informar o erro exibido?']]);
+});
+
+test('o tipo do último botão rápido segue nos pedidos livres até outro botão ou Nova, mesmo depois de reabrir', async () => {
+  const h = harness(); await h.module.open(); await settle();
+  const ask = async value => { h.input().value = value; await h.input().emit('keydown', { key: 'Enter' }); await settle(); };
+  await h.button('Encerrar').emit('click'); await settle();
+  await ask('mais curto');
+  assert.equal(h.sent[1].intent, 'encerrar', 'no manual search and the closing rules stay on');
+  const again = harness(h.store); await again.module.open(); await settle();
+  again.input().value = 'sem emoji'; await again.input().emit('keydown', { key: 'Enter' }); await settle();
+  assert.equal(again.sent[0].intent, 'encerrar', 'read back from the saved conversation');
+  await h.button('Pedir info').emit('click'); await settle();
+  await ask('pede o XML');
+  assert.deepEqual([h.sent[2].intent, h.sent[3].intent], ['pedir_info', 'pedir_info']);
+  await h.button('Nova').emit('click'); await settle();
+  await ask('oi, tudo bem?');
+  assert.equal(h.sent[4].intent, undefined, 'a fresh conversation starts with no kind');
 });
