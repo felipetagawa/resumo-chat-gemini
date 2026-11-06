@@ -40,12 +40,38 @@ test('rótulos por papel: cliente com nome, Você, Outro técnico', () => {
   assert.equal(result.fullConversation, result.conversation);
 });
 
-test('sem selfName as mensagens enviadas saem como Técnico e só as 12 últimas entram', () => {
+test('sem selfName as mensagens enviadas saem como Técnico e o atendimento inteiro entra quando cabe', () => {
   const h = fixture();
-  for (let i = 1; i <= 14; i++) h.message(i % 2 ? 'Ana Silva' : 'Felipe Okamoto', `fala ${i}`, i % 2 === 0);
+  for (let i = 1; i <= 40; i++) h.message(i % 2 ? 'Ana Silva' : 'Felipe Okamoto', `fala ${i}`, i % 2 === 0);
   const result = h.capture.capturarConversaRotulada('');
-  assert.match(result.conversation, /^Cliente \(Ana Silva\): fala 3\nTécnico: fala 4\n/);
-  assert.match(result.fullConversation, /^Cliente \(Ana Silva\): fala 1/);
+  assert.match(result.conversation, /^Cliente \(Ana Silva\): fala 1\nTécnico: fala 2\n/);
+  assert.ok(result.conversation.endsWith('Técnico: fala 40'));
+  assert.equal(result.conversation, result.fullConversation);
+});
+
+test('atendimento longo: mantém o começo, marca o meio omitido e traz as mais recentes', () => {
+  const h = fixture();
+  h.message('Ana Silva', 'Ao emitir a NF-e aparece rejeição 539 duplicidade');
+  for (let i = 2; i <= 120; i++) h.message(i % 2 ? 'Ana Silva' : 'Felipe Okamoto', `mensagem ${i} ${'x'.repeat(200)}`, i % 2 === 0);
+  h.message('Ana Silva', 'e aí, resolveu?');
+  const result = h.capture.capturarConversaRotulada('');
+  assert.ok(result.conversation.length <= 16000, String(result.conversation.length));
+  assert.match(result.conversation, /^Cliente \(Ana Silva\): Ao emitir a NF-e aparece rejeição 539 duplicidade\n/);
+  assert.match(result.conversation, /\n\[\d+ mensagens do meio omitidas\]\n/);
+  assert.ok(result.conversation.endsWith('Cliente (Ana Silva): e aí, resolveu?'));
+  const omitted = Number(result.conversation.match(/\[(\d+) mensagens/)[1]);
+  const lines = result.conversation.split('\n').length;
+  assert.equal(lines - 1 + omitted, 121, 'every message is either sent or counted as omitted');
+});
+
+test('primeira mensagem enorme é cortada no começo sem estourar o limite', () => {
+  const h = fixture();
+  h.message('Ana Silva', 'P'.repeat(9000));
+  for (let i = 2; i <= 60; i++) h.message(i % 2 ? 'Ana Silva' : 'Felipe Okamoto', `m${i} ${'y'.repeat(300)}`, i % 2 === 0);
+  const result = h.capture.capturarConversaRotulada('');
+  assert.ok(result.conversation.length <= 16000);
+  assert.match(result.conversation, /^Cliente \(Ana Silva\): P+ …\n/);
+  assert.ok(result.conversation.split('\n')[0].length <= 3000);
 });
 
 test('mensagensDaResposta expõe autor e direção sem dados extras', () => {

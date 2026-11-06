@@ -91,9 +91,8 @@ const ChatCaptureModule = (() => {
         return messages.filter(item => item.scoped || hasUnscopedCustomer);
     }
 
-    function limitarMensagensRecentes(messages) {
+    function limitarMensagensRecentes(messages, available = 16000) {
         const lines = [], marker = '[trecho inicial omitido] ';
-        let available = 16000;
         for (const item of [...messages].reverse()) {
             const prefix = `${item.name}: `;
             const line = prefix + item.message;
@@ -133,13 +132,38 @@ const ChatCaptureModule = (() => {
 
     const normalizeName = value => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('pt-BR');
     // Smart Reply needs to know which lines are the technician's own voice.
+    // Smart Reply: the whole attendance when it fits; otherwise its opening (where the customer
+    // usually explains the problem) plus the most recent messages, with the gap marked.
+    const REPLY_LIMIT = 16000, OPENING_BUDGET = 3000, OPENING_MESSAGES = 4;
+    function conversaComInicio(labeled) {
+        const lines = labeled.map(item => `${item.name}: ${item.message}`);
+        const whole = lines.join('\n');
+        if (whole.length <= REPLY_LIMIT) return whole;
+        const opening = [];
+        let used = 0;
+        for (const line of lines.slice(0, OPENING_MESSAGES)) {
+            const room = OPENING_BUDGET - used - (opening.length ? 1 : 0);
+            if (room <= 0) break;
+            opening.push(line.length <= room ? line : `${line.slice(0, Math.max(0, room - 2))} …`);
+            used += Math.min(line.length, room) + (opening.length > 1 ? 1 : 0);
+            if (line.length > room) break;
+        }
+        const rest = labeled.slice(opening.length);
+        const gap = count => `[${count} mensage${count === 1 ? 'm' : 'ns'} do meio omitida${count === 1 ? '' : 's'}]`;
+        const reserve = gap(rest.length).length + 2;
+        const recent = limitarMensagensRecentes(rest, REPLY_LIMIT - opening.join('\n').length - reserve);
+        const kept = recent ? recent.split('\n').length : 0;
+        const omitted = rest.length - kept;
+        return [...opening, ...(omitted > 0 ? [gap(omitted)] : []), ...(recent ? [recent] : [])].join('\n');
+    }
+
     function capturarConversaRotulada(selfName = '') {
         const self = normalizeName(selfName);
         const labeled = mensagensParaResposta().map(item => ({ ...item, name: item.customer
             ? (item.author ? `Cliente (${item.author})` : 'Cliente')
             : !item.sent ? item.name
             : !self || !item.author ? 'Técnico' : normalizeName(item.author) === self ? 'Você' : 'Outro técnico' }));
-        return { conversation: limitarMensagensRecentes(labeled.slice(-12)),
+        return { conversation: conversaComInicio(labeled),
             fullConversation: labeled.map(item => `${item.name}: ${item.message}`).join('\n') };
     }
 
