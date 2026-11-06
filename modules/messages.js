@@ -74,7 +74,7 @@ const MessagesModule = (() => {
 
         const fixedMessages = isPre ? PRE_FIXED_MESSAGES.map(m => resolveTemplate(m.text, name)) : SUPPORT_FIXED_MESSAGES;
 
-        const fixedAcordeon = UIBuilder.criarAcordeon("📌 Mensagens Fixas", true, "acordeon-fixas");
+        const fixedAcordeon = UIBuilder.criarAcordeon("Mensagens fixas", true, "acordeon-fixas");
 
         fixedMessages.forEach((msg, index) => {
             const key = `fixed_${index}`;
@@ -85,7 +85,7 @@ const MessagesModule = (() => {
         container.appendChild(fixedAcordeon.container);
 
         if (!isPre) {
-            const customAcordeon = UIBuilder.criarAcordeon(`✨ Mensagens Personalizadas (${customMessagesList.length})`, true, "acordeon-custom");
+            const customAcordeon = UIBuilder.criarAcordeon(`Mensagens personalizadas (${customMessagesList.length})`, true, "acordeon-custom");
 
             // Adicionar botão de nova mensagem no header do acordeon ou logo abaixo
             const btnAdd = document.createElement("button");
@@ -374,7 +374,7 @@ const MessagesModule = (() => {
             navigator.clipboard.writeText(text);
             const btn = e.target;
             const original = btn.textContent;
-            btn.textContent = "✅ Copiado";
+            btn.textContent = "Copiado";
             setTimeout(() => { btn.textContent = original; }, 1500);
         });
 

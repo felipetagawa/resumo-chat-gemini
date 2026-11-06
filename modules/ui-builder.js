@@ -9,10 +9,10 @@ const UIBuilder = (() => {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 15px;
-      background: ${aberto ? 'var(--ai-surface-muted)' : 'var(--ai-surface-muted)'};
+      padding: 11px 14px;
+      background: var(--ai-surface-muted);
       border: 1px solid var(--ai-border);
-      border-radius: 6px;
+      border-radius: ${aberto ? '10px 10px 0 0' : '10px'};
       cursor: pointer;
       user-select: none;
       font-weight: 600;
@@ -30,7 +30,7 @@ const UIBuilder = (() => {
         content.style = `
       border: 1px solid var(--ai-border);
       border-top: none;
-      border-radius: 0 0 6px 6px;
+      border-radius: 0 0 10px 10px;
       background:var(--ai-surface);
       max-height: ${aberto ? 'none' : '0'};
       overflow: ${aberto ? 'visible' : 'hidden'};
@@ -56,7 +56,7 @@ const UIBuilder = (() => {
             icon.textContent = isOpen ? '−' : '+';
 
             header.style.background = isOpen ? 'var(--ai-surface-muted)' : 'var(--ai-surface-muted)';
-            header.style.borderRadius = isOpen ? '6px 6px 0 0' : '6px';
+            header.style.borderRadius = isOpen ? '10px 10px 0 0' : '10px';
 
             if (isOpen) {
                 content.style.padding = '15px 15px 5px 15px';

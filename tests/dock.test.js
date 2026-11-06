@@ -59,8 +59,9 @@ test('Consultar Docs é o botão do grupo e Sugerir resposta o link embaixo', ()
   const src = fs.readFileSync('content.js', 'utf8');
   const group = src.slice(src.indexOf("replyGroup.className"), src.indexOf("container.appendChild(replyGroup)"));
   assert.ok(group.indexOf('appendChild(botaoDocs)') >= 0 && group.indexOf('appendChild(botaoDocs)') < group.indexOf('appendChild(botaoSmartReply)'));
-  assert.match(src, /botaoDocs\.className = 'gemini-floating-btn atendeai-primary-action'/);
-  assert.match(src, /botaoSmartReply\.className = 'gemini-preserved-link atendeai-reply-link'/);
+  assert.match(src, /botaoDocs\.className \+= ' gemini-hero'/);
+  assert.match(src, /botaoSmartReply\.className = 'gemini-preserved-link';/);
+  assert.doesNotMatch(src, /botaoSmartReply\.className \+= ' gemini-hero/);
   assert.doesNotMatch(src, /data-reply-open/);
   const options = fs.readFileSync('options.js', 'utf8');
   assert.ok(options.indexOf('id: "btnConsultarDocsLoop", label: "Consultar Docs"') < options.indexOf('id: "btnSmartReply", label: "↳ Sugerir resposta"'));

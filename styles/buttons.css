@@ -1,125 +1,58 @@
-.gemini-floating-btn {
-    position: relative;
-    background: var(--ai-surface);
-    color: var(--ai-text);
-    border: 1px solid var(--ai-border-strong);
-    border-radius: var(--ai-radius-sm);
-    padding: 7px 10px 7px 12px;
-    font-size: var(--ai-font-size);
-    font-family: var(--ai-font);
-    font-weight: var(--ai-weight-medium);
-    letter-spacing: 0.01em;
-    line-height: 1.25;
-    cursor: pointer;
-    box-shadow: var(--ai-shadow-sm);
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: var(--ai-dock-width);
-    min-height: 34px;
-    text-align: left;
-    margin-bottom: 6px;
-    box-sizing: border-box;
-}
-
-.gemini-floating-btn:hover:not(:disabled) {
-    background: var(--ai-surface-hover);
-    color: var(--ai-text);
-    border-color: var(--ai-border-hover);
-    box-shadow: var(--ai-shadow-sm);
-}
-
-.gemini-floating-btn:active:not(:disabled) {
-    background: var(--ai-surface-active);
-}
-
-.gemini-floating-btn .icon {
-    font-size: 14px;
-    min-width: 16px;
-    text-align: center;
-    opacity: 0.86;
-    filter: none;
-}
-
-.gemini-preserved-link {
-    display: block;
-    width: var(--ai-dock-width);
-    box-sizing: border-box;
-    margin: 0;
-    padding: 6px 10px 7px 12px;
-    line-height: 1.35;
-    border: none;
-    background: var(--ai-surface);
-    color: var(--ai-text-secondary);
-    font-family: var(--ai-font);
-    font-size: var(--ai-font-size-sm);
-    font-weight: var(--ai-weight-medium);
-    text-align: left;
-    cursor: pointer;
-}
-
-.gemini-preserved-link::before {
-    content: none;
-}
-
-.gemini-report-group {
-    width: var(--ai-dock-width);
-    box-sizing: border-box;
-    margin-bottom: 6px;
-    background: var(--ai-surface);
-    border: 1px solid var(--ai-border-strong);
-    border-radius: var(--ai-radius-sm);
-    box-shadow: var(--ai-shadow-sm);
-    overflow: hidden;
-}
-
-.gemini-report-group .gemini-floating-btn {
-    margin-bottom: 0;
-    width: 100%;
-    border: 0;
-    border-bottom: 1px solid var(--ai-border);
-    border-radius: 0;
-    box-shadow: none;
-}
-
-.gemini-report-group .gemini-preserved-link {
-    width: 100%;
-}
+/* AtendeAI dock — one machined panel: Gerar Relatório is the gold action,
+   Sugerir resposta the raised one, everything else a quiet list. */
 
 #containerBotoesGemini {
+    width: var(--ai-dock-width);
+    box-sizing: border-box;
+    padding: 6px;
+    background: var(--ai-surface);
+    border: 1px solid var(--ai-border-strong);
+    border-radius: 16px;
+    box-shadow: var(--ai-highlight), var(--ai-shadow-md);
     overscroll-behavior: contain;
     font-family: var(--ai-font);
+    color: var(--ai-text);
+    scrollbar-width: thin;
+    scrollbar-color: var(--ai-border-strong) transparent;
 }
 
+#containerBotoesGemini ::selection {
+    background: var(--ai-primary-soft);
+    color: var(--ai-text);
+}
+
+/* Toolbar: grip, wordmark, size, minimize. */
 .gemini-dock-toolbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 4px;
-    padding: 2px 4px;
-    margin-bottom: 6px;
-    border-radius: var(--ai-radius-sm);
-    background: var(--ai-surface);
-    border: 1px solid var(--ai-border-strong);
+    gap: 2px;
     box-sizing: border-box;
-    width: var(--ai-dock-width);
-    min-height: 26px;
-    box-shadow: var(--ai-shadow-sm);
+    width: 100%;
+    min-height: 28px;
+    padding: 0 0 0 0;
+    margin-bottom: 6px;
 }
 
 .gemini-dock-handle {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 22px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--ai-text-muted);
     cursor: grab;
     touch-action: none;
     user-select: none;
-    border: 0;
-    background: none;
-    color: var(--ai-text-muted);
-    font-size: 13px;
-    line-height: 1;
-    padding: 2px 5px;
-    border-radius: 4px;
-    letter-spacing: 0.08em;
+}
+
+.gemini-dock-handle svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
 }
 
 .gemini-dock-handle:hover {
@@ -132,18 +65,64 @@
     background: var(--ai-surface-active);
 }
 
+.gemini-dock-brand {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: 2px;
+    font-family: var(--ai-font-display);
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+    color: var(--ai-text-secondary);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.gemini-dock-brand::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 1.5px;
+    background: var(--ai-primary);
+    transform: rotate(45deg);
+}
+
 .gemini-dock-size,
 .gemini-dock-toggle {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ai-text-muted);
     font-family: var(--ai-font);
     font-size: 11px;
     font-weight: var(--ai-weight-medium);
-    color: var(--ai-text-secondary);
-    border: 0;
-    border-radius: 4px;
-    background: transparent;
-    padding: 2px 6px;
-    min-height: 22px;
+    font-variant-numeric: tabular-nums;
     cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.gemini-dock-toggle {
+    padding: 0;
+}
+
+.gemini-dock-toggle svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .gemini-dock-size:hover,
@@ -157,30 +136,271 @@
     background: var(--ai-surface-active);
 }
 
+.gemini-dock-size[hidden] {
+    display: none;
+}
+
+#containerBotoesGemini[data-minimized="true"] {
+    width: auto;
+    padding: 4px;
+    border-radius: 12px;
+}
+
 #containerBotoesGemini[data-minimized="true"] > :not(.gemini-dock-toolbar) {
     display: none !important;
 }
 
 #containerBotoesGemini[data-minimized="true"] .gemini-dock-toolbar {
     width: auto;
-    min-width: 72px;
     margin-bottom: 0;
     gap: 2px;
 }
 
-.gemini-dock-size[hidden] {
-    display: none;
+#containerBotoesGemini[data-minimized="true"] .gemini-dock-brand {
+    padding-right: 6px;
+}
+
+/* Every dock action. Default shape is the quiet list row. */
+.gemini-floating-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 32px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: var(--ai-radius-sm);
+    background: transparent;
+    color: var(--ai-text-secondary);
+    font-family: var(--ai-font);
+    font-size: var(--ai-font-size);
+    font-weight: 500;
+    letter-spacing: 0.005em;
+    line-height: 1.2;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gemini-floating-btn .label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gemini-floating-btn .icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    color: var(--ai-text-muted);
+    transition: color 0.15s ease;
+}
+
+.gemini-floating-btn .icon svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.gemini-floating-btn:hover:not(:disabled) {
+    background: var(--ai-surface-hover);
+    color: var(--ai-text);
+}
+
+.gemini-floating-btn:hover:not(:disabled) .icon {
+    color: var(--ai-primary-ink);
+}
+
+.gemini-floating-btn:active:not(:disabled) {
+    background: var(--ai-surface-active);
+}
+
+.gemini-dock-divider {
+    height: 1px;
+    margin: 6px 6px;
+    background: var(--ai-border);
+}
+
+/* Hero actions: taller, icon on a tile. */
+.gemini-floating-btn.gemini-hero {
+    min-height: 42px;
+    padding: 8px 8px;
+    font-family: var(--ai-font-display);
+    font-weight: 650;
+    color: var(--ai-text);
+}
+
+.gemini-floating-btn.gemini-hero .icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: var(--ai-surface-active);
+    color: var(--ai-primary-ink);
+}
+
+.gemini-floating-btn.gemini-hero-solo {
+    margin-bottom: 6px;
+    background: var(--ai-surface-raised);
+    box-shadow: inset 0 0 0 1px var(--ai-border), var(--ai-highlight);
+}
+
+/* Paired group: hero + its secondary link. */
+.gemini-report-group {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 6px;
+    border-radius: var(--ai-radius-md);
+    background: var(--ai-surface-raised);
+    box-shadow: inset 0 0 0 1px var(--ai-border), var(--ai-highlight);
+    overflow: hidden;
+}
+
+.gemini-report-group .gemini-floating-btn {
+    border-radius: 0;
+}
+
+.gemini-report-group .gemini-floating-btn:hover:not(:disabled) {
+    background: var(--ai-surface-hover);
+}
+
+.gemini-preserved-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+    min-height: 28px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 5px 8px 5px 10px;
+    border: 0;
+    border-top: 1px solid var(--ai-border);
+    background: transparent;
+    color: var(--ai-text-muted);
+    font-family: var(--ai-font);
+    font-size: var(--ai-font-size-sm);
+    font-weight: 500;
+    line-height: 1.3;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.gemini-preserved-link::after {
+    content: "";
+    flex: 0 0 auto;
+    width: 12px;
+    height: 12px;
+    background: currentColor;
+    opacity: 0.7;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
+    transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
 .gemini-preserved-link:hover {
-    background: var(--ai-surface-muted);
+    background: var(--ai-surface-hover);
     color: var(--ai-text);
     text-decoration: none;
 }
 
+.gemini-preserved-link:hover::after {
+    opacity: 1;
+    transform: translateX(2px);
+}
+
+/* The gold group: Gerar Relatório, the main feature. */
+.gemini-report-group.gemini-group-accent {
+    background: var(--ai-primary-fill);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), inset 0 0 0 1px rgba(0, 0, 0, 0.08), var(--ai-shadow-primary);
+}
+
+.gemini-group-accent .gemini-floating-btn.gemini-hero {
+    color: var(--ai-on-primary);
+}
+
+.gemini-group-accent .gemini-floating-btn.gemini-hero .icon {
+    background: rgba(0, 0, 0, 0.13);
+    color: var(--ai-on-primary);
+}
+
+.gemini-group-accent .gemini-floating-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.16);
+    color: var(--ai-on-primary);
+}
+
+.gemini-group-accent .gemini-floating-btn:hover:not(:disabled) .icon {
+    color: var(--ai-on-primary);
+}
+
+.gemini-group-accent .gemini-floating-btn:active:not(:disabled) {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.gemini-group-accent .gemini-preserved-link {
+    border-top-color: rgba(0, 0, 0, 0.12);
+    color: var(--ai-on-primary);
+    opacity: 0.86;
+}
+
+.gemini-group-accent .gemini-preserved-link:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: var(--ai-on-primary);
+    opacity: 1;
+}
+
+/* Focus inside clipped groups is drawn inset so the ring is never cut. */
+.gemini-report-group :is(.gemini-floating-btn, .gemini-preserved-link):focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--ai-primary);
+}
+
+.gemini-group-accent :is(.gemini-floating-btn, .gemini-preserved-link):focus-visible {
+    box-shadow: inset 0 0 0 2px var(--ai-on-primary);
+}
+
+/* Working state keeps the colour and says it is busy. */
+#containerBotoesGemini .gemini-floating-btn:disabled {
+    filter: none;
+    opacity: 0.82;
+    cursor: progress;
+}
+
+.gemini-spinner::before {
+    content: "";
+    width: 13px;
+    height: 13px;
+    box-sizing: border-box;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: gemini-spin 0.7s linear infinite;
+}
+
+@keyframes gemini-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gemini-spinner::before { animation-duration: 2.4s; }
+    .gemini-preserved-link::after { transition: none; }
+}
+
+/* Legacy dropdown (kept for older menus). */
 .gemini-dropdown {
     position: relative;
-    width: var(--ai-dock-width);
+    width: 100%;
     margin-bottom: 6px;
 }
 
@@ -193,14 +413,15 @@
     display: none;
     position: absolute;
     bottom: 0;
-    right: calc(100% + 8px);
-    background-color: var(--ai-surface);
+    right: calc(100% + 10px);
     min-width: 216px;
-    box-shadow: var(--ai-shadow-md);
-    border-radius: var(--ai-radius-md);
+    padding: 4px;
+    background-color: var(--ai-surface);
+    border: 1px solid var(--ai-border-strong);
+    border-radius: var(--ai-radius-lg);
+    box-shadow: var(--ai-highlight), var(--ai-shadow-md);
     overflow: hidden;
     z-index: 999999;
-    border: 1px solid var(--ai-border-strong);
     animation: fadeInSide 0.16s ease;
 }
 
@@ -209,61 +430,48 @@
 }
 
 .gemini-dropdown-item {
-    color: var(--ai-text);
-    padding: 9px 12px;
-    text-decoration: none;
     display: flex;
     align-items: center;
     gap: 10px;
-    cursor: pointer;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: var(--ai-radius-sm);
+    background: transparent;
+    color: var(--ai-text);
     font-family: var(--ai-font);
     font-size: var(--ai-font-size);
-    font-weight: var(--ai-weight-medium);
-    transition: background 0.14s ease, color 0.14s ease;
-    border: none;
-    background: var(--ai-surface);
-    width: 100%;
+    font-weight: 500;
     text-align: left;
-    border-bottom: 1px solid var(--ai-border);
-}
-
-.gemini-dropdown-item:last-child {
-    border-bottom: none;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.14s ease, color 0.14s ease;
 }
 
 .gemini-dropdown-item:hover {
     background-color: var(--ai-surface-hover);
-    color: var(--ai-text);
 }
 
 .gemini-dropdown-item .icon {
-    font-size: 14px;
     min-width: 18px;
     text-align: center;
-    opacity: 0.86;
+    color: var(--ai-text-muted);
 }
 
 @keyframes fadeInSide {
-    from {
-        opacity: 0;
-        transform: translateX(6px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+    from { opacity: 0; transform: translateX(6px); }
+    to { opacity: 1; transform: translateX(0); }
 }
 
+/* Pré-atendimento: Identificar produto result. */
 :where(#containerBotoesGemini) .product-classifier-result {
-    width: var(--ai-dock-width);
+    width: 100%;
     box-sizing: border-box;
     margin: 0 0 6px 0;
-    padding: 8px 10px;
-    border: 1px solid var(--ai-border-strong);
-    border-radius: var(--ai-radius-sm);
-    background: var(--ai-surface);
-    box-shadow: var(--ai-shadow-sm);
+    padding: 9px 10px;
+    border-radius: var(--ai-radius-md);
+    background: var(--ai-surface-muted);
+    box-shadow: inset 0 0 0 1px var(--ai-border);
     font-family: var(--ai-font);
     color: var(--ai-text);
 }
@@ -276,8 +484,6 @@
     margin-bottom: 4px;
     font-size: var(--ai-font-size-xs);
     font-weight: var(--ai-weight-medium);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
     color: var(--ai-text-muted);
 }
 
@@ -285,7 +491,7 @@
     font-size: var(--ai-font-size);
     font-weight: var(--ai-weight-bold);
     line-height: 1.35;
-    color: var(--ai-text);
+    color: var(--ai-primary-ink);
 }
 
 :where(#containerBotoesGemini) .product-classifier-list {
@@ -310,8 +516,9 @@
 
 :where(#containerBotoesGemini) .product-classifier-option strong {
     flex: 0 0 auto;
-    color: var(--ai-text-secondary);
+    color: var(--ai-primary-ink);
     font-weight: var(--ai-weight-medium);
+    font-variant-numeric: tabular-nums;
 }
 
 :where(#containerBotoesGemini) .product-classifier-empty {
@@ -319,7 +526,3 @@
     line-height: 1.35;
     color: var(--ai-text-muted);
 }
-
-#containerBotoesGemini .atendeai-primary-action { background: var(--ai-primary-soft); border-color: var(--ai-primary-border); color: var(--ai-primary); }
-#containerBotoesGemini .atendeai-reply-link { display: flex; align-items: center; gap: 6px; }
-.atendeai-reply-icon { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; flex: 0 0 auto; }

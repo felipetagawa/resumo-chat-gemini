@@ -11,6 +11,7 @@
 #gemini-notification-toast,
 #gemini-overdue-toast,
 #atendeai-options,
+#atendeai-popup,
 #atendeai-onboarding-overlay,
 #atendeai-context-notice,
 #atendeai-config-modal-overlay,
@@ -27,6 +28,7 @@
 .smart-reply-preview {
   color-scheme: light;
   --ai-font: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --ai-font-display: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --ai-font-size: 13px;
   --ai-font-size-sm: 12px;
   --ai-font-size-xs: 11px;
@@ -38,46 +40,54 @@
   --ai-weight-medium: 600;
   --ai-weight-bold: 650;
 
-  --ai-bg: #f5f6f8;
+  /* Light: warm paper with a bronze accent, the daylight twin of Graphite & Champagne. */
+  --ai-bg: #f3f1ec;
   --ai-surface: #ffffff;
-  --ai-surface-muted: #f7f8fa;
-  --ai-surface-hover: #eef1f5;
-  --ai-surface-active: #e7ebf0;
-  --ai-border: #e4e7ec;
-  --ai-border-strong: #d0d5dd;
-  --ai-border-hover: #b8c0cc;
-  --ai-text: #1f2937;
-  --ai-text-secondary: #4b5563;
-  --ai-text-muted: #626b79;
-  --ai-primary: #2f5ea8;
+  --ai-surface-muted: #f8f6f1;
+  --ai-surface-raised: #fbfaf7;
+  --ai-surface-hover: #f1ede5;
+  --ai-surface-active: #e9e3d7;
+  --ai-border: #e7e2d8;
+  --ai-border-strong: #d8d0c1;
+  --ai-border-hover: #bdb3a1;
+  --ai-text: #1d1b17;
+  --ai-text-secondary: #48433a;
+  --ai-text-muted: #6b6457;
+  --ai-primary: #83631f;
   --ai-on-primary: #ffffff;
-  --ai-danger-soft-hover: #fce9e7;
-  --ai-danger-soft-active: #f8d7d3;
-  --ai-primary-hover: #264d8c;
-  --ai-primary-active: #1f3f73;
-  --ai-primary-soft: #eef3f9;
-  --ai-primary-border: #c5d4e8;
-  --ai-danger: #b42318;
-  --ai-danger-hover: #912018;
-  --ai-danger-soft: #fef3f2;
-  --ai-danger-border: #f0c7c3;
-  --ai-warning: #9a3412;
-  --ai-warning-soft: #fff7ed;
-  --ai-success: #17663a;
-  --ai-success-soft: #f0fdf4;
+  --ai-primary-fill: linear-gradient(180deg, #9d7a31 0%, #85651f 100%);
+  --ai-primary-fill-hover: linear-gradient(180deg, #a8853a 0%, #8f6e27 100%);
+  --ai-primary-ink: #7a5c1c;
+  --ai-danger-soft-hover: #fbe6e2;
+  --ai-danger-soft-active: #f6d4cd;
+  --ai-primary-hover: #7a5c1c;
+  --ai-primary-active: #694e16;
+  --ai-primary-soft: #f7efdd;
+  --ai-primary-border: #e2cf9f;
+  --ai-danger: #b3261e;
+  --ai-danger-hover: #8f1d17;
+  --ai-danger-soft: #fdf1ef;
+  --ai-danger-border: #efc4bd;
+  --ai-warning: #93520c;
+  --ai-warning-soft: #fdf4e3;
+  --ai-success: #1d6b40;
+  --ai-success-soft: #eef8f1;
 
-  --ai-radius-sm: 6px;
-  --ai-radius-md: 8px;
-  --ai-radius-lg: 12px;
-  --ai-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-  --ai-shadow-md: 0 8px 24px rgba(16, 24, 40, 0.10);
-  --ai-overlay: rgba(15, 23, 42, 0.18);
-  --ai-focus: 0 0 0 2px #ffffff, 0 0 0 4px rgba(47, 94, 168, 0.45);
+  --ai-radius-sm: 8px;
+  --ai-radius-md: 10px;
+  --ai-radius-lg: 14px;
+  --ai-radius-xl: 18px;
+  --ai-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --ai-shadow-sm: 0 1px 2px rgba(40, 32, 18, 0.06), 0 1px 1px rgba(40, 32, 18, 0.04);
+  --ai-shadow-md: 0 18px 40px -18px rgba(40, 32, 18, 0.28), 0 6px 14px -8px rgba(40, 32, 18, 0.14);
+  --ai-shadow-primary: 0 8px 18px -10px rgba(133, 101, 31, 0.6);
+  --ai-overlay: rgba(28, 24, 16, 0.28);
+  --ai-focus: 0 0 0 2px #ffffff, 0 0 0 4px rgba(138, 106, 38, 0.5);
   --ai-space-1: 4px;
   --ai-space-2: 8px;
   --ai-space-3: 12px;
   --ai-space-4: 16px;
-  --ai-control-h: 32px;
+  --ai-control-h: 34px;
   --ai-dock-width: 188px;
 
   font-family: var(--ai-font);
@@ -96,6 +106,7 @@
 #gemini-notification-toast[data-atendeai-theme="dark"],
 #gemini-overdue-toast[data-atendeai-theme="dark"],
 #atendeai-options[data-atendeai-theme="dark"],
+#atendeai-popup[data-atendeai-theme="dark"],
 #atendeai-onboarding-overlay[data-atendeai-theme="dark"],
 #atendeai-context-notice[data-atendeai-theme="dark"],
 #atendeai-config-modal-overlay[data-atendeai-theme="dark"],
@@ -111,37 +122,44 @@
 .recovery-buffer-panel[data-atendeai-theme="dark"],
 .smart-reply-preview[data-atendeai-theme="dark"] {
   color-scheme: dark;
-  --ai-bg: #1b2433;
-  --ai-surface: #243044;
-  --ai-surface-muted: #1e2a3c;
-  --ai-surface-hover: #2c3a50;
-  --ai-surface-active: #33465f;
-  --ai-border: #3d4d63;
-  --ai-border-strong: #4a5d75;
-  --ai-border-hover: #6b7c94;
-  --ai-text: #f3f4f6;
-  --ai-text-secondary: #d1d5db;
-  --ai-text-muted: #b0bac9;
-  --ai-primary: #8db1fa;
-  --ai-on-primary: #101b2b;
-  --ai-danger-soft-hover: #502626;
-  --ai-danger-soft-active: #613030;
-  --ai-primary-hover: #7aa2f2;
-  --ai-primary-active: #79a0f2;
-  --ai-primary-soft: #2a3f66;
-  --ai-primary-border: #3d5a8c;
-  --ai-danger: #f87171;
-  --ai-danger-hover: #fca5a5;
-  --ai-danger-soft: #3f1d1d;
-  --ai-danger-border: #7f1d1d;
-  --ai-warning: #fbbf24;
-  --ai-warning-soft: #3f2f12;
-  --ai-success: #4ade80;
-  --ai-success-soft: #163226;
-  --ai-shadow-sm: 0 1px 2px rgba(8, 12, 20, 0.28);
-  --ai-shadow-md: 0 8px 24px rgba(8, 12, 20, 0.38);
-  --ai-overlay: rgba(8, 12, 20, 0.55);
-  --ai-focus: 0 0 0 2px #243044, 0 0 0 4px rgba(91, 141, 239, 0.55);
+  /* Graphite & Champagne: warm near-black planes, one gold accent for the main action. */
+  --ai-bg: #111113;
+  --ai-surface: #18181b;
+  --ai-surface-muted: #141416;
+  --ai-surface-raised: #202024;
+  --ai-surface-hover: #26262b;
+  --ai-surface-active: #2e2e34;
+  --ai-border: #29292e;
+  --ai-border-strong: #36363c;
+  --ai-border-hover: #4b4b52;
+  --ai-text: #f4f1ea;
+  --ai-text-secondary: #d0cbc1;
+  --ai-text-muted: #9c978d;
+  --ai-primary: #d8b46a;
+  --ai-on-primary: #1d1607;
+  --ai-primary-fill: linear-gradient(180deg, #e7ca8d 0%, #d2ad5e 100%);
+  --ai-primary-fill-hover: linear-gradient(180deg, #eed6a2 0%, #dbb86b 100%);
+  --ai-primary-ink: #e3c584;
+  --ai-danger-soft-hover: #3a1f1c;
+  --ai-danger-soft-active: #472623;
+  --ai-primary-hover: #e4c27e;
+  --ai-primary-active: #c9a457;
+  --ai-primary-soft: #29241a;
+  --ai-primary-border: #5b4a2b;
+  --ai-danger: #f2897c;
+  --ai-danger-hover: #f7aaa0;
+  --ai-danger-soft: #2b1a18;
+  --ai-danger-border: #5e2b26;
+  --ai-warning: #efbb5a;
+  --ai-warning-soft: #2c2415;
+  --ai-success: #74d39f;
+  --ai-success-soft: #16241c;
+  --ai-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --ai-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45), 0 2px 6px -2px rgba(0, 0, 0, 0.3);
+  --ai-shadow-md: 0 28px 56px -20px rgba(0, 0, 0, 0.7), 0 10px 22px -12px rgba(0, 0, 0, 0.55);
+  --ai-shadow-primary: 0 8px 20px -10px rgba(216, 180, 106, 0.55);
+  --ai-overlay: rgba(6, 6, 8, 0.62);
+  --ai-focus: 0 0 0 2px #18181b, 0 0 0 4px rgba(216, 180, 106, 0.6);
 }
 
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, #chamadoManualPopup, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(.ai-btn, .btn-primary, .btn-secondary, .btn-danger),
@@ -156,14 +174,18 @@
   line-height: 1.2;
   border-radius: var(--ai-radius-sm);
   min-height: var(--ai-control-h);
-  padding: 6px 11px;
+  padding: 7px 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   cursor: pointer;
   box-sizing: border-box;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.12s ease;
+}
+
+:where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, #chamadoManualPopup, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(.ai-btn, .btn-primary, .btn-secondary, .btn-danger):active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, #chamadoManualPopup, .atendeai-modal-overlay, .atendeai-observations-drawer) :is(.ai-btn, .btn-primary, .btn-secondary, .btn-danger):focus-visible,
@@ -203,17 +225,18 @@
 .recovery-buffer-generate,
 .smart-reply-insert,
 .smart-reply-choice-primary {
-  background: var(--ai-primary);
+  background: var(--ai-primary-fill);
   color: var(--ai-on-primary);
-  border: 1px solid var(--ai-primary);
+  border: 1px solid transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), var(--ai-shadow-primary);
+  font-weight: var(--ai-weight-bold);
 }
 
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-primary, .btn-primary):hover:not(:disabled),
 .recovery-buffer-generate:hover:not(:disabled),
 .smart-reply-insert:hover:not(:disabled),
 .smart-reply-choice-primary:hover:not(:disabled) {
-  background: var(--ai-primary-hover);
-  border-color: var(--ai-primary-hover);
+  background: var(--ai-primary-fill-hover);
 }
 
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-primary, .btn-primary):active:not(:disabled),
@@ -221,16 +244,16 @@
 .smart-reply-insert:active:not(:disabled),
 .smart-reply-choice-primary:active:not(:disabled) {
   background: var(--ai-primary-active);
-  border-color: var(--ai-primary-active);
 }
 
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-secondary, .btn-secondary),
 .smart-reply-regenerate,
 .smart-reply-choice,
 .recovery-buffer-view {
-  background: var(--ai-surface);
+  background: var(--ai-surface-raised);
   color: var(--ai-text);
   border: 1px solid var(--ai-border-strong);
+  box-shadow: var(--ai-highlight);
 }
 
 :where(#containerBotoesGemini, #atendeai-recovery-report-fallback, #atendeai-recovery-overlay, #atendeai-smart-reply, .atendeai-modal-overlay) :is(.ai-btn-secondary, .btn-secondary):hover:not(:disabled),

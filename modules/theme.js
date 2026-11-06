@@ -15,6 +15,7 @@ const ThemeModule = (() => {
     "gemini-notification-toast",
     "gemini-overdue-toast",
     "atendeai-options",
+    "atendeai-popup",
     "atendeai-onboarding-overlay",
     "atendeai-context-notice",
     "atendeai-config-modal-overlay",

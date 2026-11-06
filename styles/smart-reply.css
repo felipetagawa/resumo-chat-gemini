@@ -24,7 +24,7 @@
 #atendeai-smart-reply [hidden] { display: none !important; }
 
 #atendeai-smart-reply .smart-reply-header { display: flex; align-items: center; gap: 4px; }
-#atendeai-smart-reply .smart-reply-title { flex: 1 1 auto; font-size: var(--ai-font-size-md); font-weight: var(--ai-weight-bold); }
+#atendeai-smart-reply .smart-reply-title { flex: 1 1 auto; font-family: var(--ai-font-display); font-size: var(--ai-font-size-md); font-weight: var(--ai-weight-bold); }
 
 #atendeai-smart-reply .smart-reply-link {
     padding: 4px 8px;
@@ -136,7 +136,7 @@
     padding: 3px 10px;
     border: 1px solid var(--ai-border-strong);
     border-radius: 999px;
-    background: var(--ai-surface);
+    background: var(--ai-surface-raised);
     color: var(--ai-text-secondary);
     font: inherit;
     cursor: pointer;
@@ -176,15 +176,16 @@
 #atendeai-smart-reply .smart-reply-msg-actions { display: flex; justify-content: flex-end; gap: 6px; }
 #atendeai-smart-reply .smart-reply-insert {
     padding: 4px 10px;
-    border: 1px solid var(--ai-primary);
+    border: 0;
     border-radius: var(--ai-radius-sm);
-    background: var(--ai-primary);
+    background: var(--ai-primary-fill);
     color: var(--ai-on-primary);
+    box-shadow: var(--ai-shadow-primary);
     font: inherit;
     font-weight: var(--ai-weight-medium);
     cursor: pointer;
 }
-#atendeai-smart-reply .smart-reply-insert:hover:not(:disabled) { background: var(--ai-primary-hover); }
+#atendeai-smart-reply .smart-reply-insert:hover:not(:disabled) { background: var(--ai-primary-fill-hover); }
 #atendeai-smart-reply .smart-reply-insert:disabled { opacity: 0.45; cursor: default; }
 #atendeai-smart-reply .smart-reply-error { border-color: var(--ai-danger-border); background: var(--ai-danger-soft); color: var(--ai-danger); }
 #atendeai-smart-reply .smart-reply-error p { margin: 0; }
@@ -241,13 +242,14 @@
     padding: 8px 14px;
     border: 0;
     border-radius: var(--ai-radius-md);
-    background: var(--ai-primary);
+    background: var(--ai-primary-fill);
     color: var(--ai-on-primary);
+    box-shadow: var(--ai-shadow-primary);
     font: inherit;
     font-weight: var(--ai-weight-bold);
     cursor: pointer;
 }
-#atendeai-smart-reply .smart-reply-send:hover:not(:disabled) { background: var(--ai-primary-hover); }
+#atendeai-smart-reply .smart-reply-send:hover:not(:disabled) { background: var(--ai-primary-fill-hover); }
 #atendeai-smart-reply .smart-reply-send:disabled { opacity: 0.55; cursor: default; }
 
 #atendeai-smart-reply :is(button, a, textarea, input, select, [tabindex]):focus-visible {
