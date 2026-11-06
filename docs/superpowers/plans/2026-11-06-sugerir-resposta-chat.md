@@ -394,3 +394,22 @@ Both repos. Steps marked **(Felipe)** need his explicit OK in chat before runnin
      ```
   3. Check with `unzip -l ../atendeai-1.8.0.zip` that `modules/reply-chat-store.js` is present and `tests/` is absent.
 - [ ] **Step 6: Push / merge (Felipe)** only as he directs.
+
+## Custo (Task 8, Step 1 — 06/11/2026)
+
+Fonte: logs do Cloud Run do serviço `gemini-resumo`, linhas `gemini.usage` e `claude_usage`, de 21/10 a 06/11/2026 (14 dias com dados; a leitura bateu no limite de 20.000 linhas, então os dias mais antigos ficaram de fora).
+
+| Função | Chamadas | Custo estimado (US$) |
+|---|---|---|
+| Linha do problema (fila) | 19.290 | 0,51 |
+| Gerar Relatório | 703 | 0,22 |
+| Sugerir resposta (Gemini + Claude) | 3 | < 0,01 |
+| Consultar Docs (Claude + Gemini) | 4 | < 0,01 |
+
+- **Gasto atual:** ≈ US$0,73 em 14 dias, ou ≈ US$1,5/mês. A R$5,50 por dólar (premissa), dá ≈ R$8/mês, o que bate com os ≈ R$10/mês que o Felipe estima.
+- **Cache:** o `cacheRead` da única chamada `smart_reply` no Claude veio 0. A conta abaixo usa o preço cheio de entrada.
+- **Preço do Haiku 5.5** (`ANTHROPIC_MODEL=claude-haiku-5-5`): US$0,10 por milhão de tokens de entrada e US$0,50 por milhão de saída, para prompts de até 100 mil tokens.
+- **Uma mensagem do chat, no pior caso:** política ≈ 1.600 tokens, atendimento de 16.000 caracteres ≈ 4.500, manual ≈ 900, histórico de 8.000 caracteres ≈ 2.300, total ≈ 9.300 de entrada e ≈ 200 de saída. Custa ≈ US$0,001. No caso típico, ≈ 3.500 de entrada, custa ≈ US$0,0004.
+- **Volume:** hoje o Sugerir resposta quase não é usado (3 chamadas em 14 dias). Como cenário alto, supus 30 respostas por dia × 1,5 chamada × 22 dias ≈ 1.000 chamadas/mês. No pior caso por chamada, isso dá ≈ US$1/mês ≈ R$5,50.
+- **Total no cenário alto:** ≈ R$8 + R$5,50 ≈ R$13,50/mês, abaixo do teto de R$20. **Os limites de histórico (12 turnos, 8.000 caracteres) ficam como estão.**
+- **Limite de chamadas:** o pico observado de `smart_reply` é de 1 chamada por minuto, longe do limite de 30/min do `SmartReplyRateLimiter`.
