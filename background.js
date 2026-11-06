@@ -77,27 +77,6 @@ async function apiFetchJson(url, options = {}) {
   return json ?? {};
 }
 
-function normalizeDateStr(v) {
-  if (v == null) return null;
-  const s = String(v).trim();
-  return s ? s : null;
-}
-
-function normalizeName(v) {
-  if (v == null) return null;
-  const s = String(v).trim();
-  return s ? s : null;
-}
-
-function normalizeBool(v) {
-  if (v == null) return null;
-  if (typeof v === "boolean") return v;
-  const s = String(v).trim().toLowerCase();
-  if (s === "true" || s === "1" || s === "yes" || s === "sim") return true;
-  if (s === "false" || s === "0" || s === "no" || s === "nao" || s === "não") return false;
-  return null;
-}
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const safeSend = (data) => {
     try { sendResponse(data); } catch (_) { }
@@ -391,49 +370,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         sendTabMessageSafe(tabId, { action: "preControl:sucesso" });
         safeSend({ success: true });
-
-      } catch (err) {
-        const msg = "Erro: " + (err?.message || String(err));
-        sendTabMessageSafe(tabId, { action: "exibirErro", erro: msg });
-        safeSend({ success: false, erro: msg });
-      }
-    })();
-
-    return true;
-  }
-
-  if (request?.action === "preControl:query") {
-    (async () => {
-      try {
-        const apiBaseUrl = await getApiBaseUrl();
-
-        const name = normalizeName(request?.name);
-        const date = normalizeDateStr(request?.date);
-        const dateFrom = normalizeDateStr(request?.dateFrom);
-        const dateTo = normalizeDateStr(request?.dateTo);
-        const negociation = normalizeBool(request?.negociation);
-
-        const url = new URL(`${apiBaseUrl}/api/pre-controls`);
-
-        const page = request?.page != null ? String(request.page) : null;
-        const size = request?.size != null ? String(request.size) : null;
-
-        if (name) url.searchParams.set("name", name);
-
-        if (dateFrom || dateTo) {
-          if (dateFrom) url.searchParams.set("dateFrom", dateFrom);
-          if (dateTo) url.searchParams.set("dateTo", dateTo);
-        } else if (date) {
-          url.searchParams.set("date", date);
-        }
-
-        if (negociation !== null) url.searchParams.set("negociation", String(negociation));
-
-        if (page) url.searchParams.set("page", page);
-        if (size) url.searchParams.set("size", size);
-
-        const json = await apiFetchJson(url.toString(), { method: "GET" });
-        safeSend({ success: true, data: json });
 
       } catch (err) {
         const msg = "Erro: " + (err?.message || String(err));

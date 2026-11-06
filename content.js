@@ -15,7 +15,6 @@ function handleConfigError(error) {
     extensionContextInvalid = true;
     clearInterval(initInterval);
     document.getElementById("atendeai-onboarding-overlay")?.remove();
-    document.getElementById("atendeai-config-modal-overlay")?.remove();
     const dock = document.getElementById("containerBotoesGemini");
     dock?.dockCleanup?.();
     dock?.remove();
@@ -73,12 +72,17 @@ function getUserNameSafe() {
 }
 
 function isValidSector(sector) {
-  return sector === "suporte" || sector === "preatendimento" || sector === "lider";
+  return sector === "suporte" || sector === "preatendimento";
+}
+
+// Only pré-atendimento needs a name (its fixed greeting says "Eu sou o atendente {{NOME}}").
+function isConfiguredProfile(name, sector) {
+  return isValidSector(sector) && (sector !== "preatendimento" || !!name);
 }
 
 async function isUserConfigured() {
   const { name, sector } = await getUserConfig();
-  return !!name && isValidSector(sector);
+  return isConfiguredProfile(name, sector);
 }
 
 function inicializarModulos() {
@@ -99,206 +103,119 @@ function inicializarModulos() {
   modulosInicializados = true;
 }
 
-const getIconHTML = (icon, text) => {
-  if (typeof icon === "string" && (icon.endsWith(".png") || icon.endsWith(".jpg") || icon.endsWith(".svg"))) {
-    const iconUrl = chrome.runtime.getURL(icon);
-    return `<span class="icon"><img src="${iconUrl}" alt="${text} icon" style="width: 16px; height: 16px; vertical-align: middle;"></span>`;
-  }
-  return `<span class="icon">${icon}</span>`;
+// One drawn icon set for the dock: 24px grid, 1.75 stroke, round joins.
+const DOCK_ICONS = {
+  report: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>',
+  reply: '<path d="M11 3.5l1.9 4.6 4.6 1.9-4.6 1.9L11 16.5l-1.9-4.6L4.5 10l4.6-1.9z"/><path d="M18.5 14.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z"/>',
+  messages: '<path d="M20 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8 8h8M8 12h5"/>',
+  agenda: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  notes: '<path d="M12 20h8"/><path d="M16.5 3.6a2.1 2.1 0 0 1 3 3L7.5 18.6 3.5 19.5l.9-4z"/>',
+  settings: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  product: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4"/>'
+};
+
+const getIconHTML = (icon) => {
+  if (icon === "loading") return '<span class="icon gemini-spinner" aria-hidden="true"></span>';
+  const paths = DOCK_ICONS[icon];
+  if (!paths) return "";
+  return `<span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">${paths}</svg></span>`;
 };
 
 function createOnboardingModal() {
   if (extensionContextInvalid) return;
   if (document.getElementById("atendeai-onboarding-overlay")) return;
 
-  const LEADER_PASSWORD = "SoftengerenciamentoJB-BR";
-
   const overlay = document.createElement("div");
   overlay.id = "atendeai-onboarding-overlay";
-  overlay.style.cssText = `
-    position: fixed;
-    inset: 0;
-    z-index: 1000000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(8px);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  `;
 
   const modal = document.createElement("div");
-  modal.style.cssText = `
-    width: 480px;
-    max-width: 90vw;
-    background: var(--ai-surface);
-    color: var(--ai-text);
-    border-radius: 24px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    overflow: hidden;
-    animation: slideUp 0.3s ease-out;
-  `;
+  modal.className = "atendeai-onb-card";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "atendeai-onb-title");
 
-  const header = document.createElement("div");
-  header.style.cssText = `
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    padding: 24px;
-    text-align: center;
-    color: white;
-  `;
-  header.innerHTML = `
-    <div style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">Bem-vindo ao AtendeAI!</div>
-    <div style="font-size: 14px; opacity: 0.9;">Configure seu perfil para começarmos.</div>
-  `;
+  // No self-closing tags besides inputs: the onboarding test parses this template.
+  modal.innerHTML = `
+    <div class="atendeai-onb-brand">AtendeAI</div>
+    <h2 id="atendeai-onb-title" class="atendeai-onb-title">Como você atende?</h2>
+    <p class="atendeai-onb-lead">O setor define quais ferramentas aparecem no dock. Dá para trocar depois em Configurações.</p>
 
-  const body = document.createElement("div");
-  body.style.cssText = `padding: 32px 24px;`;
+    <fieldset class="atendeai-onb-options">
+      <legend class="atendeai-onb-sr">Setor</legend>
+      <label class="atendeai-onb-option">
+        <input type="radio" name="onboarding-sector" value="suporte" checked />
+        <span class="atendeai-onb-option-title">Suporte técnico</span>
+        <span class="atendeai-onb-option-text">Gerar Relatório, Sugerir resposta, Docs e Agenda.</span>
+      </label>
+      <label class="atendeai-onb-option">
+        <input type="radio" name="onboarding-sector" value="preatendimento" />
+        <span class="atendeai-onb-option-title">Pré-atendimento</span>
+        <span class="atendeai-onb-option-text">Identificar produto, mensagens de triagem e tempo na fila.</span>
+      </label>
+    </fieldset>
 
-  body.innerHTML = `
-    <div style="margin-bottom: 20px;">
-      <label for="onboarding-name-input" style="display: block; font-size: 13px; font-weight: 700; color: var(--ai-text-secondary); margin-bottom: 8px;">Nome</label>
-      <input type="text" id="onboarding-name-input" placeholder="Digite seu nome" style="
-        width: 100%;
-        padding: 12px;
-        border: 2px solid var(--ai-border-strong);
-        border-radius: 12px;
-        font-size: 15px;
-        outline: none;
-        transition: border-color 0.2s;
-      " />
+    <div id="onboarding-name-wrap" class="atendeai-onb-field" hidden>
+      <label for="onboarding-name-input" class="atendeai-onb-label">Seu nome na saudação</label>
+      <input type="text" id="onboarding-name-input" autocomplete="given-name" placeholder="Ex.: Ana" />
+      <div class="atendeai-onb-hint">Entra em “Eu sou o atendente <b id="onboarding-name-echo">Ana</b> do pré-atendimento…”</div>
     </div>
 
-    <div style="margin-bottom: 14px;">
-      <label style="display: block; font-size: 13px; font-weight: 700; color: var(--ai-text-secondary); margin-bottom: 12px;">Seu Setor</label>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-        <label style="cursor: pointer;">
-          <input type="radio" name="onboarding-sector" value="suporte" checked style="display: none;" />
-          <div class="sector-card" style="
-            border: 2px solid var(--ai-border-strong); border-radius: 12px; padding: 12px;
-            text-align: center; font-size: 14px; font-weight: 700;
-            color: var(--ai-text-secondary); transition: all 0.2s;
-          ">Suporte</div>
-        </label>
-
-        <label style="cursor: pointer;">
-          <input type="radio" name="onboarding-sector" value="preatendimento" style="display: none;" />
-          <div class="sector-card" style="
-            border: 2px solid var(--ai-border-strong); border-radius: 12px; padding: 12px;
-            text-align: center; font-size: 14px; font-weight: 700;
-            color: var(--ai-text-secondary); transition: all 0.2s;
-          ">Pré-atendimento</div>
-        </label>
-
-        <label style="cursor: pointer; grid-column: 1 / span 2;">
-          <input type="radio" name="onboarding-sector" value="lider" style="display: none;" />
-          <div class="sector-card" style="
-            border: 2px solid var(--ai-border-strong); border-radius: 12px; padding: 12px;
-            text-align: center; font-size: 14px; font-weight: 900;
-            color: var(--ai-text-secondary); transition: all 0.2s;
-          ">Líder</div>
-        </label>
-      </div>
-    </div>
-
-    <div id="leader-pass-wrap" style="display:none; margin-bottom: 20px;">
-      <label style="display:block; font-size: 13px; font-weight: 800; color:var(--ai-text-secondary); margin-bottom:8px;">Senha do Líder</label>
-      <input type="password" id="leader-pass-input" placeholder="Digite a senha" style="
-        width: 100%;
-        padding: 12px;
-        border: 2px solid var(--ai-border-strong);
-        border-radius: 12px;
-        font-size: 15px;
-        outline: none;
-      "/>
-      <div id="leader-pass-hint" style="margin-top:8px; font-size:12px; color:var(--ai-danger); font-weight:700;"></div>
-    </div>
-
-    <button id="onboarding-save-btn" style="
-      width: 100%;
-      background: #2563eb;
-      color: white;
-      border: none;
-      padding: 14px;
-      border-radius: 14px;
-      font-size: 15px;
-      font-weight: 800;
-      cursor: pointer;
-      transition: background 0.2s;
-    ">Salvar e Continuar</button>
+    <button id="onboarding-save-btn" type="button" class="atendeai-onb-submit">Começar</button>
     <div id="onboarding-save-error" role="alert"></div>
   `;
 
-  const styleRadios = () => {
-    const cards = body.querySelectorAll(".sector-card");
-    const inputs = body.querySelectorAll('input[name="onboarding-sector"]');
-    inputs.forEach((input, index) => {
-      const active = input.checked;
-      cards[index].style.borderColor = active ? "var(--ai-primary)" : "var(--ai-border-strong)";
-      cards[index].style.backgroundColor = active ? "var(--ai-primary-soft)" : "transparent";
-      cards[index].style.color = active ? "var(--ai-primary)" : "var(--ai-text-secondary)";
-    });
-
-    const selected = body.querySelector('input[name="onboarding-sector"]:checked')?.value;
-    const passWrap = body.querySelector("#leader-pass-wrap");
-    if (passWrap) passWrap.style.display = (selected === "lider") ? "block" : "none";
-  };
-
-  body.addEventListener("change", (e) => {
-    if (e.target.name === "onboarding-sector") styleRadios();
-  });
-  setTimeout(styleRadios, 0);
-
-  modal.appendChild(header);
-  modal.appendChild(body);
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   globalThis.ThemeModule?.apply?.(overlay);
 
-  const saveBtn = body.querySelector("#onboarding-save-btn");
-  const nameInput = body.querySelector("#onboarding-name-input");
-  const passInput = body.querySelector("#leader-pass-input");
-  const passHint = body.querySelector("#leader-pass-hint");
+  const saveBtn = modal.querySelector("#onboarding-save-btn");
+  const nameInput = modal.querySelector("#onboarding-name-input");
+  const nameWrap = modal.querySelector("#onboarding-name-wrap");
+  const feedback = modal.querySelector("#onboarding-save-error");
+  const selectedSector = () => modal.querySelector('input[name="onboarding-sector"]:checked')?.value;
+
+  const syncNameField = () => {
+    const needsName = selectedSector() === "preatendimento";
+    if (nameWrap) nameWrap.hidden = !needsName;
+    if (feedback) feedback.textContent = "";
+  };
+  modal.addEventListener("change", (e) => {
+    if (e.target?.name === "onboarding-sector") syncNameField();
+  });
+  const nameEcho = modal.querySelector("#onboarding-name-echo");
+  nameInput?.addEventListener?.("input", () => {
+    if (nameEcho) nameEcho.textContent = (nameInput.value || "").trim() || "Ana";
+  });
+  modal.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target?.tagName === "INPUT") saveBtn?.click();
+  });
+  setTimeout(() => modal.querySelector('input[name="onboarding-sector"]:checked')?.focus?.(), 0);
 
   saveBtn.addEventListener("click", async () => {
     if (onboardingSaving || extensionContextInvalid) return;
+    const sector = selectedSector();
     const name = (nameInput.value || "").trim();
-    const sector = body.querySelector('input[name="onboarding-sector"]:checked')?.value;
 
-    if (!name) {
-      alert("Por favor, digite seu nome.");
+    if (!isValidSector(sector)) {
+      feedback.textContent = "Escolha um setor para continuar.";
+      return;
+    }
+    if (sector === "preatendimento" && !name) {
+      feedback.textContent = "Informe seu nome: ele aparece na saudação do pré-atendimento.";
+      nameInput?.focus?.();
       return;
     }
 
-    if (!sector) {
-      alert("Selecione um setor.");
-      return;
-    }
-
-    if (sector === "lider") {
-      const pass = (passInput?.value || "").trim();
-      if (!pass) {
-        if (passHint) passHint.textContent = "⚠️ Senha obrigatória para selecionar Líder.";
-        passInput?.focus();
-        return;
-      }
-      if (pass !== LEADER_PASSWORD) {
-        if (passHint) passHint.textContent = "❌ Senha incorreta.";
-        passInput?.focus();
-        return;
-      }
-      if (passHint) passHint.textContent = "";
-    }
-
-    const feedback = body.querySelector("#onboarding-save-error");
     onboardingSaving = true;
     saveBtn.disabled = true;
     feedback.textContent = "";
     try {
       // A second tab/options may have configured the profile since this opened.
       const saved = await storageGet([NAME_KEY, SECTOR_KEY, "atendeai_visibility"]);
-      if (!sanitizeName(saved[NAME_KEY]) || !isValidSector(sanitizeSector(saved[SECTOR_KEY]))) {
+      if (!isConfiguredProfile(sanitizeName(saved[NAME_KEY]), sanitizeSector(saved[SECTOR_KEY]))) {
         const isPre = sector === "preatendimento";
-        const data = { [NAME_KEY]: name, [SECTOR_KEY]: sector };
+        const data = { [SECTOR_KEY]: sector };
+        if (isPre) data[NAME_KEY] = name;
         if (!Object.prototype.hasOwnProperty.call(saved, "atendeai_visibility")) {
           data.atendeai_visibility = {
             btnAgenda: true, btnMessages: true, btnSmartReply: true,
@@ -334,15 +251,14 @@ async function getUserConfig() {
   return { name: sanitizeName(data[NAME_KEY]), sector: sanitizeSector(data[SECTOR_KEY]) };
 }
 
-function guardFeature(actionFn, opts = {}) {
-  const { allowLeader = false } = opts;
-
+function guardFeature(actionFn) {
   return async (...args) => {
     try {
       if (extensionContextInvalid) return;
       const ok = await isUserConfigured();
       if (!ok) {
-        openConfigRequiredModal();
+        // Missing profile: the same one-screen setup as the first access.
+        createOnboardingModal();
         return;
       }
     } catch (error) {
@@ -352,136 +268,6 @@ function guardFeature(actionFn, opts = {}) {
 
     return actionFn(...args);
   };
-}
-
-function ensureConfigRequiredModal() {
-  if (document.getElementById("atendeai-config-modal-overlay")) return;
-
-  const overlay = document.createElement("div");
-  overlay.id = "atendeai-config-modal-overlay";
-  overlay.style.cssText = `
-    position: fixed;
-    inset: 0;
-    z-index: 1000000;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-    background: rgba(15, 23, 42, 0.55);
-    backdrop-filter: blur(6px);
-  `;
-
-  const modal = document.createElement("div");
-  modal.id = "atendeai-config-modal";
-  modal.style.cssText = `
-    width: 520px;
-    max-width: 92vw;
-    border-radius: 16px;
-    background: var(--ai-surface);
-    box-shadow: 0 18px 50px rgba(0,0,0,0.28);
-    overflow: hidden;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  `;
-
-  modal.innerHTML = `
-    <div style="
-      padding: 16px 18px;
-      background: var(--ai-primary-soft);
-      color: var(--ai-primary);
-    ">
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-        <div>
-          <div style="font-size:16px; font-weight:900;">Configuração necessária</div>
-          <div style="margin-top:6px; font-size:12.8px; opacity:.95; font-weight:600;">
-            Para usar os recursos, configure seu nome/login e setor no Portal AtendeAI.
-          </div>
-        </div>
-
-        <button id="atendeai-config-modal-close" type="button" aria-label="Fechar" style="
-          appearance:none;
-          border:none;
-          background: var(--ai-surface-hover);
-          color:var(--ai-text-secondary);
-          width:34px;
-          height:34px;
-          border-radius:10px;
-          cursor:pointer;
-          font-weight:900;
-          display:inline-flex;
-          align-items:center;
-          justify-content:center;
-        ">✕</button>
-      </div>
-    </div>
-
-    <div style="padding: 16px 18px; color:var(--ai-text);">
-      <div style="
-        padding: 12px 12px;
-        border-radius: 12px;
-        background: var(--ai-surface-muted);
-        border: 1px solid var(--ai-border);
-        font-size: 13px;
-        font-weight: 700;
-        color: var(--ai-text-secondary);
-        line-height: 1.45;
-      ">
-        • Nome/Login: usado para personalizar mensagens</b>)<br/>
-        • Setor: define quais funcionalidades aparecem e quais atalhos são fixos.
-      </div>
-
-      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px; flex-wrap:wrap;">
-        <button id="atendeai-config-modal-cancel" type="button" style="
-          background:var(--ai-surface-muted);
-          color:var(--ai-text);
-          font-weight:900;
-          border:none;
-          border-radius:12px;
-          padding:10px 12px;
-          cursor:pointer;
-        ">Agora não</button>
-
-        <button id="atendeai-config-modal-open-portal" type="button" style="
-          background:var(--ai-primary);
-          color:var(--ai-on-primary);
-          font-weight:900;
-          border:none;
-          border-radius:12px;
-          padding:10px 12px;
-          cursor:pointer;
-        ">Abrir Portal AtendeAI</button>
-      </div>
-    </div>
-  `;
-
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-  globalThis.ThemeModule?.apply?.(overlay);
-
-  const close = () => { overlay.style.display = "none"; };
-
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) close();
-  });
-
-  document.getElementById("atendeai-config-modal-close")?.addEventListener("click", close);
-  document.getElementById("atendeai-config-modal-cancel")?.addEventListener("click", close);
-
-  document.getElementById("atendeai-config-modal-open-portal")?.addEventListener("click", async () => {
-    try {
-      chrome.runtime.sendMessage({ action: "openOptions" });
-    } catch (e) {
-      const url = chrome.runtime.getURL("options.html");
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
-    close();
-  });
-}
-
-function openConfigRequiredModal() {
-  ensureConfigRequiredModal();
-  const overlay = document.getElementById("atendeai-config-modal-overlay");
-  if (!overlay) return;
-  overlay.style.display = "flex";
 }
 
 async function initializeExtensionDock(container) {
@@ -507,7 +293,7 @@ async function initializeExtensionDock(container) {
   const handle = document.createElement("button");
   handle.type = "button";
   handle.className = "gemini-dock-handle";
-  handle.textContent = "⠿";
+  handle.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>';
   handle.setAttribute("aria-label", "Arrastar dock");
   handle.title = "Arrastar dock";
   const sizeButton = document.createElement("button");
@@ -516,7 +302,11 @@ async function initializeExtensionDock(container) {
   const toggleButton = document.createElement("button");
   toggleButton.type = "button";
   toggleButton.className = "gemini-dock-toggle";
+  const brand = document.createElement("span");
+  brand.className = "gemini-dock-brand";
+  brand.textContent = "AtendeAI";
   toolbar.appendChild(handle);
+  toolbar.appendChild(brand);
   toolbar.appendChild(sizeButton);
   toolbar.appendChild(toggleButton);
   container.prepend(toolbar);
@@ -559,7 +349,9 @@ async function initializeExtensionDock(container) {
     sizeButton.setAttribute("aria-label", `Tamanho do dock: ${sizeButton.textContent}. Clique para alternar.`);
     sizeButton.title = "Alternar tamanho: 85%, 100%, 115%";
     sizeButton.hidden = effectiveMinimized;
-    toggleButton.textContent = effectiveMinimized ? "▣" : "−";
+    toggleButton.innerHTML = effectiveMinimized
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m7 14 5-5 5 5"/></svg>'
+      : '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12h12"/></svg>';
     toggleButton.setAttribute("aria-label", viewportCompact ? viewportExpanded ? "Recolher ações do dock" : "Expandir ações do dock" : minimized ? "Restaurar dock" : "Minimizar dock");
     toggleButton.setAttribute("aria-expanded", String(!effectiveMinimized));
     toggleButton.title = viewportCompact ? "Ações do dock sob demanda nesta janela" : minimized ? "Restaurar dock" : "Minimizar dock";
@@ -637,8 +429,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
       right: "20px",
       zIndex: "999998",
       display: "flex",
-      flexDirection: "column",
-      gap: "0"
+      flexDirection: "column"
     }
   });
 
@@ -647,7 +438,8 @@ function criarBotoesFlutuantes(visibility, userSector) {
     btn.id = id;
     btn.className = "gemini-floating-btn";
 
-    btn.innerHTML = `${getIconHTML(icon, text)} ${text}`;
+    btn.type = "button";
+    btn.innerHTML = `${getIconHTML(icon, text)}<span class="label">${text}</span>`;
     btn.addEventListener("click", onClick);
     return btn;
   };
@@ -734,14 +526,14 @@ function criarBotoesFlutuantes(visibility, userSector) {
   const botaoClassificarProduto = createButton(
     "btnClassificarProduto",
     "Identificar produto",
-    "🔎",
+    "product",
     guardFeature(async () => {
       const btn = document.getElementById("btnClassificarProduto");
       const originalHtml = btn?.innerHTML || "";
 
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span class="icon">⏳</span> Identificando...';
+        btn.innerHTML = `${getIconHTML("loading")}<span class="label">Identificando…</span>`;
       }
 
       const conversation = ChatCaptureModule.capturarTextoChat();
@@ -773,7 +565,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = originalHtml || `${getIconHTML("🔎", "Identificar produto")} Identificar produto`;
+          btn.innerHTML = originalHtml || `${getIconHTML("product")}<span class="label">Identificar produto</span>`;
         }
       }
     })
@@ -782,11 +574,11 @@ function criarBotoesFlutuantes(visibility, userSector) {
   const botaoDocs = createButton(
     "btnConsultarDocs",
     "Consultar Docs",
-    "docs.png",
+    "",
     guardFeature(() => DocsModule.exibirPainelConsultaDocs())
   );
 
-  const botaoResumo = createButton("btnResumoGemini", "Gerar Relatório", "relatorio.png",
+  const botaoResumo = createButton("btnResumoGemini", "Gerar Relatório", "report",
     guardFeature(async () => {
       const btn = document.getElementById("btnResumoGemini");
       const texto = ChatCaptureModule.capturarTextoChat();
@@ -798,7 +590,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
       }
 
       btn.disabled = true;
-      btn.innerHTML = `<span class="icon">⏳</span> Gerando...`;
+      btn.innerHTML = `${getIconHTML("loading")}<span class="label">Gerando…</span>`;
 
       try {
         const summaryObservation = ObservationsModule.getPromptComplementForCurrentChat();
@@ -822,10 +614,11 @@ function criarBotoesFlutuantes(visibility, userSector) {
         alert("Erro de comunicação: " + error.message);
       } finally {
         btn.disabled = false;
-        btn.innerHTML = `${getIconHTML("relatorio.png", "Gerar Relatório")} Gerar Relatório`;
+        btn.innerHTML = `${getIconHTML("report")}<span class="label">Gerar Relatório</span>`;
       }
     })
   );
+  botaoResumo.className += " gemini-hero";
 
   const botaoConversasPreservadas = document.createElement("button");
   botaoConversasPreservadas.id = "btnConversasPreservadas";
@@ -836,11 +629,9 @@ function criarBotoesFlutuantes(visibility, userSector) {
     return RecoveryBufferModule.openPreservedBuffers();
   }));
 
-  const botaoSmartReply = createButton('btnSmartReply', 'Sugerir resposta', '',
+  const botaoSmartReply = createButton('btnSmartReply', 'Sugerir resposta', 'reply',
     guardFeature(() => SmartReplyModule.open()));
-  botaoSmartReply.type = 'button';
-  botaoSmartReply.className += ' atendeai-reply-primary';
-  botaoSmartReply.innerHTML = '<svg class="atendeai-reply-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14v10H8l-5 4V3Z"/><path d="M6 7h8M6 10h5"/></svg> Sugerir resposta';
+  botaoSmartReply.className += ' gemini-hero atendeai-reply-primary';
   botaoDocs.id = 'btnConsultarDocsLoop';
   botaoDocs.className = 'gemini-preserved-link';
   botaoDocs.textContent = 'Consultar Docs';
@@ -848,14 +639,14 @@ function criarBotoesFlutuantes(visibility, userSector) {
   const botaoMessages = createButton(
     "btnMessages",
     "Mensagens Padrão",
-    "mensagem-padrao.png",
+    "messages",
     guardFeature(() => MessagesModule.toggleMensagens())
   );
 
   const botaoAgenda = createButton(
     "btnAgenda",
     "Agenda & Gestão",
-    "agenda.png",
+    "agenda",
     guardFeature(() => AgendaModule.exibirAgenda())
   );
 
@@ -863,7 +654,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
   const botaoObservacoes = createButton(
     "btnObservacoes",
     "Observações",
-    "📝",
+    "notes",
     guardFeature(() => ObservationsModule.openDrawer())
   );
   botaoObservacoes.insertAdjacentHTML(
@@ -874,7 +665,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
   const botaoConfiguracoes = createButton(
     "btnConfiguracoes",
     "Configurações",
-    "config.png",
+    "settings",
     () => {
       try {
         chrome.runtime.sendMessage({ action: "openOptions" });
@@ -886,14 +677,15 @@ function criarBotoesFlutuantes(visibility, userSector) {
   );
 
   if (userSector === "preatendimento") {
+    botaoClassificarProduto.className += " gemini-hero gemini-hero-solo";
     container.appendChild(botaoClassificarProduto);
     container.appendChild(productClassifierResult);
   }
 
-  // Gerar Relatório comes first; Sugerir resposta right below it.
+  // Gerar Relatório is the main feature: first and the only gold action. Sugerir resposta sits right below it.
   if (isVisible("btnResumoGemini")) {
     const reportGroup = document.createElement("div");
-    reportGroup.className = "gemini-report-group";
+    reportGroup.className = "gemini-report-group gemini-group-accent";
     reportGroup.appendChild(botaoResumo);
     reportGroup.appendChild(botaoConversasPreservadas);
     container.appendChild(reportGroup);
@@ -906,6 +698,10 @@ function criarBotoesFlutuantes(visibility, userSector) {
     if (isVisible('btnConsultarDocsLoop')) replyGroup.appendChild(botaoDocs);
     container.appendChild(replyGroup);
   }
+  const divider = document.createElement("div");
+  divider.className = "gemini-dock-divider";
+  divider.setAttribute("role", "presentation");
+  container.appendChild(divider);
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);
   if (isVisible("btnAgenda")) container.appendChild(botaoAgenda);
   container.appendChild(botaoObservacoes);
@@ -920,22 +716,16 @@ function criarBotoesFlutuantes(visibility, userSector) {
 
 MessagingHelper.addListener((request, sender, sendResponse) => {
   const botaoResumo = document.getElementById("btnResumoGemini");
-  const botaoDica = document.getElementById("btnDica");
   const botaoMessages = document.getElementById("btnMessages");
 
   if (botaoResumo) {
     botaoResumo.disabled = false;
-    botaoResumo.innerHTML = `${getIconHTML("relatorio.png", "Gerar Relatório")} Gerar Relatório`;
+    botaoResumo.innerHTML = `${getIconHTML("report")}<span class="label">Gerar Relatório</span>`;
   }
 
   if (botaoMessages) {
     botaoMessages.disabled = false;
-    botaoMessages.innerHTML = `${getIconHTML("mensagem-padrao.png", "Mensagens Padrão")} Mensagens Padrão`;
-  }
-
-  if (botaoDica) {
-    botaoDica.disabled = false;
-    botaoDica.innerHTML = `${getIconHTML("dicas-inteligentes.png", "Dicas Inteligentes")} Dicas Inteligentes`;
+    botaoMessages.innerHTML = `${getIconHTML("messages")}<span class="label">Mensagens Padrão</span>`;
   }
 
   if (request.action === "exibirResumo") {

@@ -91,19 +91,19 @@ function harness(saved = {}) {
 }
 
 const valid = { atendeai_user_name: 'Ana', atendeai_user_sector: 'suporte' };
-test('first access saves an email login and closes only after confirmed persistence', async () => {
+test('first access as suporte needs only the sector and closes only after confirmed persistence', async () => {
   const h = harness(); await h.tick();
   assert.ok(h.document.getElementById('atendeai-onboarding-overlay'));
-  await h.save();
-  assert.equal(h.store.atendeai_user_name, 'tecnico@example.com');
+  await h.save('');
+  assert.equal(h.store.atendeai_user_name, undefined);
   assert.equal(h.store.atendeai_user_sector, 'suporte');
   assert.equal(h.store.atendeai_visibility.btnResumoGemini, true);
   assert.equal(h.document.getElementById('atendeai-onboarding-overlay'), null);
   assert.ok(h.document.getElementById('containerBotoesGemini'));
 });
 test('configured user and fresh page after manual reload never open onboarding or rewrite data', async () => {
-  for (const sector of ['suporte', 'preatendimento', 'lider']) {
-    const h = harness({ ...valid, atendeai_user_sector: sector }); await h.tick(); await h.tick();
+  for (const saved of [valid, { ...valid, atendeai_user_sector: 'preatendimento' }, { atendeai_user_sector: 'suporte' }]) {
+    const h = harness(saved); await h.tick(); await h.tick();
     assert.equal(h.document.getElementById('atendeai-onboarding-overlay'), null);
     assert.ok(h.document.getElementById('containerBotoesGemini')); assert.equal(h.writes.length, 0);
   }
@@ -200,22 +200,31 @@ test('pre-service first access preserves its visibility defaults', async () => {
   assert.equal(h.store.atendeai_visibility.btnProductClassifier, true);
 });
 
-test('leader onboarding still requires the existing password before persisting', async () => {
-  const h = harness(); await h.tick(); await h.save('Ana', 'lider');
+test('pre-service onboarding requires the greeting name before persisting', async () => {
+  const h = harness(); await h.tick(); await h.save('', 'preatendimento');
   assert.equal(h.writes.length, 0);
-  assert.match(h.document.getElementById('leader-pass-hint').textContent, /obrigatória/);
-  h.document.getElementById('leader-pass-input').value = 'incorreta'; await h.save('Ana', 'lider');
-  assert.equal(h.writes.length, 0);
-  assert.match(h.document.getElementById('leader-pass-hint').textContent, /incorreta/);
-  h.document.getElementById('leader-pass-input').value = 'SoftengerenciamentoJB-BR'; await h.save('Ana', 'lider');
-  assert.equal(h.store.atendeai_user_sector, 'lider');
+  assert.ok(h.document.getElementById('atendeai-onboarding-overlay'));
+  assert.match(h.document.getElementById('onboarding-save-error').textContent, /nome/i);
+  await h.save('Ana', 'preatendimento');
+  assert.equal(h.store.atendeai_user_name, 'Ana');
+  assert.equal(h.document.getElementById('atendeai-onboarding-overlay'), null);
+});
+
+test('the leader sector no longer exists: onboarding offers only Suporte and Pré-atendimento, and a stored Líder profile chooses again', async () => {
+  const source = fs.readFileSync('content.js', 'utf8');
+  assert.doesNotMatch(source, /lider|LEADER|Líder/);
+  const h = harness({ ...valid, atendeai_user_sector: 'lider' }); await h.tick();
+  assert.ok(h.document.getElementById('atendeai-onboarding-overlay'));
+  const sectors = h.document.querySelectorAll('input[name="onboarding-sector"]').map(r => r.value);
+  assert.deepEqual(sectors, ['suporte', 'preatendimento']);
+  await h.save('', 'suporte');
+  assert.equal(h.store.atendeai_user_sector, 'suporte');
   assert.equal(h.document.getElementById('atendeai-onboarding-overlay'), null);
 });
 
 test('onboarding surfaces and fields explicitly follow theme tokens including autofill', () => {
-  const source = fs.readFileSync('content.js', 'utf8');
   const css = fs.readFileSync('styles/modals.css', 'utf8');
-  assert.match(source, /background: var\(--ai-surface\)/);
+  assert.match(css, /#atendeai-onboarding-overlay \.atendeai-onb-card \{[^}]*background: var\(--ai-surface\)/);
   for (const state of ['', '::placeholder', ':focus', ':-webkit-autofill']) {
     assert.ok(css.includes(`#atendeai-onboarding-overlay input${state}`), state);
   }

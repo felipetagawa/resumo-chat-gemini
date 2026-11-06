@@ -75,8 +75,10 @@
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #f97316;
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.16);
+  flex: 0 0 auto;
+  margin-left: auto;
+  background: var(--ai-primary);
+  box-shadow: 0 0 0 3px var(--ai-primary-soft);
 }
 
 #btnObservacoes.has-observation .atendeai-observations-dot,
@@ -86,13 +88,15 @@
 
 .atendeai-observations-ia {
   display: none;
-  padding: 2px 6px;
+  flex: 0 0 auto;
+  padding: 1px 6px;
   border-radius: 999px;
-  background: var(--ai-primary, #2f5ea8);
-  color: var(--ai-on-primary);
+  border: 1px solid var(--ai-primary-border);
+  background: var(--ai-primary-soft);
+  color: var(--ai-primary-ink);
   font-size: 10px;
   font-weight: 650;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
 }
 
 #btnObservacoes.uses-ia .atendeai-observations-ia,
@@ -101,17 +105,11 @@
 }
 
 #btnObservacoes.has-observation {
-  background: var(--ai-warning-soft, #fffaf5);
-  border-color: #f0d0b4;
-  color: var(--ai-warning, #9a3412);
-  box-shadow: none;
+  color: var(--ai-text);
 }
 
-#btnObservacoes.uses-ia {
-  background: var(--ai-primary-soft, #eef3f9);
-  border-color: var(--ai-primary-border, #c5d4e8);
-  color: var(--ai-primary-hover, #264d8c);
-  box-shadow: none;
+#btnObservacoes.has-observation .icon {
+  color: var(--ai-primary-ink);
 }
 
 .atendeai-observations-overlay {
@@ -129,7 +127,8 @@
   z-index: 999999;
   width: min(420px, 92vw);
   background: var(--ai-surface, #ffffff);
-  box-shadow: -14px 0 34px rgba(15, 23, 42, 0.2);
+  border-left: 1px solid var(--ai-border-strong);
+  box-shadow: -28px 0 56px -24px rgba(0, 0, 0, 0.55);
   display: flex;
   flex-direction: column;
   font-family: var(--ai-font, "Segoe UI", system-ui, sans-serif);
@@ -147,13 +146,16 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 18px 14px;
+  padding: 20px 20px 16px;
   border-bottom: 1px solid var(--ai-border, #e4e7ec);
+  background: var(--ai-surface-muted);
 }
 
 .atendeai-observations-title {
-  font-size: 16px;
+  font-family: var(--ai-font-display);
+  font-size: 17px;
   font-weight: 650;
+  letter-spacing: -0.01em;
   color: var(--ai-text, #1f2937);
 }
 
@@ -172,8 +174,8 @@
   width: 32px;
   height: 32px;
   border: 1px solid var(--ai-border, #e4e7ec);
-  border-radius: 6px;
-  background: var(--ai-surface-muted, #f7f8fa);
+  border-radius: var(--ai-radius-sm);
+  background: var(--ai-surface-raised);
   color: var(--ai-text-secondary, #4b5563);
   cursor: pointer;
   font-size: 20px;
@@ -212,18 +214,18 @@
   width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--ai-border-strong, #d0d5dd);
-  border-radius: 8px;
-  padding: 10px 11px;
+  border-radius: var(--ai-radius-md);
+  padding: 10px 12px;
   color: var(--ai-text, #1f2937);
-  background: var(--ai-surface, #ffffff);
+  background: var(--ai-surface-muted);
   font: 13px/1.45 var(--ai-font, "Segoe UI", system-ui, sans-serif);
   resize: vertical;
 }
 
 .atendeai-observations-drawer textarea:focus {
   outline: none;
-  border-color: var(--ai-primary, #2f5ea8);
-  box-shadow: 0 0 0 3px rgba(47, 94, 168, 0.18);
+  border-color: var(--ai-primary-border);
+  box-shadow: var(--ai-focus);
 }
 
 .atendeai-observations-toggle {
@@ -233,8 +235,8 @@
   margin: 0 0 9px;
   padding: 10px 11px;
   border: 1px solid var(--ai-border, #e4e7ec);
-  border-radius: 8px;
-  background: var(--ai-surface-muted, #f7f8fa);
+  border-radius: var(--ai-radius-md);
+  background: var(--ai-surface-raised);
   color: var(--ai-text-secondary, #4b5563);
   font-size: 13px;
   font-weight: 600;
@@ -274,3 +276,7 @@
 .atendeai-observations-footer-row [data-tone="pending"] { color: var(--ai-warning); }
 .atendeai-observations-footer-row [data-tone="success"] { color: var(--ai-success); }
 .atendeai-observations-footer-row [data-tone="error"] { color: var(--ai-danger); }
+
+/* In the dock row the IA badge alone signals "observações para o resumo"; the dot covers private notes. */
+#btnObservacoes.uses-ia .atendeai-observations-dot { display: none; }
+#btnObservacoes .atendeai-observations-ia { margin-left: auto; }

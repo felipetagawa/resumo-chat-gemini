@@ -52,7 +52,7 @@ const SummaryModule = (() => {
       }
     }
 
-    const titulo = tipo === "solucao" ? "Solução Sugerida" : `Resumo Gerado ${humorIcon}`;
+    const titulo = tipo === "solucao" ? "Solução sugerida" : `Resumo gerado ${humorIcon}`.trim();
 
     const conteudoFormatado = formatarResumoComNegrito(texto);
 
@@ -91,52 +91,19 @@ const SummaryModule = (() => {
 
     const popup = document.createElement("div");
     popup.id = "geminiResumoPopup";
-    popup.style = `
-      position:fixed;
-      bottom:130px;
-      right:20px;
-      z-index:999999;
-      background:var(--ai-surface);
-      border:1px solid var(--ai-border-strong);
-      border-radius:8px;
-      padding:16px;
-      width:380px;
-      max-height:500px;
-      overflow-y:auto;
-      box-shadow:0 4px 15px rgba(0,0,0,0.15);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      font-size:14px;
-      display:flex;
-      flex-direction:column;
-    `;
+    popup.className = "gemini-pop";
+    popup.setAttribute("role", "dialog");
+    popup.setAttribute("aria-label", titulo);
 
     popup.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <b style="font-size:16px; color:var(--ai-text);">${titulo}</b>
-        <button id="fecharResumoFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ai-text-secondary);">&times;</button>
+      <div class="gemini-pop-head">
+        <div class="gemini-pop-title">${titulo}</div>
+        <button id="fecharResumoFlutuante" type="button" class="gemini-pop-close" aria-label="Fechar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </div>
-      <div id="conteudoResumo" style="
-        padding: 12px;
-        background: var(--ai-surface-muted);
-        border: 1px solid var(--ai-border);
-        border-radius: 4px;
-        font-family: 'Segoe UI', sans-serif;
-        flex: 1;
-        overflow-y: auto;
-        margin-bottom: 12px;
-        line-height: 1.5;
-        color: var(--ai-text);
-      "></div>
-
-      <div style="display:flex; gap:8px;">
-        <button id="copiarResumoFlutuante" style="
-          flex: 1; padding: 8px; background: var(--ai-surface);
-          color: var(--ai-text); border: 1px solid var(--ai-border-strong); border-radius: 6px; cursor: pointer; font-weight:500; font-family: 'Segoe UI', sans-serif;
-        ">📋 Copiar</button>
-        <button id="exportarResumo" style="
-          flex: 1; padding: 8px; background: var(--ai-surface);
-          color: var(--ai-text); border: 1px solid var(--ai-border-strong); border-radius: 6px; cursor: pointer; font-weight:500; font-family: 'Segoe UI', sans-serif;
-        ">💾 Salvar .txt</button>
+      <div id="conteudoResumo" class="gemini-pop-body"></div>
+      <div class="gemini-pop-actions">
+        <button id="exportarResumo" type="button" class="gemini-pop-btn">Salvar .txt</button>
+        <button id="copiarResumoFlutuante" type="button" class="gemini-pop-btn gemini-pop-btn-primary">Copiar resumo</button>
       </div>
     `;
 
@@ -151,14 +118,11 @@ const SummaryModule = (() => {
       navigator.clipboard.writeText(textoParaCopiar);
 
       const btn = popup.querySelector("#copiarResumoFlutuante");
-      const original = btn.textContent;
-      btn.textContent = "✅ Copiado!";
-      btn.style.background = "var(--ai-success-soft)";
-      btn.style.color = "var(--ai-success)";
+      btn.textContent = "Copiado";
+      btn.classList.add("is-done");
       setTimeout(() => {
-        btn.textContent = original;
-        btn.style.background = "var(--ai-surface)";
-        btn.style.color = "var(--ai-text)";
+        btn.textContent = "Copiar resumo";
+        btn.classList.remove("is-done");
       }, 2000);
     });
 
@@ -218,43 +182,16 @@ const SummaryModule = (() => {
 
     const popup = document.createElement("div");
     popup.id = "geminiDicaPopup";
-    popup.style = `
-      position:fixed;
-      bottom:130px;
-      right:20px;
-      z-index:999999;
-      background:var(--ai-surface);
-      border:1px solid var(--ai-border-strong);
-      border-radius:8px;
-      padding:16px;
-      width:400px;
-      max-height:500px;
-      overflow-y:auto;
-      box-shadow:0 4px 15px rgba(0,0,0,0.15);
-      font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      font-size: 14px;
-      display: flex;
-      flex-direction: column;
-    `;
+    popup.className = "gemini-pop";
+    popup.setAttribute("role", "dialog");
+    popup.setAttribute("aria-label", "Dicas inteligentes");
 
     popup.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <b style="font-size:16px; color:var(--ai-text);">💡 Dicas Inteligentes</b>
-        <button id="fecharDicaFlutuante" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--ai-text-muted);">&times;</button>
+      <div class="gemini-pop-head">
+        <div class="gemini-pop-title">Dicas inteligentes</div>
+        <button id="fecharDicaFlutuante" type="button" class="gemini-pop-close" aria-label="Fechar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </div>
-      <div id="conteudoDica" style="
-        padding: 10px;
-        background: var(--ai-surface-muted);
-        border: 1px solid var(--ai-border);
-        border-radius: 4px;
-        font-family: 'Segoe UI', sans-serif;
-        flex: 1;
-        overflow-y: auto;
-        margin-bottom: 12px;
-        white-space: pre-wrap;
-        line-height: 1.4;
-        color: var(--ai-text);
-      "></div>
+      <div id="conteudoDica" class="gemini-pop-body gemini-pop-pre"></div>
     `;
 
     popup.querySelector("#conteudoDica").innerHTML = formatarResumoComNegrito(conteudo);

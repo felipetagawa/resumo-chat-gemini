@@ -47,6 +47,10 @@ document.addEventListener("DOMContentLoaded", () => {
     onboardingDialog: document.getElementById("onboardingDialog"),
     onboardingNameInput: document.getElementById("onboardingNameInput"),
     onboardingSaveBtn: document.getElementById("onboardingSaveBtn"),
+    onboardingCancelBtn: document.getElementById("onboardingCancelBtn"),
+    onboardingTitle: document.getElementById("onboardingTitle"),
+    onboardingNameWrap: document.getElementById("onboardingNameWrap"),
+    onboardingNameEcho: document.getElementById("onboardingNameEcho"),
     onboardingStatus: document.getElementById("onboardingStatus"),
     versionElements: document.querySelectorAll(".app-version"),
     visibilityOptions: document.getElementById("visibilityOptions"),
@@ -62,19 +66,6 @@ document.addEventListener("DOMContentLoaded", () => {
     documentationLearningEnabled: document.getElementById("documentationLearningEnabled"),
     documentationLearningCount: document.getElementById("documentationLearningCount"),
     clearDocumentationLearning: document.getElementById("clearDocumentationLearning"),
-    leaderPasswordWrap: document.getElementById("leaderPasswordWrap"),
-    leaderPasswordInput: document.getElementById("leaderPasswordInput"),
-    leaderFilterName: document.getElementById("leaderFilterName"),
-    leaderFilterDateFrom: document.getElementById("leaderFilterDateFrom"),
-    leaderFilterDateTo: document.getElementById("leaderFilterDateTo"),
-    leaderFilterNegociation: document.getElementById("leaderFilterNegociation"),
-    leaderBtnAll: document.getElementById("leaderBtnAll"),
-    leaderBtnQuery: document.getElementById("leaderBtnQuery"),
-    leaderExportTxt: document.getElementById("leaderExportTxt"),
-    leaderExportExcel: document.getElementById("leaderExportExcel"),
-    leaderStatus: document.getElementById("leaderStatus"),
-    leaderAvgBox: document.getElementById("leaderAvgBox"),
-    leaderTableBody: document.getElementById("leaderTableBody"),
   };
 
   const MAX_SHORTCUT_LEN = 20;
@@ -83,8 +74,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const NAME_KEY = "atendeai_user_name";
   const SECTOR_KEY = "atendeai_user_sector";
   const VISIBILITY_KEY = "atendeai_visibility";
-  const LEADER_PASSWORD = "SoftengerenciamentoJB-BR";
-  const LEADER_AUTH_KEY = "atendeai_leader_auth";
 
   const BUTTON_CONFIGS = [
     { id: "btnAgenda", label: "Agenda & Gestão", defaultSupport: true, defaultPre: true },
@@ -250,29 +239,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function isValidSector(sector) {
+    return sector === "suporte" || sector === "preatendimento";
+  }
+
+  // Only pré-atendimento needs a name: its fixed greeting says "Eu sou o atendente {{NOME}}".
+  function isConfiguredProfile(name, sector) {
+    return isValidSector(sector) && (sector !== "preatendimento" || !!name);
+  }
+
   function getUserSector() {
     try {
       const v = String(localStorage.getItem(SECTOR_KEY) || "").trim().toLowerCase();
-      if (v === "suporte" || v === "preatendimento" || v === "lider") return v;
-      return "";
+      return isValidSector(v) ? v : "";
     } catch (e) { return ""; }
   }
 
-  function setUserSectorOnce(sector) {
+  function setUserSector(sector) {
     const s = String(sector || "").trim().toLowerCase();
-    if (s !== "suporte" && s !== "preatendimento" && s !== "lider") return;
-
-    try {
-      const existing = getUserSector();
-      if (existing) return;
-      localStorage.setItem(SECTOR_KEY, s);
-    } catch (e) { }
+    if (!isValidSector(s)) return;
+    try { localStorage.setItem(SECTOR_KEY, s); } catch (e) { }
   }
 
   function sectorLabel(sector) {
-    if (sector === "suporte") return "Suporte";
+    if (sector === "suporte") return "Suporte técnico";
     if (sector === "preatendimento") return "Pré-atendimento";
-    if (sector === "lider") return "Líder";
     return "";
   }
 
@@ -283,10 +274,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (sector === "preatendimento") {
       return new Set(["sec-home", "sec-mensagens"]);
-    }
-
-    if (sector === "lider") {
-      return new Set(["sec-home", "sec-mensagens", "sec-ia", "sec-historico", "sec-lider"]);
     }
 
     return new Set(["sec-home"]);
@@ -415,13 +402,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const safeName = sanitizeName(name);
     const sector = getUserSector();
     if (el.sectorBadge) {
-      if (sector) {
-        el.sectorBadge.style.display = "inline-flex";
-        el.sectorBadge.textContent = `Setor: ${sectorLabel(sector)}`;
-      } else {
-        el.sectorBadge.style.display = "none";
-        el.sectorBadge.textContent = "";
-      }
+      el.sectorBadge.hidden = !sector;
+      el.sectorBadge.textContent = sector ? sectorLabel(sector) : "";
+      el.sectorBadge.setAttribute("aria-label", sector ? `Setor: ${sectorLabel(sector)}. Trocar setor` : "Escolher setor");
+      el.sectorBadge.title = "Trocar setor";
     }
 
     if (el.editNameTrigger) {
@@ -435,7 +419,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (el.nameSetupBlock) {
-      el.nameSetupBlock.style.display = safeName ? "none" : "block";
+      el.nameSetupBlock.style.display = !safeName && sector === "preatendimento" ? "block" : "none";
     }
 
     if (el.nameInput) el.nameInput.value = safeName;
@@ -476,11 +460,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setNameUI(currentName);
 
-    if (!currentName || !currentSector) {
+    if (!isConfiguredProfile(currentName, currentSector)) {
       showOnboardingDialog();
     }
 
     el.onboardingSaveBtn?.addEventListener("click", validateAndSaveOnboarding);
+    el.onboardingCancelBtn?.addEventListener("click", () => { try { el.onboardingDialog?.close(); } catch (e) { } });
+    el.sectorBadge?.addEventListener("click", () => showOnboardingDialog({ changing: true }));
+    el.onboardingDialog?.addEventListener("cancel", (e) => {
+      // First access cannot be dismissed; changing the sector can.
+      if (el.onboardingDialog.dataset.mode !== "change") e.preventDefault();
+    });
+    el.onboardingDialog?.addEventListener("change", (e) => {
+      if (e.target?.name === "onboardingSector") syncOnboardingNameField();
+    });
+    el.onboardingNameInput?.addEventListener("input", () => {
+      if (el.onboardingNameEcho) el.onboardingNameEcho.textContent = sanitizeName(el.onboardingNameInput.value) || "Ana";
+    });
 
     el.saveVisibilityBtn?.addEventListener("click", saveVisibilitySettings);
 
@@ -491,8 +487,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    if (!currentName) {
-      flashNameStatus("⚠️ Defina seu nome para continuar.", "var(--ai-warning)", 2500);
+    if (!currentName && currentSector === "preatendimento") {
+      flashNameStatus("Defina seu nome: ele aparece na saudação do pré-atendimento.", "var(--ai-warning)", 2500);
       el.nameInput?.focus();
     }
 
@@ -556,134 +552,74 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function toggleLeaderPasswordUI() {
+  function syncOnboardingNameField() {
     const selected = document.querySelector('input[name="onboardingSector"]:checked');
-    const isLeader = selected && selected.value === "lider";
-    if (el.leaderPasswordWrap) el.leaderPasswordWrap.style.display = isLeader ? "block" : "none";
+    const needsName = selected?.value === "preatendimento";
+    if (el.onboardingNameWrap) el.onboardingNameWrap.hidden = !needsName;
+    if (el.onboardingStatus) el.onboardingStatus.textContent = "";
   }
 
-  function showOnboardingDialog() {
+  function showOnboardingDialog({ changing = false } = {}) {
     if (!el.onboardingDialog) return;
-
-    el.onboardingDialog.addEventListener("cancel", (e) => e.preventDefault());
-
-    el.onboardingDialog.showModal();
-
+    el.onboardingDialog.dataset.mode = changing ? "change" : "first";
+    if (el.onboardingTitle) el.onboardingTitle.textContent = changing ? "Trocar setor" : "Como você atende?";
+    if (el.onboardingSaveBtn) el.onboardingSaveBtn.textContent = changing ? "Salvar setor" : "Começar";
+    if (el.onboardingCancelBtn) el.onboardingCancelBtn.hidden = !changing;
     if (el.onboardingStatus) el.onboardingStatus.textContent = "";
 
     const currentName = getUserName();
     if (el.onboardingNameInput) el.onboardingNameInput.value = currentName || "";
+    if (el.onboardingNameEcho) el.onboardingNameEcho.textContent = currentName || "Ana";
 
-    const currentSector = getUserSector();
-    const radios = Array.from(document.querySelectorAll('input[name="onboardingSector"]'));
-    if (currentSector) {
-      radios.forEach(r => {
-        r.checked = (r.value === currentSector);
-        r.disabled = true;
-      });
-    } else {
-      radios.forEach(r => { r.disabled = false; r.checked = false; });
-    }
-
-    toggleLeaderPasswordUI();
-
-    document.querySelectorAll('input[name="onboardingSector"]').forEach(r => {
-      r.addEventListener("change", toggleLeaderPasswordUI);
+    const currentSector = getUserSector() || "suporte";
+    document.querySelectorAll('input[name="onboardingSector"]').forEach((r) => {
+      r.disabled = false;
+      r.checked = r.value === currentSector;
     });
+    syncOnboardingNameField();
 
-    ensureLeaderPasswordUI();
-
-    setTimeout(() => el.onboardingNameInput?.focus(), 50);
-  }
-
-  function ensureLeaderPasswordUI() {
-    if (!el.onboardingDialog) return;
-
-    let wrap = el.onboardingDialog.querySelector("#leaderPasswordWrap");
-    if (!wrap) {
-      wrap = document.createElement("div");
-      wrap.id = "leaderPasswordWrap";
-      wrap.style.cssText = "margin-top:12px; display:none;";
-
-      wrap.innerHTML = `
-        <label style="display:block; font-size:12px; font-weight:800; color:var(--ai-text-secondary); margin-bottom:6px;">
-          Senha do Líder
-        </label>
-        <input id="leaderPasswordInput" type="password" placeholder="Digite a senha" style="
-          width: 100%;
-          padding: 10px 12px;
-          border: 2px solid var(--ai-border);
-          border-radius: 12px;
-          font-size: 14px;
-          outline: none;
-        "/>
-        <div style="margin-top:6px; font-size:12px; color:var(--ai-text-muted); font-weight:600;">
-          Necessário para habilitar o painel Líder.
-        </div>
-      `;
-
-      const radiosBlock = el.onboardingDialog.querySelector(".sector-grid")
-        || el.onboardingDialog.querySelector('input[name="onboardingSector"]')?.closest("div")
-        || el.onboardingDialog;
-
-      radiosBlock?.parentElement?.insertBefore(wrap, radiosBlock.nextSibling);
-    }
-
-    const update = () => {
-      const selected = document.querySelector('input[name="onboardingSector"]:checked');
-      const sector = selected ? String(selected.value || "").toLowerCase() : "";
-      wrap.style.display = sector === "lider" ? "block" : "none";
-    };
-
-    const radios = Array.from(document.querySelectorAll('input[name="onboardingSector"]'));
-    radios.forEach(r => r.addEventListener("change", update));
-    update();
+    if (!el.onboardingDialog.open) el.onboardingDialog.showModal();
+    setTimeout(() => document.querySelector('input[name="onboardingSector"]:checked')?.focus(), 50);
   }
 
   async function validateAndSaveOnboarding() {
+    const selected = document.querySelector('input[name="onboardingSector"]:checked');
+    const sector = selected ? String(selected.value) : "";
     const name = sanitizeName(el.onboardingNameInput?.value);
-    const sectorExisting = getUserSector();
 
-    let sector = sectorExisting;
-    if (!sectorExisting) {
-      const selected = document.querySelector('input[name="onboardingSector"]:checked');
-      sector = selected ? String(selected.value) : "";
+    if (!isValidSector(sector)) {
+      if (el.onboardingStatus) el.onboardingStatus.textContent = "Escolha um setor para continuar.";
+      return;
     }
-
-    if (!name) {
-      el.onboardingStatus.textContent = "⚠️ Informe seu nome/login.";
+    if (sector === "preatendimento" && !name) {
+      if (el.onboardingStatus) el.onboardingStatus.textContent = "Informe seu nome: ele aparece na saudação do pré-atendimento.";
       el.onboardingNameInput?.focus();
       return;
     }
 
-    if (!sector || (sector !== "suporte" && sector !== "preatendimento" && sector !== "lider")) {
-      el.onboardingStatus.textContent = "⚠️ Selecione seu setor.";
-      return;
-    }
-
+    const previousSector = getUserSector();
     const btn = el.onboardingSaveBtn;
     if (btn) btn.disabled = true;
 
     try {
-      setUserName(name);
-      setUserSectorOnce(sector);
-      setNameUI(name);
+      setUserSector(sector);
+      if (sector === "preatendimento") {
+        try { localStorage.setItem(NAME_KEY, name); } catch (e) { }
+      }
+      setNameUI(getUserName());
 
-      await persistUserMetaToChromeStorage({ name, sector });
+      await persistUserMetaToChromeStorage(sector === "preatendimento" ? { name, sector } : { sector });
 
-      if (sector !== sectorExisting) {
+      if (sector !== previousSector) {
         await applySectorDefaultsIfChanged(sector);
       }
 
       await refreshUIAfterOnboarding();
-
+      try { el.onboardingDialog?.close(); } catch (e) { }
     } catch (err) {
       console.error("Erro no onboarding:", err);
-      if (el.onboardingStatus) {
-        el.onboardingStatus.textContent = "❌ Erro ao finalizar. Veja o console (F12).";
-      }
+      if (el.onboardingStatus) el.onboardingStatus.textContent = "Não foi possível salvar. Tente novamente.";
     } finally {
-      try { el.onboardingDialog?.close(); } catch (e) { console.error("Falha ao fechar dialog:", e); }
       if (btn) btn.disabled = false;
     }
   }
@@ -732,610 +668,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       el.historyList.appendChild(li);
     });
-  }
-
-  function normalizeToYMD(dateRaw) {
-    const s = (dateRaw == null ? "" : String(dateRaw)).trim();
-    if (!s) return "";
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-
-    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10);
-
-    const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-
-    const d = new Date(s);
-    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
-
-    return "";
-  }
-
-  function initLeaderControls() {
-    if (!el.leaderBtnQuery || !el.leaderTableBody) return;
-
-    let currentFilters = {};
-    let serverTotalPages = 0;
-    let currentPage = 0;
-    const PAGE_SIZE = 15;
-
-    let masterRows = [];
-    let filteredRows = [];
-    let pageRows = [];
-
-    const pagePrevBtn = document.getElementById("leaderPagePrev");
-    const pageNextBtn = document.getElementById("leaderPageNext");
-    const pageInfoEl = document.getElementById("leaderPageInfo");
-
-    const setStatus = (text, color = "var(--ai-text-muted)") => {
-      if (!el.leaderStatus) return;
-      el.leaderStatus.textContent = text || "";
-      el.leaderStatus.style.color = color;
-    };
-
-    const disableUI = (disabled) => {
-      [el.leaderBtnQuery, el.leaderExportTxt, el.leaderExportExcel, pagePrevBtn, pageNextBtn]
-        .filter(Boolean)
-        .forEach((b) => (b.disabled = !!disabled));
-    };
-
-    const safe = (v) => (v == null ? "" : String(v));
-
-    const normalizeName = (v) => safe(v).trim();
-    const normalizeDate = (v) => safe(v).trim();
-
-    const normalizeBoolFilter = (v) => {
-      const s = safe(v).trim().toLowerCase();
-      if (!s || s === "all" || s === "todos") return null;
-      if (s === "true" || s === "sim" || s === "1") return true;
-      if (s === "false" || s === "nao" || s === "não" || s === "0") return false;
-      return null;
-    };
-
-    function getLeaderFilters() {
-      const name = normalizeName(el.leaderFilterName?.value);
-
-      const dateFrom = normalizeDate(el.leaderFilterDateFrom?.value);
-      const dateTo = normalizeDate(el.leaderFilterDateTo?.value);
-
-      const neg = normalizeBoolFilter(el.leaderFilterNegociation?.value);
-
-      return { name, dateFrom, dateTo, neg };
-    }
-
-    function parseDurationToMs(value) {
-      if (value == null) return 0;
-
-      if (typeof value === "number" && Number.isFinite(value)) {
-        if (value > 100000) return Math.max(0, Math.floor(value));
-        if (value > 0 && value < 100000) return Math.max(0, Math.floor(value * 1000));
-        return 0;
-      }
-
-      const s = safe(value).trim();
-
-      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
-        const parts = s.split(":").map((x) => parseInt(x, 10));
-        if (parts.some((n) => Number.isNaN(n))) return 0;
-
-        let h = 0, m = 0, sec = 0;
-        if (parts.length === 3) [h, m, sec] = parts;
-        if (parts.length === 2) [m, sec] = parts;
-
-        return ((h * 3600) + (m * 60) + sec) * 1000;
-      }
-
-      if (/^\d+$/.test(s)) {
-        const n = parseInt(s, 10);
-        if (!Number.isFinite(n)) return 0;
-        if (n > 100000) return n;
-        return n * 1000;
-      }
-
-      return 0;
-    }
-
-    function formatDuration(ms) {
-      ms = Math.max(0, Math.floor(ms || 0));
-      const totalSec = Math.floor(ms / 1000);
-      const h = Math.floor(totalSec / 3600);
-      const m = Math.floor((totalSec % 3600) / 60);
-      const s = totalSec % 60;
-
-      const pad = (n) => String(n).padStart(2, "0");
-      if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
-      return `${pad(m)}:${pad(s)}`;
-    }
-
-    function normalizeApiList(payload) {
-      if (Array.isArray(payload)) return payload;
-      if (payload && typeof payload === "object") {
-        const candidates = [
-          payload.content, payload.items, payload.data, payload.result, payload.results,
-          payload.registros, payload.records,
-        ];
-        for (const c of candidates) if (Array.isArray(c)) return c;
-      }
-      return [];
-    }
-
-    function pickField(obj, keys) {
-      for (const k of keys) {
-        if (obj && obj[k] != null) return obj[k];
-      }
-      return "";
-    }
-
-    function normalizeNegociationValue(v) {
-      if (v === true) return true;
-      if (v === false) return false;
-
-      const s = safe(v).trim().toLowerCase();
-      if (!s) return false;
-
-      if (s === "true" || s === "sim" || s === "s" || s === "1" || s === "yes") return true;
-      if (s === "false" || s === "nao" || s === "não" || s === "n" || s === "0" || s === "no") return false;
-
-      if (s.includes("sim")) return true;
-      return false;
-    }
-
-    function mapRow(item) {
-      const dateRaw = pickField(item, ["date", "data", "createdAt", "created_at", "dia", "timestamp", "dataRegistro", "data_registro"]);
-      const preRaw = pickField(item, ["preName", "pre", "nomePre", "nome_pre", "agentName", "name", "tecnico", "usuario", "userName", "user_name"]);
-      const cliRaw = pickField(item, ["nameClient", "clientName", "cliente", "nomeCliente", "nome_cliente", "customerName", "customer", "client"]);
-
-      const negRaw = pickField(item, [
-        "negociation", "negotiation",
-        "negociacao", "negociação",
-        "isNegociation", "isNegotiation",
-        "hasNegociation", "hasNegotiation",
-        "negociou", "negociado", "negociacaoOk"
-      ]);
-      const neg = normalizeNegociationValue(negRaw);
-
-      const ms =
-        parseDurationToMs(
-          pickField(item, [
-            "durationMs", "tempoMs", "timeMs", "elapsedMs", "spentMs",
-            "duration", "tempo", "time", "elapsed",
-            "durationSeconds", "tempoSeconds", "timeSeconds"
-          ])
-        ) || 0;
-
-      let displayDate = "";
-      if (dateRaw) {
-        const d = new Date(dateRaw);
-
-        if (!isNaN(d.getTime())) {
-          const dataFmt = d.toLocaleDateString('pt-BR'); // Ex: 11/02/2026
-          const horaFmt = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); // Ex: 14:30
-          displayDate = `${dataFmt} ${horaFmt}`;
-        } else {
-          displayDate = typeof normalizeToYMD === 'function' ? normalizeToYMD(dateRaw) : String(dateRaw);
-        }
-      }
-
-
-      return {
-        date: displayDate.trim(),
-        pre: safe(preRaw).trim(),
-        client: safe(cliRaw).trim(),
-        ms,
-        negociation: neg,
-        raw: item
-      };
-    }
-
-    function renderTable(rows) {
-      pageRows = rows || [];
-      if (!el.leaderTableBody) return;
-
-      el.leaderTableBody.innerHTML = "";
-
-      if (!pageRows.length) {
-        el.leaderTableBody.innerHTML = `
-          <tr>
-            <td colspan="5" style="padding:12px; color:var(--ai-text-muted); font-weight:700;">
-              Nenhum registro encontrado.
-            </td>
-          </tr>
-        `;
-        return;
-      }
-
-      const frag = document.createDocumentFragment();
-
-      pageRows.forEach((r) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td style="padding:10px; border-bottom:1px solid var(--ai-border);">${safe(r.date)}</td>
-          <td style="padding:10px; border-bottom:1px solid var(--ai-border); font-weight:800;">${safe(r.pre)}</td>
-          <td style="padding:10px; border-bottom:1px solid var(--ai-border);">${safe(r.client)}</td>
-          <td style="padding:10px; border-bottom:1px solid var(--ai-border); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-weight:800;">
-            ${formatDuration(r.ms)}
-          </td>
-          <td style="padding:10px; border-bottom:1px solid var(--ai-border); font-weight:900;">
-            ${r.negociation ? "Sim" : "Não"}
-          </td>
-        `;
-        frag.appendChild(tr);
-      });
-
-      el.leaderTableBody.appendChild(frag);
-    }
-
-    function renderAvgBox(rows) {
-      if (!el.leaderAvgBox) return;
-
-      const all = rows || [];
-      const valid = all.filter((r) => (r.ms || 0) > 0);
-
-      if (!all.length) {
-        el.leaderAvgBox.innerHTML = `
-          <div style="font-weight:900; color:var(--ai-text);">Sem dados</div>
-          <div style="margin-top:6px; color:var(--ai-text-muted); font-weight:700;">
-            Faça uma consulta para ver métricas.
-          </div>
-        `;
-        return;
-      }
-
-      const totalMs = valid.reduce((acc, r) => acc + (r.ms || 0), 0);
-      const avgMs = valid.length ? Math.round(totalMs / valid.length) : 0;
-
-      el.leaderAvgBox.innerHTML = `
-        <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-          <div>
-            <div style="font-weight:900; color:var(--ai-text);">Registros</div>
-            <div style="margin-top:4px; color:var(--ai-text-secondary); font-weight:800;">${all.length}</div>
-          </div>
-          <div>
-            <div style="font-weight:900; color:var(--ai-text);">Média (tempos válidos)</div>
-            <div style="margin-top:4px; color:var(--ai-text-secondary); font-weight:900; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;">
-              ${formatDuration(avgMs)}
-            </div>
-          </div>
-          <div>
-            <div style="font-weight:900; color:var(--ai-text);">Total (tempos válidos)</div>
-            <div style="margin-top:4px; color:var(--ai-text-secondary); font-weight:900; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;">
-              ${formatDuration(totalMs)}
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function downloadFile(filename, content, mime) {
-      const blob = new Blob([content], { type: mime || "text/plain;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-
-      setTimeout(() => URL.revokeObjectURL(url), 600);
-    }
-
-    function exportTxt() {
-      if (!filteredRows.length) {
-        setStatus("⚠️ Nada para exportar.", "var(--ai-warning)");
-        return;
-      }
-
-      const lines = [
-        "Data\tPre\tCliente\tTempo\tNegociação",
-        ...filteredRows.map((r) => `${safe(r.date)}\t${safe(r.pre)}\t${safe(r.client)}\t${formatDuration(r.ms)}\t${r.negociation ? "Sim" : "Não"}`)
-      ];
-
-      downloadFile("pre_controles.txt", lines.join("\n"), "text/plain;charset=utf-8");
-      setStatus("TXT gerado (todos os registros do filtro).", "green");
-    }
-
-    function exportCsvForExcel() {
-      if (!filteredRows.length) {
-        setStatus("Nada para exportar.", "var(--ai-warning)");
-        return;
-      }
-
-      const esc = (v) => `"${safe(v).replace(/"/g, '""')}"`;
-
-      const lines = [
-        ["Data", "Pre", "Cliente", "Tempo", "Negociação"].map(esc).join(";"),
-        ...filteredRows.map((r) => [r.date, r.pre, r.client, formatDuration(r.ms), (r.negociation ? "Sim" : "Não")].map(esc).join(";"))
-      ];
-
-      const content = "\uFEFF" + lines.join("\n");
-      downloadFile("pre_controles.csv", content, "text/csv;charset=utf-8");
-      setStatus("CSV (Excel) gerado (todos os registros do filtro).", "green");
-    }
-
-    function applyFilters(rows, filters) {
-      const nameNeedle = safe(filters.name).trim().toLowerCase();
-
-      const from = safe(filters.dateFrom).trim();
-      const to = safe(filters.dateTo).trim();
-
-      const neg = filters.neg;
-
-      return (rows || []).filter((r) => {
-        if (nameNeedle) {
-          const hay = safe(r.pre).toLowerCase();
-          if (!hay.includes(nameNeedle)) return false;
-        }
-
-        if (neg === true || neg === false) {
-          if (r.negociation !== neg) return false;
-        }
-
-        if (from) {
-          if (!r.date) return false;
-          if (safe(r.date) < from) return false;
-        }
-
-        if (to) {
-          if (!r.date) return false;
-          if (safe(r.date) > to) return false;
-        }
-
-        return true;
-      });
-    }
-
-
-
-
-
-    function updatePaginationUI() {
-      const totalPages = serverTotalPages;
-      const total = PAGE_SIZE;
-
-      if (pagePrevBtn) {
-        pagePrevBtn.disabled = currentPage <= 0;
-        pagePrevBtn.onclick = () => {
-          if (currentPage > 0) query(currentFilters, currentPage - 1);
-        };
-      }
-      if (pageNextBtn) {
-        pageNextBtn.disabled = currentPage >= totalPages - 1;
-        pageNextBtn.onclick = () => {
-          if (currentPage < serverTotalPages - 1) query(currentFilters, currentPage + 1);
-        };
-      }
-
-      if (!pageInfoEl) return;
-
-      pageInfoEl.innerHTML = "";
-      pageInfoEl.style.display = "flex";
-      pageInfoEl.style.alignItems = "center";
-      pageInfoEl.style.gap = "4px";
-
-      if (totalPages === 0) {
-        pageInfoEl.textContent = "1";
-        return;
-      }
-
-      const createBtn = (pageNum, text, isActive) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.textContent = text || String(pageNum + 1);
-        btn.style.cssText = `
-          border: 1px solid ${isActive ? "var(--ai-primary-border)" : "transparent"};
-          background: ${isActive ? "var(--ai-primary-soft)" : "transparent"};
-          color: ${isActive ? "var(--ai-primary)" : "var(--ai-text-secondary)"};
-          font-weight: 800;
-          font-size: 13px;
-          min-width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0 4px;
-          margin: 0;
-          transition: background 0.2s;
-        `;
-
-        if (!isActive) {
-          btn.onmouseenter = () => btn.style.background = "var(--ai-surface-muted)";
-          btn.onmouseleave = () => btn.style.background = "transparent";
-          btn.onclick = () => {
-            query(currentFilters, pageNum);
-          };
-        }
-        return btn;
-      };
-
-      const maxVisible = 5;
-      let startPage, endPage;
-
-      if (totalPages <= maxVisible) {
-        startPage = 0;
-        endPage = totalPages - 1;
-      } else {
-        const maxPagesBeforeCurrent = Math.floor(maxVisible / 2);
-        const maxPagesAfterCurrent = Math.ceil(maxVisible / 2) - 1;
-
-        if (currentPage <= maxPagesBeforeCurrent) {
-          startPage = 0;
-          endPage = maxVisible - 1;
-        } else if (currentPage + maxPagesAfterCurrent >= totalPages) {
-          startPage = totalPages - maxVisible;
-          endPage = totalPages - 1;
-        } else {
-          startPage = currentPage - maxPagesBeforeCurrent;
-          endPage = currentPage + maxPagesAfterCurrent;
-        }
-      }
-
-      if (totalPages > maxVisible) {
-        if (currentPage > 0) {
-          pageInfoEl.appendChild(createBtn(0, "<<", false));
-        }
-      }
-
-      const hasStartGap = startPage > 0;
-
-      if (hasStartGap) {
-        pageInfoEl.appendChild(createBtn(0, "1", currentPage === 0));
-        if (startPage > 1) {
-          const dot = document.createElement("span");
-          dot.textContent = "...";
-          dot.style.color = "var(--ai-text-muted)";
-          dot.style.fontSize = "12px";
-          pageInfoEl.appendChild(dot);
-        }
-      }
-
-      for (let i = startPage; i <= endPage; i++) {
-        pageInfoEl.appendChild(createBtn(i, null, currentPage === i));
-      }
-
-      if (endPage < totalPages - 1) {
-        if (endPage < totalPages - 2) {
-          const dot = document.createElement("span");
-          dot.textContent = "...";
-          dot.style.color = "var(--ai-text-muted)";
-          dot.style.fontSize = "12px";
-          pageInfoEl.appendChild(dot);
-        }
-        pageInfoEl.appendChild(createBtn(totalPages - 1, String(totalPages), currentPage === totalPages - 1));
-      }
-
-      if (totalPages > maxVisible) {
-        if (currentPage < totalPages - 1) {
-          pageInfoEl.appendChild(createBtn(totalPages - 1, ">>", false));
-        }
-      }
-    }
-
-
-    function refreshFiltered(resetPage = false) {
-      const f = getLeaderFilters();
-      filteredRows = applyFilters(masterRows, f);
-      if (resetPage) currentPage = 0;
-    }
-
-    function setCurrentMonthDefaults() {
-      const now = new Date();
-      const y = now.getFullYear();
-      const m = now.getMonth();
-
-      const first = new Date(y, m, 1);
-      const last = new Date(y, m + 1, 0);
-
-      const toYMD = (d) => {
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, "0");
-        const dd = String(d.getDate()).padStart(2, "0");
-        return `${yyyy}-${mm}-${dd}`;
-      };
-
-      if (el.leaderFilterDateFrom) el.leaderFilterDateFrom.value = toYMD(first);
-      if (el.leaderFilterDateTo) el.leaderFilterDateTo.value = toYMD(last);
-    }
-
-    async function query(filters = {}, pageIndex = 0) {
-      disableUI(true);
-      setStatus("Consultando...", "var(--ai-text-muted)");
-
-      if (pageIndex === 0) {
-        currentFilters = filters;
-      }
-      currentPage = pageIndex;
-
-      try {
-        const resp = await new Promise((resolve) => {
-          chrome.runtime.sendMessage({
-            action: "preControl:query",
-            ...currentFilters,
-            page: currentPage,
-            size: PAGE_SIZE
-          }, (r) => resolve(r || {}));
-        });
-
-        if (!resp.success) {
-          throw new Error(resp.erro || "Erro na consulta");
-        }
-
-
-        const apiData = resp.data;
-
-        const rawList = apiData.content || (Array.isArray(apiData) ? apiData : []);
-
-        serverTotalPages = apiData.totalPages || 0;
-
-        const rows = rawList.map(mapRow);
-
-        rows.sort((a, b) => {
-          const getTimestamp = (r) => {
-            const val = pickField(r.raw, ["createdAt", "created_at", "timestamp", "date", "data", "dataRegistro", "data_registro"]);
-            if (!val) return 0;
-            let ms = new Date(val).getTime();
-            if (!Number.isNaN(ms)) return ms;
-            if (typeof val === 'string') {
-              const parts = val.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s(\d{2}):(\d{2})(?::(\d{2}))?)?/);
-              if (parts) {
-                const [_, d, m, y, hh, mm, ss] = parts;
-                return new Date(y, m - 1, d, hh || 0, mm || 0, ss || 0).getTime();
-              }
-            }
-            return 0;
-          };
-          return getTimestamp(b) - getTimestamp(a);
-        });
-
-        filteredRows = rows;
-        renderTable(rows);
-        renderAvgBox(rows);
-        updatePaginationUI();
-
-        setStatus(`Página ${currentPage + 1} de ${serverTotalPages}`, "green");
-
-      } catch (err) {
-        console.error(err);
-        renderTable([]);
-        setStatus(`Erro: ${err.message}`, "var(--ai-danger)");
-      } finally {
-        disableUI(false);
-      }
-    }
-
-    el.leaderBtnQuery.addEventListener("click", () => {
-      const f = getLeaderFilters();
-      query(f, 0);
-    });
-
-    el.leaderExportTxt?.addEventListener("click", exportTxt);
-    el.leaderExportExcel?.addEventListener("click", exportCsvForExcel);
-
-    [
-      el.leaderFilterName,
-      el.leaderFilterDateFrom,
-      el.leaderFilterDateTo,
-      el.leaderFilterNegociation
-    ].forEach((inp) => {
-      inp?.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          el.leaderBtnQuery?.click();
-        }
-      });
-    });
-
-    el.leaderFilterNegociation?.addEventListener("change", () => el.leaderBtnQuery?.click());
-    el.leaderFilterDateFrom?.addEventListener("change", () => el.leaderBtnQuery?.click());
-    el.leaderFilterDateTo?.addEventListener("change", () => el.leaderBtnQuery?.click());
-
-    setCurrentMonthDefaults();
-
-    masterRows = [];
-    filteredRows = [];
-    currentPage = 0;
-
-    el.leaderBtnQuery?.click();
   }
 
   function renderVersionHistory(history) {
@@ -1743,6 +1075,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function initAppearanceSettings() {
     await globalThis.ThemeModule?.init?.();
+    // Colours transition only after the saved theme is painted, so a light preference never animates in from dark.
+    requestAnimationFrame(() => document.documentElement.setAttribute("data-theme-ready", ""));
     const radios = [el.themeDark, el.themeLight, el.themeSystem].filter(Boolean);
     if (!radios.length) return;
     const data = await storageGet([THEME_KEY]);
@@ -1939,7 +1273,6 @@ document.addEventListener("DOMContentLoaded", () => {
       el.creditsDialog?.close();
     });
 
-    initLeaderControls();
   }
 
   initApp();

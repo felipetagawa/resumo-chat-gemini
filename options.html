@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" id="atendeai-options">
+<html lang="pt-BR" id="atendeai-options" data-atendeai-theme="dark">
 
 <head>
   <meta charset="UTF-8">
@@ -303,13 +303,12 @@
         <div class="sys-name" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <span class="atendeai-mark" aria-hidden="true">A</span>
           <span>AtendeAI Manager</span>
-          <span id="sectorBadge"></span>
+          <button id="sectorBadge" type="button" class="sector-chip" hidden></button>
         </div>
       </div>
 
       <div class="nav-tabs">
         <button class="nav-tab active" type="button" data-section="sec-home">Início</button>
-        <button class="nav-tab" type="button" data-section="sec-lider">Líder Controle</button>
         <button class="nav-tab" type="button" data-section="sec-mensagens">Mensagens Padrão</button>
         <button class="nav-tab" type="button" data-section="sec-ia">Configuração IA</button>
         <button class="nav-tab" type="button" data-section="sec-historico">Histórico</button>
@@ -325,22 +324,7 @@
         <p class="desc">Ajustes do atendimento, mensagens padrão e visibilidade dos botões.</p>
       </div>
 
-      <div class="home-grid">
-        <div class="home-feature">
-          <strong>Mensagens Padrão</strong>
-          <p>Cadastre respostas frequentes e atalhos para colar mensagens com um clique.</p>
-        </div>
-        <div class="home-feature">
-          <strong>Configuração IA</strong>
-          <p>Defina o tom, o formato e o perfil padrão das sugestões de resposta.</p>
-        </div>
-        <div class="home-feature">
-          <strong>Histórico</strong>
-          <p>Consulte resumos e chamados manuais anteriores quando precisar de contexto.</p>
-        </div>
-      </div>
-
-      <div class="card news-card" style="margin-top:16px;">
+      <div class="card news-card">
         <h2><span class="atendeai-mark" aria-hidden="true">A</span> Novidades</h2>
         <p class="hint">Atualizações recentes desta extensão.</p>
         <div id="changelogList" class="changelog-list" hidden></div>
@@ -533,96 +517,6 @@
       </div>
     </section>
 
-    <section id="sec-lider" class="page-section">
-      <div class="card" style="padding:18px;">
-        <div class="card-header-row">
-          <h2 style="margin:0;">Controle Líder</h2>
-
-          <div class="header-actions">
-            <details class="actions-menu">
-              <summary class="actions-trigger">
-                Ações <span class="chevron">▾</span>
-              </summary>
-
-              <div class="actions-dropdown">
-                <button id="leaderExportTxt" type="button" class="actions-item">
-                  <span class="icon">⤓</span>
-                  <span class="text">
-                    <span class="title">Baixar TXT</span>
-                    <span class="desc">Exporta a consulta atual</span>
-                  </span>
-                </button>
-
-                <button id="leaderExportExcel" type="button" class="actions-item">
-                  <span class="icon">⤓</span>
-                  <span class="text">
-                    <span class="title">Baixar Excel</span>
-                    <span class="desc">Exporta a consulta atual</span>
-                  </span>
-                </button>
-              </div>
-            </details>
-
-            <div style="font-size:12px; min-height:18px;"></div>
-          </div>
-        </div>
-
-        <div class="leader-filters">
-          <input id="leaderFilterName" placeholder="Filtrar por nome do Pré" autocomplete="off" />
-
-          <select id="leaderFilterNegociation">
-            <option value="">Negociação: Todos</option>
-            <option value="false">Sem Negociação</option>
-            <option value="true">Com Negociação</option>
-          </select>
-
-          <input id="leaderFilterDateFrom" type="date" />
-          <input id="leaderFilterDateTo" type="date" />
-        </div>
-
-        <div class="leader-actions-row">
-          <button id="leaderBtnQuery" class="btn-primary" type="button"
-            style="margin-top:0; padding:10px 12px; border-radius:10px; font-weight:900;">
-            Consultar
-          </button>
-
-          <div id="leaderStatus" class="leader-status-inline"></div>
-        </div>
-
-        <div id="leaderAvgBox" style="
-          padding:12px; border:1px solid var(--ai-border); border-radius:12px;
-          background:var(--ai-surface-muted); margin-bottom:12px; font-size:13px;
-        "></div>
-
-        <div style="overflow:auto; border:1px solid var(--ai-border); border-radius:12px;">
-          <table style="width:100%; border-collapse:collapse; font-size:13px;">
-            <thead>
-              <tr style="background:var(--ai-surface-muted);">
-                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Data</th>
-                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Pré</th>
-                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Cliente</th>
-                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Tempo</th>
-                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--ai-border);">Negociação</th>
-              </tr>
-            </thead>
-            <tbody id="leaderTableBody"></tbody>
-          </table>
-        </div>
-
-        <div class="leader-pagination">
-          <button id="leaderPagePrev" type="button" class="btn-copy leader-page-btn" aria-label="Página anterior">
-            &lt;
-          </button>
-
-          <div id="leaderPageInfo" class="leader-page-number">1</div>
-
-          <button id="leaderPageNext" type="button" class="btn-copy leader-page-btn" aria-label="Próxima página">
-            &gt;
-          </button>
-        </div>
-      </div>
-    </section>
-
   </main>
 
   <script src="modules/theme.js"></script>
@@ -632,93 +526,36 @@
     <a href="#" id="openCredits" class="footer-link">Créditos do sistema – <span class="app-version">v...</span></a>
   </footer>
 
-  <dialog id="onboardingDialog" style="
-    border:none;
-    border-radius:16px;
-    padding:0;
-    width:520px;
-    max-width:92vw;
-    box-shadow:0 18px 40px rgba(0,0,0,0.28);
-    overflow:hidden;
-    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  ">
-    <div class="dialog-header">
-      <div style="font-size:15px; font-weight:650;">Configuração inicial</div>
-      <div class="kicker">Informe seu nome e selecione seu setor para continuar.</div>
+  <dialog id="onboardingDialog" class="onb-dialog" aria-labelledby="onboardingTitle">
+    <div class="onb-brand">AtendeAI</div>
+    <h2 id="onboardingTitle" class="onb-title">Como você atende?</h2>
+    <p class="onb-lead">O setor define quais ferramentas aparecem no dock e aqui nas Configurações.</p>
+
+    <fieldset class="onb-options">
+      <legend class="sr-only">Setor</legend>
+      <label class="onb-option">
+        <input type="radio" name="onboardingSector" value="suporte" />
+        <span class="onb-option-title">Suporte técnico</span>
+        <span class="onb-option-text">Gerar Relatório, Sugerir resposta, Docs e Agenda.</span>
+      </label>
+      <label class="onb-option">
+        <input type="radio" name="onboardingSector" value="preatendimento" />
+        <span class="onb-option-title">Pré-atendimento</span>
+        <span class="onb-option-text">Identificar produto, mensagens de triagem e tempo na fila.</span>
+      </label>
+    </fieldset>
+
+    <div id="onboardingNameWrap" class="onb-field" hidden>
+      <label for="onboardingNameInput">Seu nome na saudação</label>
+      <input id="onboardingNameInput" type="text" placeholder="Ex.: Ana" autocomplete="given-name" />
+      <div class="hint">Entra em “Eu sou o atendente <b id="onboardingNameEcho">Ana</b> do pré-atendimento…”</div>
     </div>
 
-    <div style="padding:16px 18px; background:var(--ai-surface);">
-      <label style="font-weight:800; font-size:13px; display:block;">Nome</label>
-      <input id="onboardingNameInput" type="text" placeholder="Digite seu Nome" style="
-          width: 90%;
-          margin-top:8px;
-          padding:10px 12px;
-          border:1px solid var(--ai-border-strong);
-          border-radius:10px;
-          font-size:14px;
-          outline:none;
-        " />
+    <div id="onboardingStatus" class="onb-status" role="alert"></div>
 
-      <div style="height:12px;"></div>
-
-      <div style="font-weight:800; font-size:13px;">Setor</div>
-      <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
-        <label style="
-          display:flex; align-items:center; gap:8px; cursor:pointer;
-          padding:10px 12px; border:1px solid var(--ai-border); border-radius:12px; background:var(--ai-surface-muted);
-          font-weight:800; font-size:13px; color:var(--ai-text);
-        ">
-          <input type="radio" name="onboardingSector" value="suporte" />
-          Suporte
-        </label>
-
-        <label style="
-          display:flex; align-items:center; gap:8px; cursor:pointer;
-          padding:10px 12px; border:1px solid var(--ai-border); border-radius:12px; background:var(--ai-surface-muted);
-          font-weight:800; font-size:13px; color:var(--ai-text);
-        ">
-          <input type="radio" name="onboardingSector" value="preatendimento" />
-          Pré-atendimento
-        </label>
-
-        <label style="
-          display:flex; align-items:center; gap:8px; cursor:pointer;
-          padding:10px 12px; border:1px solid var(--ai-border); border-radius:12px; background:var(--ai-surface-muted);
-          font-weight:800; font-size:13px; color:var(--ai-text);
-        ">
-          <input type="radio" name="onboardingSector" value="lider" />
-          Líder
-        </label>
-      </div>
-
-      <div id="leaderPasswordWrap" style="display:none; margin-top:12px;">
-        <label style="font-weight:800; font-size:13px; display:block;">Senha do Líder</label>
-        <input id="leaderPasswordInput" type="password" placeholder="Digite a senha" style="
-            width: 90%;
-            margin-top:8px;
-            padding:10px 12px;
-            border:1px solid var(--ai-border-strong);
-            border-radius:10px;
-            font-size:14px;
-            outline:none;
-          " />
-        <div class="hint" style="margin-top:8px;">
-          Necessário para habilitar a área de controle do Líder.
-        </div>
-      </div>
-
-      <div class="hint" style="margin-top:10px;">
-        O setor será salvo localmente e não poderá ser alterado depois. Apenas o nome poderá ser editado.
-      </div>
-
-      <div id="onboardingStatus"
-        style="font-size:12px; margin-top:10px; min-height:18px; color:var(--ai-warning); font-weight:700;"></div>
-
-      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
-        <button id="onboardingSaveBtn" type="button" class="btn-primary" style="margin-top:0; font-weight:900;">
-          Confirmar e continuar
-        </button>
-      </div>
+    <div class="onb-actions">
+      <button id="onboardingCancelBtn" type="button" class="btn-ghost" hidden>Cancelar</button>
+      <button id="onboardingSaveBtn" type="button" class="btn-primary onb-submit">Começar</button>
     </div>
   </dialog>
 
