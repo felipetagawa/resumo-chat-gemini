@@ -184,3 +184,12 @@ test('the strip tells the last CRM save this browser saw, so "never saw it" and 
   await settle();
   assert.match(text(), /Agendar: guardei o retorno\./);
 });
+
+test('the strip appends the CRM answer to a save that could not be confirmed', async () => {
+  const { P, R } = load();
+  const { doc } = tableDoc(['1']);
+  await P.mount(doc, { now: () => T });
+  await R.setLastSave({ at: T, outcome: 'sem-confirmacao', mode: 'agendar', detail: 'mensagem: Fora do expediente' });
+  await settle();
+  assert.match(textOf(doc.getElementById('atendeai-retornos-strip')), /Resposta do CRM — mensagem: Fora do expediente/);
+});

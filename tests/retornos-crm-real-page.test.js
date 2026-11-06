@@ -227,3 +227,18 @@ test('every save the browser sees leaves a plain-language last-save note, with n
   await drive(realPage({ mode: 'finalizar' }), C, [['send', SALVAR], ['complete', SALVAR, redirectXml]]);
   assert.equal((await R.getLastSave()).outcome, 'removido');
 });
+
+test('when a save is not confirmed, the last-save note carries what the CRM answered (messages, scripts), without long numbers', async () => {
+  const { C, R } = load();
+  C._test.setLeaveWait(10);
+  const xml = '<partial-response><changes><update id="frmAtendimento:growl"><![CDATA[x]]></update>'
+    + '<eval><![CDATA[PF(\'growl\').renderMessage({"summary":"Fora do expediente","detail":"Agende entre 8h e 17h, protocolo 1790172575959","severity":"error"});]]></eval></changes></partial-response>';
+  await drive(realPage(), C, [['send', SALVAR], ['complete', SALVAR, xml]]);
+  await new Promise((r) => setTimeout(r, 60));
+  const last = await R.getLastSave();
+  assert.equal(last.outcome, 'sem-confirmacao');
+  assert.match(last.detail, /mensagem: Fora do expediente \/ Agende entre 8h e 17h, protocolo …/);
+  assert.match(last.detail, /script: PF\('growl'\)\.renderMessage/);
+  assert.match(last.detail, /atualizou: growl/);
+  assert.ok(!last.detail.includes('1790172575959'));
+});

@@ -16,7 +16,8 @@ const RetornosCapture = (() => {
   ];
   let signatures = RECORDED_SIGNATURES;
 
-  const LEAVE_WAIT_MS = 4000;
+  let leaveWaitMs = 4000;
+  const MESSAGE_RE = /ui-(?:messages-(?:error|warn|info|fatal)-(?:summary|detail)|growl-title|growl-message)[^>]*>([^<]*)</g;
   const ERROR_RE = /ui-messages-(?:error|fatal)|ui-message-(?:error|fatal)|ui-growl-(?:item[^"]*)?(?:error|fatal)|ui-state-error/;
   const text = (v) => String(v ?? "").replace(/\s+/g, " ").trim();
   const norm = (v) => text(v).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -28,10 +29,28 @@ const RetornosCapture = (() => {
     if (m) { try { args = JSON.parse(m[1]); } catch { args = null; } }
     const redirect = body.match(/<redirect url="([^"]*)"/);
     const evals = [...body.matchAll(/<eval>([\s\S]*?)<\/eval>/g)].map((e) => e[1]);
+    const messages = [
+      ...[...body.matchAll(MESSAGE_RE)].map((m) => m[1]),
+      ...[...body.matchAll(/"(?:summary|detail)"\s*:\s*"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1])
+    ].map(text).filter(Boolean);
     return {
-      args, hasError: ERROR_RE.test(body), redirect: redirect ? redirect[1] : null, evals,
+      args, hasError: ERROR_RE.test(body), redirect: redirect ? redirect[1] : null, evals, messages,
+      updateIds: [...body.matchAll(/<update id="([^"]*)"/g)].map((m) => m[1]),
       showsConfirm: /dlgConfirmarAgendamento/.test(body)
     };
+  }
+
+  // A short, personal-data-free description of what the CRM answered, for the "last save" note.
+  function describe(summary) {
+    const mask = (v) => String(v ?? "").replace(/\d{6,}/g, "…");
+    const parts = [];
+    const messages = [...new Set(summary.messages || [])].slice(0, 2);
+    if (messages.length) parts.push(`mensagem: ${messages.map(mask).join(" / ")}`);
+    const evals = (summary.evals || []).map((e) => mask(text(e).replace(/<!\[CDATA\[|\]\]>/g, ""))).filter(Boolean).slice(0, 2);
+    if (evals.length) parts.push(`script: ${evals.join(" ; ")}`);
+    if (summary.args && Object.keys(summary.args).length) parts.push(`args: ${Object.keys(summary.args).slice(0, 6).join(",")}`);
+    if ((summary.updateIds || []).length) parts.push(`atualizou: ${summary.updateIds.slice(0, 4).map((id) => id.split(":").pop()).join(",")}`);
+    return parts.join(" | ").slice(0, 260);
   }
 
   // A saved attendance leaves the screen (the CRM redirects); anything else is not proof of a save.
@@ -62,12 +81,12 @@ const RetornosCapture = (() => {
     const mode = signature.mode === "radio" || signature.mode === "confirm" ? ctx.radioMode || null : signature.mode;
     const summary = summaryOf(signal);
     if (Number(signal.status) !== 200 || summary.args?.validationFailed === true || summary.hasError === true) {
-      return { outcome: "refused", mode, reason: "validacao" };
+      return { outcome: "refused", mode, reason: "validacao", detail: describe(summary) };
     }
     // Salvar can open "Confirmar Agendamento" (another chamado close to that time): nothing is saved yet.
     if (signature.mode !== "confirm" && asksConfirmation(summary)) return { outcome: "pending", mode };
-    if (!mode) return { outcome: "unknown", mode: null, reason: "sem-modo" };
-    if (!leaves(summary)) return { outcome: "unknown", mode, reason: "ficou-na-tela" };
+    if (!mode) return { outcome: "unknown", mode: null, reason: "sem-modo", detail: describe(summary) };
+    if (!leaves(summary)) return { outcome: "unknown", mode, reason: "ficou-na-tela", detail: describe(summary) };
     return { outcome: "ok", mode };
   }
 
@@ -200,14 +219,14 @@ const RetornosCapture = (() => {
       // "Confirmar Agendamento" dialog waits for Continuar (Cancelar drops it, a new Salvar replaces it).
       let snapshot = null, held = null;
 
-      const remember = (outcome, mode, reason, page) => store.setLastSave?.({ at: Date.now(), outcome, mode, reason: reason || "", protocolo: page?.protocolo || "" });
+      const remember = (outcome, mode, reason, page, detail) => store.setLastSave?.({ at: Date.now(), outcome, mode, reason: reason || "", detail: detail || "", protocolo: page?.protocolo || "" });
 
       const settle = async (verdict, taken) => {
         if (verdict.outcome === "ok") {
           const did = await applySave(verdict, taken.page, taken.remember);
           await remember(did || "ignorado", verdict.mode, "", taken.page);
         } else if (verdict.outcome === "refused") {
-          await remember("recusado", verdict.mode, verdict.reason, taken.page);
+          await remember("recusado", verdict.mode, verdict.reason, taken.page, verdict.detail);
         } else if (verdict.reason === "ficou-na-tela" && verdict.mode) {
           // No proof in the answer itself: a save makes the CRM leave this screen, so wait a moment for that.
           let done = false;
@@ -217,14 +236,14 @@ const RetornosCapture = (() => {
             win.removeEventListener?.("beforeunload", onLeave);
             win.removeEventListener?.("pagehide", onLeave);
             if (left) void applySave({ outcome: "ok", mode: verdict.mode }, taken.page, taken.remember).then((did) => remember(did || "ignorado", verdict.mode, "saiu-da-tela", taken.page));
-            else void remember("sem-confirmacao", verdict.mode, "ficou-na-tela", taken.page);
+            else void remember("sem-confirmacao", verdict.mode, "ficou-na-tela", taken.page, verdict.detail);
           };
           const onLeave = () => finish(true);
           win.addEventListener?.("beforeunload", onLeave);
           win.addEventListener?.("pagehide", onLeave);
-          setTimeout(() => finish(false), LEAVE_WAIT_MS);
+          setTimeout(() => finish(false), leaveWaitMs);
         } else {
-          await remember("sem-confirmacao", verdict.mode, verdict.reason, taken.page);
+          await remember("sem-confirmacao", verdict.mode, verdict.reason, taken.page, verdict.detail);
         }
       };
 
@@ -257,7 +276,7 @@ const RetornosCapture = (() => {
     get SAVE_SIGNATURES() { return signatures; },
     hasSignatures: () => signatures.length > 0,
     interpretSave, readPage, readMode, findDateInput, applySave, start, summarizeXml,
-    _test: { setSignatures(list) { signatures = list; } }
+    _test: { setSignatures(list) { signatures = list; }, setLeaveWait(ms) { leaveWaitMs = ms; } }
   };
 })();
 

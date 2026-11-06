@@ -71,7 +71,8 @@ const RetornosStrip = (() => {
       recusado: `${mode}: o CRM recusou (validação), não mudei nada`,
       "sem-confirmacao": `${mode}: não consegui confirmar que o CRM salvou, não mudei nada`
     }[info.outcome];
-    return label ? `Último salvamento que eu vi (${day} ${time}) — ${label}.` : "";
+    const answer = info.detail && /recusado|sem-confirmacao/.test(info.outcome) ? ` Resposta do CRM — ${info.detail}` : "";
+    return label ? `Último salvamento que eu vi (${day} ${time}) — ${label}.${answer}` : "";
   }
 
   async function paint(doc, strip, opts) {
