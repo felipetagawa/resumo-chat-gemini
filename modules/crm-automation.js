@@ -621,6 +621,17 @@ const CRMAutomationModule = (function () {
         };
     }
 
+    // The client name comes from SZ, where a webchat customer types it: always text, never markup.
+    function historyItemContent(doc, clientName, problemPreview) {
+        const name = doc.createElement("div");
+        name.style.cssText = "font-weight: 700; color: #1f2937; margin-bottom: 4px; font-size: 14px;";
+        name.textContent = clientName;
+        const problem = doc.createElement("div");
+        problem.style.cssText = "font-size: 12px; color: #6b7280; line-height: 1.4;";
+        problem.textContent = problemPreview || "Sem descrição do problema...";
+        return [name, problem];
+    }
+
     async function init() {
         console.log("CRM Automation: Iniciando...");
 
@@ -733,11 +744,7 @@ const CRMAutomationModule = (function () {
                     itemEl.onmouseover = () => itemEl.style.backgroundColor = '#f9fafb';
                     itemEl.onmouseout = () => itemEl.style.backgroundColor = 'white';
 
-                    // HTML Structure for the Item
-                    itemEl.innerHTML = `
-                         <div style="font-weight: 700; color: #1f2937; margin-bottom: 4px; font-size: 14px;">${clientName}</div>
-                         <div style="font-size: 12px; color: #6b7280; line-height: 1.4;">${problemPreview || "Sem descrição do problema..."}</div>
-                    `;
+                    historyItemContent(document, clientName, problemPreview).forEach((node) => itemEl.appendChild(node));
 
                     itemEl.onclick = () => {
                         if (item.text) {
@@ -791,7 +798,8 @@ const CRMAutomationModule = (function () {
     }
 
     return {
-        init
+        init,
+        historyItemContent
     };
 })();
 

@@ -16,8 +16,18 @@ const SummaryModule = (() => {
     }, true);
   }
 
+  // O resumo pode repetir mensagens do cliente: vira texto antes de ganhar negrito e quebras.
+  function escaparHtml(texto) {
+    return String(texto)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function formatarResumoComNegrito(texto) {
-    let html = texto
+    let html = escaparHtml(texto)
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/(\*\*[A-ZÁÉÍÓÚÃÕÇ\/\s]+\*\*)/g, '<br><br>$1<br>')
       .replace(/\n/g, '<br>')
