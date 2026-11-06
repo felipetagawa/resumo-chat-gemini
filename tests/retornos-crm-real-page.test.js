@@ -359,6 +359,16 @@ test('only a script that really shows "Confirmar Agendamento" makes Salvar wait 
   assert.equal((await R.list()).length, 1, 'Continuar finishes the save that was waiting');
 });
 
+test('args.agendaProxima makes Salvar wait for Continuar: the real button opens the dialog from its own oncomplete', async () => {
+  const { C, R } = load();
+  const asks = `<partial-response><changes>${formUpdate(salvarMarkup)}<extension ln="primefaces" type="args">{"agendaProxima":true}</extension></changes></partial-response>`;
+  const page = realPage();
+  await drive(page, C, [['send', SALVAR], ['complete', SALVAR, asks]]);
+  assert.equal((await R.list()).length, 0, 'the dialog is not a save');
+  await drive(page, C, [['send', CONTINUAR], ['complete', CONTINUAR, growlSaved]]);
+  assert.equal((await R.list()).length, 1, 'Continuar finishes the save that was waiting');
+});
+
 test('Finalizar removes the return even when its answer re-rendered the form without the Salvar button', async () => {
   const { C, R } = load();
   await R.upsertCrm({ protocolo: '1790172575959', atendimentoId: '1250257', cliente: 'X', dueAt: new Date(2026, 10, 12, 8, 0).getTime() }, 1);

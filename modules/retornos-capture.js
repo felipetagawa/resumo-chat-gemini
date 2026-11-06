@@ -20,8 +20,8 @@ const RetornosCapture = (() => {
   const MESSAGE_RE = /ui-(?:messages-(?:error|warn|info|fatal)-(?:summary|detail)|growl-title|growl-message)[^>]*>([^<]*)</g;
   const GROWL_PROBLEM_RE = /severity["']?\s*:\s*["'](?:warn|error|fatal)["']/;
   const ERROR_RE = /ui-messages-(?:error|fatal)|ui-message-(?:error|fatal)|ui-growl-(?:item[^"]*)?(?:error|fatal)|ui-state-error/;
-  // The dialog is opened by a script the CRM runs (<eval>), e.g. PF('dlgConfirmarAgendamento').show().
-  // The re-rendered form can name it too (the Salvar button's own ajax call), which shows nothing.
+  // The dialog is opened by a script the CRM runs (<eval>), e.g. PF('dlgConfirmarAgendamento').show(), or by the
+  // Salvar button's oncomplete when args.agendaProxima is true. The re-rendered form naming it shows nothing.
   const SHOWS_CONFIRM_RE = /dlgConfirmarAgendamento['"]?\s*\)?\s*\.show\s*\(/;
   const text = (v) => String(v ?? "").replace(/\s+/g, " ").trim();
   const norm = (v) => text(v).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -46,7 +46,8 @@ const RetornosCapture = (() => {
       args, hasError: ERROR_RE.test(body), growlProblems: GROWL_PROBLEM_RE.test(body),
       redirect: redirect ? redirect[1] : null, evals, messages,
       updateIds: [...body.matchAll(/<update id="([^"]*)"/g)].map((m) => m[1]),
-      showsConfirm: evals.some((e) => SHOWS_CONFIRM_RE.test(e))
+      // The real Salvar button also opens it from its own oncomplete: if(args.agendaProxima){PF('dlgConfirmarAgendamento').show();}
+      showsConfirm: evals.some((e) => SHOWS_CONFIRM_RE.test(e)) || args?.agendaProxima === true
     };
   }
 
