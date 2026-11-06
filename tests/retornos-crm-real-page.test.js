@@ -269,3 +269,24 @@ test('a warning toast does not block a save when the CRM then leaves the screen'
   await drive(page, C, [['send', SALVAR], ['complete', SALVAR, withWarnAndRedirect]]);
   assert.equal((await R.list()).length, 1);
 });
+
+// The real answer to an accepted Salvar (06/11/2026): no redirect, a success toast, the form refreshed.
+const growlSaved = '<?xml version=\'1.0\' encoding=\'UTF-8\'?><partial-response><changes>'
+  + '<update id="frmTop:growl"><![CDATA[<span id="frmTop:growl"></span><script id="frmTop:growl_s">PrimeFaces.cw("Growl","widget_frmTop_growl",{id:"frmTop:growl",sticky:false,life:7000,escape:true,keepAlive:false,msgs:[{summary:"Salvo",detail:"Atendimento salvo com sucesso!",severity:\'info\'}]})</script>]]></update>'
+  + '<update id="frmAtendimento"><![CDATA[x]]></update><update id="labelJS"><![CDATA[x]]></update><extension ln="primefaces" type="args"></extension></changes></partial-response>';
+
+test('the real success answer (toast "Atendimento salvo com sucesso!", no redirect) stores the return', async () => {
+  const { C, R } = load();
+  await drive(realPage(), C, [['send', SALVAR], ['complete', SALVAR, growlSaved]]);
+  const [item] = await R.list();
+  assert.equal(item.protocolo, '1790172575959');
+  assert.equal(item.dueAt, new Date(2026, 10, 9, 15, 15).getTime());
+  assert.equal((await R.getLastSave()).outcome, 'guardado');
+});
+
+test('the real success answer on Finalizar removes the return', async () => {
+  const { C, R } = load();
+  await R.upsertCrm({ protocolo: '1790172575959', atendimentoId: '1250257', cliente: 'X', dueAt: new Date(2026, 10, 12, 8, 0).getTime() }, 1);
+  await drive(realPage({ mode: 'finalizar' }), C, [['send', SALVAR], ['complete', SALVAR, growlSaved]]);
+  assert.equal((await R.list()).length, 0);
+});

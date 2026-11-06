@@ -60,7 +60,11 @@ const RetornosCapture = (() => {
     return parts.join(" | ").slice(0, 260);
   }
 
-  // A saved attendance leaves the screen (the CRM redirects); anything else is not proof of a save.
+  // Observed 06/11/2026: a real save does NOT leave the screen. It answers with a Growl toast
+  //   {summary:"Salvo",detail:"Atendimento salvo com sucesso!",severity:'info'}
+  // and refreshes the form. That message is the proof of a save.
+  const confirmedSaved = (summary) => (summary.messages || []).some((m) => /salvo com sucesso/i.test(m));
+  // Leaving the screen (the CRM redirects) is also proof; anything else is not.
   const leaves = (summary) => Boolean(summary.redirect) || (summary.evals || []).some((e) => /location|href|redirect/i.test(e));
   const asksConfirmation = (summary) => summary.showsConfirm === true || /dlgConfirmarAgendamento/.test(JSON.stringify(summary.evals || []));
 
@@ -92,11 +96,11 @@ const RetornosCapture = (() => {
     }
     // A warning/error toast with no sign of leaving the screen is the CRM refusing (e.g. "O problema
     // deve ter ao menos 10 caracteres!"). If the screen is left anyway, the save went through.
-    if (summary.growlProblems === true && !leaves(summary)) return { outcome: "refused", mode, reason: "validacao", detail: describe(summary) };
+    if (summary.growlProblems === true && !leaves(summary) && !confirmedSaved(summary)) return { outcome: "refused", mode, reason: "validacao", detail: describe(summary) };
     // Salvar can open "Confirmar Agendamento" (another chamado close to that time): nothing is saved yet.
     if (signature.mode !== "confirm" && asksConfirmation(summary)) return { outcome: "pending", mode };
     if (!mode) return { outcome: "unknown", mode: null, reason: "sem-modo", detail: describe(summary) };
-    if (!leaves(summary)) return { outcome: "unknown", mode, reason: "ficou-na-tela", detail: describe(summary) };
+    if (!confirmedSaved(summary) && !leaves(summary)) return { outcome: "unknown", mode, reason: "ficou-na-tela", detail: describe(summary) };
     return { outcome: "ok", mode };
   }
 
