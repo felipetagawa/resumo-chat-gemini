@@ -330,3 +330,31 @@ test('Salvar sent after a re-render, before the line is back, still honours the 
   await drive(page, C, [['send', SALVAR], ['complete', SALVAR, growlSaved]]);
   assert.equal((await R.list()).length, 0, 'nor after the line is back');
 });
+
+// The real success answer also re-renders the whole form (`x` in growlSaved). Realistic markup for it:
+// the Salvar button's ajax call mentions the confirmation dialog, and a field keeps an error style.
+const salvarMarkup = '<button id="frmAtendimento:tbvAtendimento:j_idt92" name="frmAtendimento:tbvAtendimento:j_idt92" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only botaoPrimario" onclick="PrimeFaces.ab({s:&quot;frmAtendimento:tbvAtendimento:j_idt92&quot;,f:&quot;frmAtendimento&quot;,u:&quot;frmAtendimento frmTop:growl&quot;,onco:function(xhr,status,args,data){if(args.agendaProxima){PF(\'dlgConfirmarAgendamento\').show();}}});return false;" type="submit"><span class="ui-button-text ui-c">Salvar</span></button>';
+const errorField = '<input id="frmAtendimento:tbvAtendimento:problema" name="frmAtendimento:tbvAtendimento:problema" type="text" value="NFS-e rejeitada" class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all ui-state-error" aria-invalid="true" />';
+const formUpdate = (markup) => `<update id="frmAtendimento"><![CDATA[<form id="frmAtendimento" name="frmAtendimento" method="post" action="/crm-atendimento/1250257">${markup}</form>]]></update>`;
+
+test('the success toast wins over the re-rendered form, even when its markup mentions the dialog and has an error-styled field', async () => {
+  const { C, R } = load();
+  const xml = growlSaved.replace('<update id="frmAtendimento"><![CDATA[x]]></update>', formUpdate(errorField + salvarMarkup));
+  assert.notEqual(xml, growlSaved);
+  await drive(realPage(), C, [['send', SALVAR], ['complete', SALVAR, xml]]);
+  assert.equal((await R.list()).length, 1);
+  assert.equal((await R.getLastSave()).outcome, 'guardado');
+});
+
+test('only a script that really shows "Confirmar Agendamento" makes Salvar wait for Continuar, not the form markup', async () => {
+  const { C, R } = load();
+  const markupOnly = `<partial-response><changes>${formUpdate(salvarMarkup)}</changes></partial-response>`;
+  const verdict = C.interpretSave({ phase: 'complete', status: 200, source: SALVAR, responseText: markupOnly }, { doc: realPage().doc, radioMode: 'agendar' });
+  assert.notEqual(verdict.outcome, 'pending', 'the dialog named in the re-rendered form is not the dialog being shown');
+  const shows = `<partial-response><changes>${formUpdate(errorField + salvarMarkup)}<eval><![CDATA[PF('block').hide();PF('dlgConfirmarAgendamento').show();]]></eval></changes></partial-response>`;
+  const page = realPage();
+  await drive(page, C, [['send', SALVAR], ['complete', SALVAR, shows]]);
+  assert.equal((await R.list()).length, 0, 'the dialog is not a save');
+  await drive(page, C, [['send', CONTINUAR], ['complete', CONTINUAR, growlSaved]]);
+  assert.equal((await R.list()).length, 1, 'Continuar finishes the save that was waiting');
+});

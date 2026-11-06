@@ -20,6 +20,9 @@ const RetornosCapture = (() => {
   const MESSAGE_RE = /ui-(?:messages-(?:error|warn|info|fatal)-(?:summary|detail)|growl-title|growl-message)[^>]*>([^<]*)</g;
   const GROWL_PROBLEM_RE = /severity["']?\s*:\s*["'](?:warn|error|fatal)["']/;
   const ERROR_RE = /ui-messages-(?:error|fatal)|ui-message-(?:error|fatal)|ui-growl-(?:item[^"]*)?(?:error|fatal)|ui-state-error/;
+  // The dialog is opened by a script the CRM runs (<eval>), e.g. PF('dlgConfirmarAgendamento').show().
+  // The re-rendered form can name it too (the Salvar button's own ajax call), which shows nothing.
+  const SHOWS_CONFIRM_RE = /dlgConfirmarAgendamento['"]?\s*\)?\s*\.show\s*\(/;
   const text = (v) => String(v ?? "").replace(/\s+/g, " ").trim();
   const norm = (v) => text(v).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -43,7 +46,7 @@ const RetornosCapture = (() => {
       args, hasError: ERROR_RE.test(body), growlProblems: GROWL_PROBLEM_RE.test(body),
       redirect: redirect ? redirect[1] : null, evals, messages,
       updateIds: [...body.matchAll(/<update id="([^"]*)"/g)].map((m) => m[1]),
-      showsConfirm: /dlgConfirmarAgendamento/.test(body)
+      showsConfirm: evals.some((e) => SHOWS_CONFIRM_RE.test(e))
     };
   }
 
@@ -66,7 +69,7 @@ const RetornosCapture = (() => {
   const confirmedSaved = (summary) => (summary.messages || []).some((m) => /salvo com sucesso/i.test(m));
   // Leaving the screen (the CRM redirects) is also proof; anything else is not.
   const leaves = (summary) => Boolean(summary.redirect) || (summary.evals || []).some((e) => /location|href|redirect/i.test(e));
-  const asksConfirmation = (summary) => summary.showsConfirm === true || /dlgConfirmarAgendamento/.test(JSON.stringify(summary.evals || []));
+  const asksConfirmation = (summary) => summary.showsConfirm === true || (summary.evals || []).some((e) => SHOWS_CONFIRM_RE.test(e));
 
   const summaryOf = (signal) => {
     const summary = signal.response && typeof signal.response === "object" ? signal.response : summarizeXml(signal.responseText);
@@ -91,16 +94,20 @@ const RetornosCapture = (() => {
     if (!signature) return null;
     const mode = signature.mode === "radio" || signature.mode === "confirm" ? ctx.radioMode || null : signature.mode;
     const summary = summaryOf(signal);
-    if (Number(signal.status) !== 200 || summary.args?.validationFailed === true || summary.hasError === true) {
+    if (Number(signal.status) !== 200 || summary.args?.validationFailed === true) {
       return { outcome: "refused", mode, reason: "validacao", detail: describe(summary) };
     }
+    // The success toast wins: the form the CRM re-renders along with it can hold error-styled fields
+    // or name the confirmation dialog, and neither undoes the save the toast confirms.
+    const saved = confirmedSaved(summary);
+    // Salvar can open "Confirmar Agendamento" (another chamado close to that time): nothing is saved yet.
+    if (!saved && signature.mode !== "confirm" && asksConfirmation(summary)) return { outcome: "pending", mode };
+    if (!saved && summary.hasError === true) return { outcome: "refused", mode, reason: "validacao", detail: describe(summary) };
     // A warning/error toast with no sign of leaving the screen is the CRM refusing (e.g. "O problema
     // deve ter ao menos 10 caracteres!"). If the screen is left anyway, the save went through.
-    if (summary.growlProblems === true && !leaves(summary) && !confirmedSaved(summary)) return { outcome: "refused", mode, reason: "validacao", detail: describe(summary) };
-    // Salvar can open "Confirmar Agendamento" (another chamado close to that time): nothing is saved yet.
-    if (signature.mode !== "confirm" && asksConfirmation(summary)) return { outcome: "pending", mode };
+    if (!saved && summary.growlProblems === true && !leaves(summary)) return { outcome: "refused", mode, reason: "validacao", detail: describe(summary) };
     if (!mode) return { outcome: "unknown", mode: null, reason: "sem-modo", detail: describe(summary) };
-    if (!confirmedSaved(summary) && !leaves(summary)) return { outcome: "unknown", mode, reason: "ficou-na-tela", detail: describe(summary) };
+    if (!saved && !leaves(summary)) return { outcome: "unknown", mode, reason: "ficou-na-tela", detail: describe(summary) };
     return { outcome: "ok", mode };
   }
 
