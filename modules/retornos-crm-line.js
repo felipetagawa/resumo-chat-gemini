@@ -96,7 +96,12 @@ const RetornosCrmLine = (() => {
     return line;
   }
 
+  // Observed: the date lives in a 25%-wide floating-label span inside a `.linha` row together with the
+  // Agendar/Finalizar radios. The line goes right after that row (full width), never inside the span.
   function anchorOf(input) {
+    for (let node = input.parentElement; node; node = node.parentElement) {
+      if (/\blinha\b/.test(node.className || "")) return node;
+    }
     const wrapper = input.parentElement;
     return wrapper && /\bui-calendar\b/.test(wrapper.className || "") ? wrapper : input;
   }

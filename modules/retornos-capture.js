@@ -2,11 +2,18 @@
 // accepted and whether it was an Agendar or a Finalizar. Anything uncertain returns null/"unknown"
 // and changes nothing: a return is only created, moved or removed on a clear, accepted save.
 const RetornosCapture = (() => {
-  // Filled from the real recordings (plan Task 1, step 8): one entry per CRM save request.
-  //   { mode: "agendar" | "finalizar" | "radio", source: RegExp }
-  // "radio" means the same button saves both and the Agendar/Finalizar radio decides.
-  // Empty until recorded: with no signature nothing is ever created or removed (fails closed).
-  const RECORDED_SIGNATURES = [];
+  // One entry per CRM request that saves an attendance. A request is matched by its
+  // javax.faces.source, either by regex (`source`) or, since the CRM's ids are auto-generated
+  // (j_idt92), by the button it came from (`form` + `button` text, read from the page).
+  //   mode: "agendar" | "finalizar" | "radio" (the Agendar/Finalizar radio decides) | "confirm"
+  //   ("Continuar" in the "Confirmar Agendamento" dialog: it finishes the save started by Salvar), "cancel" ("Cancelar" there: drops it).
+  // Read from the live page (crm-atendimento, 06/11/2026), NOT yet from a recorded save. The response
+  // rules in interpretSave fail closed: anything not clearly accepted changes nothing.
+  const RECORDED_SIGNATURES = [
+    { mode: "radio", form: "frmAtendimento", button: /^salvar$/i },
+    { mode: "confirm", form: "frmConfirmarAgendamento", button: /^continuar$/i },
+    { mode: "cancel", form: "frmConfirmarAgendamento", button: /^cancelar$/i }
+  ];
   let signatures = RECORDED_SIGNATURES;
 
   const ERROR_RE = /ui-messages-(?:error|fatal)|ui-message-(?:error|fatal)|ui-growl-(?:item[^"]*)?(?:error|fatal)|ui-state-error/;
@@ -19,26 +26,43 @@ const RetornosCapture = (() => {
     const m = body.match(/<extension[^>]*type="args"[^>]*>([\s\S]*?)<\/extension>/);
     if (m) { try { args = JSON.parse(m[1]); } catch { args = null; } }
     const redirect = body.match(/<redirect url="([^"]*)"/);
-    return { args, hasError: ERROR_RE.test(body), redirect: redirect ? redirect[1] : null };
+    const evals = [...body.matchAll(/<eval>([\s\S]*?)<\/eval>/g)].map((e) => e[1]);
+    return {
+      args, hasError: ERROR_RE.test(body), redirect: redirect ? redirect[1] : null, evals,
+      showsConfirm: /dlgConfirmarAgendamento/.test(body)
+    };
   }
+
+  // A saved attendance leaves the screen (the CRM redirects); anything else is not proof of a save.
+  const leaves = (summary) => Boolean(summary.redirect) || (summary.evals || []).some((e) => /location|href|redirect/i.test(e));
+  const asksConfirmation = (summary) => summary.showsConfirm === true || /dlgConfirmarAgendamento/.test(JSON.stringify(summary.evals || []));
 
   const summaryOf = (signal) => (signal.response && typeof signal.response === "object"
     ? signal.response : summarizeXml(signal.responseText));
 
-  function signatureFor(source) {
-    return signatures.find((s) => s.source.test(String(source || ""))) || null;
+  function signatureFor(source, doc) {
+    const id = String(source || "");
+    if (!id) return null;
+    return signatures.find((s) => {
+      if (s.source) return s.source.test(id);
+      if (!s.button || !doc || !id.startsWith(`${s.form}:`)) return false;
+      const node = doc.getElementById(id);
+      return Boolean(node) && s.button.test(text(node.textContent));
+    }) || null;
   }
 
   function interpretSave(signal, ctx = {}) {
     if (!signal || signal.phase !== "complete") return null;
-    const signature = signatureFor(signal.source);
+    const signature = ctx.signature || signatureFor(signal.source, ctx.doc);
     if (!signature) return null;
-    const mode = signature.mode === "radio" ? ctx.radioMode || null : signature.mode;
+    const mode = signature.mode === "radio" || signature.mode === "confirm" ? ctx.radioMode || null : signature.mode;
     const summary = summaryOf(signal);
     if (Number(signal.status) !== 200 || summary.args?.validationFailed === true || summary.hasError === true) {
       return { outcome: "refused", mode };
     }
-    if (!mode) return { outcome: "unknown", mode: null };
+    // Salvar can open "Confirmar Agendamento" (another chamado close to that time): nothing is saved yet.
+    if (signature.mode !== "confirm" && asksConfirmation(summary)) return { outcome: "pending", mode };
+    if (!mode || !leaves(summary)) return { outcome: "unknown", mode };
     return { outcome: "ok", mode };
   }
 
@@ -54,9 +78,15 @@ const RetornosCapture = (() => {
     return [...doc.querySelectorAll("label")];
   }
 
+  // PrimeFaces labels point at the component wrapper (a span) as often as at the input itself.
+  const inputIn = (node) => (!node ? null : isField(node) ? node : node.querySelector?.("input") || null);
+
   function valueNear(doc, label) {
     const target = label.getAttribute("for");
-    if (target) return valueOf(doc.getElementById(target));
+    if (target) {
+      const node = doc.getElementById(target);
+      return valueOf(inputIn(node) || node);
+    }
     return valueOf(label.nextElementSibling);
   }
 
@@ -83,12 +113,13 @@ const RetornosCapture = (() => {
   }
 
   function findDateInput(doc) {
-    const byId = [...doc.querySelectorAll("input")].find((n) => /agendamento/i.test(n.id || "") && /_input$/.test(n.id || ""));
-    if (byId) return byId;
     const label = labels(doc).find((l) => norm(l.textContent).includes("data do agendamento"));
-    if (!label) return null;
-    const target = label.getAttribute("for");
-    return target ? doc.getElementById(target) : label.nextElementSibling;
+    const target = label?.getAttribute("for");
+    const wrapper = target ? doc.getElementById(target) : label?.nextElementSibling;
+    // Observed: label[for] = the calendar's span ("...:dataA"), the real input is "...:dataA_input".
+    const found = inputIn(wrapper) || (target ? doc.getElementById(`${target}_input`) : null);
+    if (found) return found;
+    return [...doc.querySelectorAll("input")].find((n) => /(?:agendamento|dataA)_input$/i.test(n.id || "")) || null;
   }
 
   function problemFromResolution(doc) {
@@ -145,18 +176,28 @@ const RetornosCapture = (() => {
       };
       [0, 1500, 4000].forEach((ms) => setTimeout(() => { void refresh(); }, ms));
 
-      let snapshot = null;
+      // `snapshot`: the page as it was when Salvar was sent. `held`: the same snapshot kept while the
+      // "Confirmar Agendamento" dialog waits for Continuar (Cancelar sends nothing we track, and a new
+      // Salvar replaces it).
+      let snapshot = null, held = null;
       doc.addEventListener("atendeai:crm-ajax", (event) => {
         let signal = null;
         try { signal = JSON.parse(event.detail); } catch { return; }
-        if (!signatureFor(signal?.source)) return;
+        const signature = signatureFor(signal?.source, doc);
+        if (!signature) return;
+        if (signature.mode === "cancel") { held = null; snapshot = null; return; }
         if (signal.phase === "send") {
-          snapshot = { page: readPage(doc, href()), remember: readRemember(doc), radioMode: readMode(doc) };
-        } else if (signal.phase === "complete" && snapshot) {
+          if (signature.mode === "confirm") snapshot = held ? { ...held, signature, source: signal.source } : null;
+          else { held = null; snapshot = { page: readPage(doc, href()), remember: readRemember(doc), radioMode: readMode(doc), signature, source: signal.source }; }
+        } else if (signal.phase === "complete" && snapshot && snapshot.source === signal.source) {
           const taken = snapshot;
           snapshot = null;
-          const verdict = interpretSave(signal, { radioMode: taken.radioMode });
-          if (verdict) void applySave(verdict, taken.page, taken.remember);
+          const verdict = interpretSave(signal, { radioMode: taken.radioMode, signature: taken.signature });
+          if (verdict?.outcome === "pending") held = taken;
+          else {
+            held = null;
+            if (verdict) void applySave(verdict, taken.page, taken.remember);
+          }
         }
       });
     } catch (error) {

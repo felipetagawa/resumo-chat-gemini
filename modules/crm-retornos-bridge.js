@@ -11,7 +11,7 @@
   const SET_DATE_EVENT = "atendeai:crm-set-date";
   const SET_DATE_ATTR = "data-atendeai-crm-set-date";
   const SET_DATE_RESULT_ATTR = "data-atendeai-crm-set-date-result";
-  const DATE_INPUT_ID = "frmAtendimento:tbvAtendimento:agendamento_input";
+  const DATE_INPUT_ID = "frmAtendimento:tbvAtendimento:dataA_input"; // observed on crm-atendimento, 06/11/2026
 
   function emit(name, payload) {
     const json = JSON.stringify(payload);
@@ -52,9 +52,9 @@
   function calendarWidgets() {
     const widgets = Object.entries(window.PrimeFaces?.widgets || {});
     return widgets
-      .filter(([, widget]) => widget?.cfg && ("pattern" in widget.cfg || "showTime" in widget.cfg || "timeOnly" in widget.cfg))
+      .filter(([, widget]) => widget?.cfg && ("pattern" in widget.cfg || "showTime" in widget.cfg || "timeOnly" in widget.cfg || "dateFormat" in widget.cfg))
       .map(([key, widget]) => ({
-        key, id: String(widget.id || widget.cfg.id || ""), pattern: widget.cfg.pattern || "",
+        key, id: String(widget.id || widget.cfg.id || ""), pattern: widget.cfg.pattern || widget.cfg.dateFormat || "",
         showTime: !!widget.cfg.showTime, timeOnly: !!widget.cfg.timeOnly, hourFormat: widget.cfg.hourFormat || "",
         minDate: widget.cfg.minDate ? String(widget.cfg.minDate) : ""
       }));
@@ -66,7 +66,7 @@
     const byId = id && document.getElementById(id);
     if (byId) return byId;
     return document.getElementById(DATE_INPUT_ID)
-      || [...document.querySelectorAll("input")].find((n) => /agendamento/i.test(n.id || "") && /_input$/.test(n.id || ""))
+      || [...document.querySelectorAll("input")].find((n) => /(?:agendamento|dataA)_input$/i.test(n.id || ""))
       || null;
   }
 
@@ -75,7 +75,7 @@
     if (!input) return "input-not-found";
     const baseId = input.id.replace(/_input$/, "");
     const widget = Object.values(window.PrimeFaces?.widgets || {})
-      .find((w) => w?.cfg && "pattern" in w.cfg && String(w.id || w.cfg.id || "") === baseId);
+      .find((w) => w?.cfg && ("showTime" in w.cfg || "dateFormat" in w.cfg || "pattern" in w.cfg) && String(w.id || w.cfg.id || "") === baseId);
     try {
       const parts = String(text).match(/^(\d{2})\/(\d{2})\/(\d{4})(?: (\d{2}):(\d{2}))?$/);
       if (widget && typeof widget.setDate === "function" && parts) {
