@@ -26,6 +26,15 @@ const RetornosCrmLine = (() => {
     return node;
   }
 
+  // The CRM only accepts an appointment inside business hours (08:00–17:00, told by the technician).
+  const HOURS_WARNING = "Atenção: o CRM só aceita agendar das 8h às 17h.";
+  function outsideHours(text) {
+    const m = String(text).match(/ (\d{2}):(\d{2})$/);
+    if (!m) return false;
+    const minutes = Number(m[1]) * 60 + Number(m[2]);
+    return minutes < 8 * 60 || minutes > 17 * 60;
+  }
+
   const calibrated = () => globalThis.RetornosCapture?.hasSignatures?.() === true;
   const hintFor = (checked) => (!calibrated() ? HINT_CALIBRATING : checked ? HINT_ON : HINT_OFF);
 
@@ -40,7 +49,7 @@ const RetornosCrmLine = (() => {
     doc.dispatchEvent(new CustomEvent(SET_DATE_EVENT, { detail: payload }));
     setTimeout(() => {
       const result = doc.documentElement?.getAttribute?.(RESULT_ATTR);
-      if (picked) picked.textContent = !result || result === "ok" ? `Preenchi o campo do CRM: ${text}` : HINT_FAIL;
+      if (picked) picked.textContent = !result || result === "ok" ? `Preenchi o campo do CRM: ${text}${outsideHours(text) ? ` ${HOURS_WARNING}` : ""}` : HINT_FAIL;
       if (result && result !== "ok" && hint) hint.textContent = HINT_FAIL;
     }, 300);
   }

@@ -162,3 +162,20 @@ test('after a shortcut the line shows the value it asked the CRM field to take',
   await new Promise((r) => setTimeout(r, 350));
   assert.match(byId(doc, 'atendeai-retornos-picked').textContent, /^Preenchi o campo do CRM: \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/);
 });
+
+test('a time outside 08:00–17:00 is flagged, because the CRM refuses to schedule outside business hours', async () => {
+  const { L } = load();
+  const { doc } = pageDoc();
+  await L.mount(doc);
+  const date = byId(doc, 'atendeai-retornos-date'), time = byId(doc, 'atendeai-retornos-time');
+  const picked = byId(doc, 'atendeai-retornos-picked');
+  date.value = '2026-11-09'; time.value = '04:07'; date.fire('change'); time.fire('change');
+  await new Promise((r) => setTimeout(r, 350));
+  assert.match(picked.textContent, /Preenchi o campo do CRM: 09\/11\/2026 04:07 Atenção: o CRM só aceita agendar das 8h às 17h\./);
+  time.value = '08:00'; time.fire('change');
+  await new Promise((r) => setTimeout(r, 350));
+  assert.doesNotMatch(picked.textContent, /Atenção/);
+  time.value = '17:00'; time.fire('change');
+  await new Promise((r) => setTimeout(r, 350));
+  assert.doesNotMatch(picked.textContent, /Atenção/, '17:00 itself is inside');
+});
