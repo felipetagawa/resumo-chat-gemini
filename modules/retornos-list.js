@@ -43,7 +43,7 @@ const RetornosList = (() => {
       actions.appendChild(remove);
     }
     const when = make(doc, "div", { class: "atendeai-retornos-when", text: S.whenLabel(item.dueAt, now) });
-    if (isManual) who.firstChild?.appendChild?.(make(doc, "span", { class: "atendeai-retornos-tag", text: "anotado à mão" }));
+    if (isManual) who.children[0]?.appendChild(make(doc, "span", { class: "atendeai-retornos-tag", text: "anotado à mão" }));
     return make(doc, "div", { class: "atendeai-retornos-row", "data-tone": tone }, [when, who, actions]);
   }
 

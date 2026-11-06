@@ -124,3 +124,9 @@
 #atendeai-retornos-news .atendeai-retornos-news-title { margin: 8px 0; font-size: var(--ai-font-size-lg); font-weight: var(--ai-weight-bold); }
 #atendeai-retornos-news ol { margin: 0 0 12px; padding-left: 20px; color: var(--ai-text-secondary); }
 #atendeai-retornos-news .atendeai-retornos-actions { justify-content: flex-end; }
+
+/* Agenda & Gestão › Retornos tab. */
+.atendeai-retornos-tab-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.atendeai-retornos-tab-head .atendeai-retornos-btn { margin-left: auto; }
+.atendeai-retornos-add[hidden] { display: none !important; }
+.atendeai-retornos-add { margin-bottom: 10px; }
