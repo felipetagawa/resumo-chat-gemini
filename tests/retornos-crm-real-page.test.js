@@ -228,7 +228,7 @@ test('every save the browser sees leaves a plain-language last-save note, with n
   assert.equal((await R.getLastSave()).outcome, 'removido');
 });
 
-test('when a save is not confirmed, the last-save note carries what the CRM answered (messages, scripts), without long numbers', async () => {
+test('the last-save note carries what the CRM answered (messages, scripts), without long numbers', async () => {
   const { C, R } = load();
   C._test.setLeaveWait(10);
   const xml = '<partial-response><changes><update id="frmAtendimento:growl"><![CDATA[x]]></update>'
@@ -236,9 +236,36 @@ test('when a save is not confirmed, the last-save note carries what the CRM answ
   await drive(realPage(), C, [['send', SALVAR], ['complete', SALVAR, xml]]);
   await new Promise((r) => setTimeout(r, 60));
   const last = await R.getLastSave();
-  assert.equal(last.outcome, 'sem-confirmacao');
-  assert.match(last.detail, /mensagem: Fora do expediente \/ Agende entre 8h e 17h, protocolo …/);
+  assert.equal(last.outcome, 'recusado', 'an error toast without leaving the screen is a refusal');
+  assert.match(last.detail, /mensagem: Agende entre 8h e 17h, protocolo …/);
   assert.match(last.detail, /script: PF\('growl'\)\.renderMessage/);
   assert.match(last.detail, /atualizou: growl/);
   assert.ok(!last.detail.includes('1790172575959'));
+});
+
+// The real answer to a refused Salvar (06/11/2026): validation messages arrive as a Growl script.
+const growlRefusal = '<?xml version=\'1.0\' encoding=\'UTF-8\'?><partial-response><changes>'
+  + '<update id="frmTop:growl"><![CDATA[<span id="frmTop:growl"></span><script id="frmTop:growl_s">PrimeFaces.cw("Growl","widget_frmTop_growl",{id:"frmTop:growl",sticky:false,life:7000,escape:true,keepAlive:false,msgs:[{summary:"Atenção",detail:"O problema deve ter ao menos 10 caracteres!",severity:\'warn\'},{summary:"Atenção",detail:"A resolução deve ter ao menos 30 caracteres!",severity:\'warn\'},{summary:"Atenção",detail:"O formulário possui campos não preenchidos ou inválidos",severity:\'warn\'}]})</script>]]></update>'
+  + '<update id="frmAtendimento:tbvAtendimento:0"><![CDATA[x]]></update><extension ln="primefaces" type="args"></extension></changes></partial-response>';
+
+test('the real refusal (validation toasts, empty args, no redirect) is recognized as a refusal and its messages are shown', async () => {
+  const { C, R } = load();
+  const page = realPage();
+  await C.start(page.doc, { location: { href: 'https://www.sistemaempresarialweb.com.br/crm-atendimento/1250257' } });
+  const fire = (signal) => page.doc.listeners.filter((l) => l.type === 'atendeai:crm-ajax').forEach((l) => l.fn({ detail: JSON.stringify(signal) }));
+  fire({ phase: 'send', source: SALVAR, status: 0 });
+  fire({ phase: 'complete', source: SALVAR, status: 200, args: {}, responseText: growlRefusal });
+  await wait();
+  assert.equal((await R.list()).length, 0);
+  const last = await R.getLastSave();
+  assert.equal(last.outcome, 'recusado');
+  assert.match(last.detail, /mensagem: O problema deve ter ao menos 10 caracteres! \/ A resolução deve ter ao menos 30 caracteres!/);
+});
+
+test('a warning toast does not block a save when the CRM then leaves the screen', async () => {
+  const { C, R } = load();
+  const page = realPage();
+  const withWarnAndRedirect = growlRefusal.replace('</changes>', '<redirect url="/crm-chamado-por-tecnico"/></changes>');
+  await drive(page, C, [['send', SALVAR], ['complete', SALVAR, withWarnAndRedirect]]);
+  assert.equal((await R.list()).length, 1);
 });

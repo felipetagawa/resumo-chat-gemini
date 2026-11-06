@@ -18,6 +18,7 @@ const RetornosCapture = (() => {
 
   let leaveWaitMs = 4000;
   const MESSAGE_RE = /ui-(?:messages-(?:error|warn|info|fatal)-(?:summary|detail)|growl-title|growl-message)[^>]*>([^<]*)</g;
+  const GROWL_PROBLEM_RE = /severity["']?\s*:\s*["'](?:warn|error|fatal)["']/;
   const ERROR_RE = /ui-messages-(?:error|fatal)|ui-message-(?:error|fatal)|ui-growl-(?:item[^"]*)?(?:error|fatal)|ui-state-error/;
   const text = (v) => String(v ?? "").replace(/\s+/g, " ").trim();
   const norm = (v) => text(v).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -29,12 +30,18 @@ const RetornosCapture = (() => {
     if (m) { try { args = JSON.parse(m[1]); } catch { args = null; } }
     const redirect = body.match(/<redirect url="([^"]*)"/);
     const evals = [...body.matchAll(/<eval>([\s\S]*?)<\/eval>/g)].map((e) => e[1]);
+    // Observed 06/11/2026: validation answers update "frmTop:growl" with a script
+    //   PrimeFaces.cw("Growl", ..., {msgs:[{summary:"Atenção",detail:"O problema deve ter ...",severity:'warn'}]})
+    // (unquoted keys). Prefer each message's detail over its generic summary.
+    const growl = (key) => [...body.matchAll(new RegExp(`["']?${key}["']?\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, "g"))].map((m) => m[1]);
+    const details = growl("detail").map(text).filter(Boolean);
     const messages = [
-      ...[...body.matchAll(MESSAGE_RE)].map((m) => m[1]),
-      ...[...body.matchAll(/"(?:summary|detail)"\s*:\s*"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1])
-    ].map(text).filter(Boolean);
+      ...[...body.matchAll(MESSAGE_RE)].map((m) => text(m[1])).filter(Boolean),
+      ...(details.length ? details : growl("summary").map(text).filter(Boolean))
+    ];
     return {
-      args, hasError: ERROR_RE.test(body), redirect: redirect ? redirect[1] : null, evals, messages,
+      args, hasError: ERROR_RE.test(body), growlProblems: GROWL_PROBLEM_RE.test(body),
+      redirect: redirect ? redirect[1] : null, evals, messages,
       updateIds: [...body.matchAll(/<update id="([^"]*)"/g)].map((m) => m[1]),
       showsConfirm: /dlgConfirmarAgendamento/.test(body)
     };
@@ -83,6 +90,9 @@ const RetornosCapture = (() => {
     if (Number(signal.status) !== 200 || summary.args?.validationFailed === true || summary.hasError === true) {
       return { outcome: "refused", mode, reason: "validacao", detail: describe(summary) };
     }
+    // A warning/error toast with no sign of leaving the screen is the CRM refusing (e.g. "O problema
+    // deve ter ao menos 10 caracteres!"). If the screen is left anyway, the save went through.
+    if (summary.growlProblems === true && !leaves(summary)) return { outcome: "refused", mode, reason: "validacao", detail: describe(summary) };
     // Salvar can open "Confirmar Agendamento" (another chamado close to that time): nothing is saved yet.
     if (signature.mode !== "confirm" && asksConfirmation(summary)) return { outcome: "pending", mode };
     if (!mode) return { outcome: "unknown", mode: null, reason: "sem-modo", detail: describe(summary) };

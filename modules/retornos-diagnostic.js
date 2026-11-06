@@ -50,10 +50,11 @@ const RetornosDiagnostic = (() => {
 
   function redactResponse(xml) {
     const text = String(xml ?? "");
-    const out = { updates: [], messages: [], redirect: null, args: null, evals: [], hasError: ERROR_RE.test(text) };
+    const out = { updates: [], messages: [], redirect: null, args: null, evals: [], hasError: ERROR_RE.test(text), growlProblems: /severity["']?\s*:\s*["'](?:warn|error|fatal)["']/.test(text) };
     for (const m of text.matchAll(/<update id="([^"]*)">([\s\S]*?)<\/update>/g)) {
       const body = m[2].replace(/^<!\[CDATA\[/, "").replace(/\]\]>$/, "");
       for (const msg of body.matchAll(MESSAGE_TEXT)) if (msg[1].trim()) out.messages.push(msg[1].trim());
+      for (const msg of body.matchAll(/["']?detail["']?\s*:\s*"((?:[^"\\]|\\.)*)"/g)) if (msg[1].trim()) out.messages.push(msg[1].trim());
       const flat = plain(body).slice(0, 300);
       out.updates.push({ id: m[1].replace(/\d{4,}/g, (d) => mask(d)), text: KEEP_TEXT_ID.test(m[1]) ? flat : mask(flat) });
     }
