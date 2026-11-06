@@ -84,9 +84,15 @@
 #atendeai-retornos-strip .atendeai-retornos-counts { display: inline-flex; gap: 8px; margin-left: auto; font-size: var(--ai-font-size-sm); color: var(--ai-text-secondary); }
 #atendeai-retornos-strip .atendeai-retornos-count[data-tone="late"] { color: var(--ai-danger); font-weight: var(--ai-weight-medium); }
 
-/* Alert at the due time: fixed in a free corner, stays until closed or snoozed. */
+/* One fixed stack in a free corner (top right in SZ.chat like the other toasts, bottom right in the CRM so the table's Ação column stays clear). */
+#atendeai-retornos-stack {
+  position: fixed; right: 20px; top: 90px; z-index: 1000000; display: flex; flex-direction: column; gap: 10px;
+  width: min(380px, calc(100vw - 40px)); pointer-events: none;
+}
+#atendeai-retornos-stack[data-placement="crm"] { top: auto; bottom: 20px; flex-direction: column-reverse; }
+#atendeai-retornos-stack > * { pointer-events: auto; }
 #atendeai-retornos-alert {
-  position: fixed; left: 20px; bottom: 20px; z-index: 1000000; box-sizing: border-box; width: min(380px, calc(100vw - 40px));
+  box-sizing: border-box; width: 100%;
   padding: 14px 16px; background: var(--ai-surface); border: 1px solid var(--ai-primary-border); border-left: 6px solid var(--ai-primary);
   border-radius: var(--ai-radius-md); box-shadow: var(--ai-shadow-md);
   font: var(--ai-font-size)/var(--ai-line) var(--ai-font); color: var(--ai-text);
@@ -99,9 +105,9 @@
 #atendeai-retornos-alert .atendeai-retornos-snooze { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
 #atendeai-retornos-alert .atendeai-retornos-snooze-label { color: var(--ai-text-muted); font-size: var(--ai-font-size-sm); }
 
-/* Chat notice in SZ.chat: below the dock corner, never over the chat list. */
+/* Chat notice in SZ.chat: inside the same stack, never over the chat list. */
 #atendeai-retornos-chat-notice {
-  position: fixed; right: 20px; top: 90px; z-index: 1000000; box-sizing: border-box; width: min(340px, calc(100vw - 40px));
+  box-sizing: border-box; width: 100%;
   padding: 12px 14px; background: var(--ai-surface); border: 1px solid var(--ai-primary-border); border-left: 6px solid var(--ai-primary);
   border-radius: var(--ai-radius-md); box-shadow: var(--ai-shadow-md);
   font: var(--ai-font-size)/var(--ai-line) var(--ai-font); color: var(--ai-text);
@@ -111,7 +117,7 @@
 
 /* News notice, once per browser. */
 #atendeai-retornos-news {
-  position: fixed; right: 20px; top: 20px; z-index: 1000000; box-sizing: border-box; width: min(360px, calc(100vw - 40px));
+  box-sizing: border-box; width: 100%;
   padding: 16px 18px; background: var(--ai-surface); border: 1px solid var(--ai-primary-border); border-radius: var(--ai-radius-lg); box-shadow: var(--ai-shadow-md);
   font: var(--ai-font-size)/var(--ai-line) var(--ai-font); color: var(--ai-text);
 }

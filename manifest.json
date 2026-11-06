@@ -38,7 +38,8 @@
         "styles/queue-context.css",
         "styles/modals.css",
         "styles/calendar.css",
-        "styles/called.css"
+        "styles/called.css",
+        "styles/retornos.css"
       ],
       "js": [
         "utils/storage.js",
@@ -60,6 +61,10 @@
         "modules/smart-reply-context.js",
         "modules/smart-reply-samples.js",
         "modules/daily-notices.js",
+        "modules/retornos-schedule.js",
+        "modules/retornos-store.js",
+        "modules/retornos-list.js",
+        "modules/retornos-alert.js",
         "modules/smart-reply.js",
         "modules/queue-context-parse.js",
         "modules/queue-context-store.js",
@@ -93,6 +98,8 @@
       "js": [
         "modules/retornos-schedule.js",
         "modules/retornos-store.js",
+        "modules/retornos-list.js",
+        "modules/retornos-alert.js",
         "modules/retornos-diagnostic.js",
         "modules/retornos-capture.js",
         "modules/retornos-crm-line.js",
