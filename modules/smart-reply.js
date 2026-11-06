@@ -362,6 +362,8 @@ const SmartReplyModule = (() => {
 
   async function open() {
     if (session) { close(); return; }
+    // Both chat windows sit in the same corner: only one at a time.
+    globalThis.DocsModule?.close?.();
     const s = { token: "", conversation: null, cache: new Map(), busy: new Set(), switchRequest: 0, noticeCount: 0, stale: false,
       insertButtons: [], pendingDraft: null };
     session = s;

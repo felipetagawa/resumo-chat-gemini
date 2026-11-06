@@ -393,3 +393,12 @@ test('selo adendo só aparece quando o adendo foi usado', async () => {
   h.input().value = 'de novo'; await h.input().emit('keydown', { key: 'Enter' }); await settle();
   assert.ok(visible(badge));
 });
+
+test('abrir o Sugerir resposta fecha o Consultar Docs', async () => {
+  const h = harness();
+  let closed = 0;
+  h.context.DocsModule = { close() { closed++; } };
+  await h.module.open(); await settle();
+  assert.equal(closed, 1);
+  assert.ok(h.panel());
+});

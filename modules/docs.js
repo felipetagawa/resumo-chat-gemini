@@ -280,8 +280,15 @@ const DocsModule = (() => {
     }
   }
 
+  function close() {
+    document.getElementById(POPUP_ID)?.remove();
+    state = null;
+  }
+
   async function exibirPainelConsultaDocs() {
-    if (document.getElementById(POPUP_ID)) { document.getElementById(POPUP_ID).remove(); state = null; return; }
+    if (document.getElementById(POPUP_ID)) { close(); return; }
+    // Both chat windows sit in the same corner: only one at a time.
+    globalThis.SmartReplyModule?.close?.();
 
     const popup = el("section");
     popup.id = POPUP_ID;
@@ -344,6 +351,7 @@ const DocsModule = (() => {
 
   return {
     exibirPainelConsultaDocs,
+    close,
     _test: { messagesForApi, safeSources, titleFrom, formatDate, renderAnswer }
   };
 })();

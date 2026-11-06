@@ -544,8 +544,6 @@ async function initializeExtensionDock(container) {
   }
 
   function applySize() {
-    // The open Smart Reply card froze the dock's footprint; a size or minimize change would let it outlive that.
-    if (container.getAttribute("data-reply-open") === "true") globalThis.SmartReplyModule?.close?.();
     const nativeList = document.querySelector("#contact-fields, .contacts-field.contact-scroll, .chats-list, .contacts-list, .contact-list");
     const listRect = nativeList?.getBoundingClientRect();
     // The visual QA found the full dock covering the left queue on narrow windows.
@@ -836,14 +834,15 @@ function criarBotoesFlutuantes(visibility, userSector) {
     return RecoveryBufferModule.openPreservedBuffers();
   }));
 
+  // Consultar Docs is the group's button; Sugerir resposta is the smaller link below it.
   const botaoSmartReply = createButton('btnSmartReply', 'Sugerir resposta', '',
     guardFeature(() => SmartReplyModule.open()));
   botaoSmartReply.type = 'button';
-  botaoSmartReply.className += ' atendeai-reply-primary';
+  botaoSmartReply.className = 'gemini-preserved-link atendeai-reply-link';
   botaoSmartReply.innerHTML = '<svg class="atendeai-reply-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14v10H8l-5 4V3Z"/><path d="M6 7h8M6 10h5"/></svg> Sugerir resposta';
   botaoDocs.id = 'btnConsultarDocsLoop';
-  botaoDocs.className = 'gemini-preserved-link';
-  botaoDocs.textContent = 'Consultar Docs';
+  botaoDocs.type = 'button';
+  botaoDocs.className = 'gemini-floating-btn atendeai-primary-action';
 
   const botaoMessages = createButton(
     "btnMessages",
@@ -902,8 +901,8 @@ function criarBotoesFlutuantes(visibility, userSector) {
   if (showSmartReply || isVisible('btnConsultarDocsLoop')) {
     const replyGroup = document.createElement('div');
     replyGroup.className = 'gemini-report-group';
-    if (showSmartReply) replyGroup.appendChild(botaoSmartReply);
     if (isVisible('btnConsultarDocsLoop')) replyGroup.appendChild(botaoDocs);
+    if (showSmartReply) replyGroup.appendChild(botaoSmartReply);
     container.appendChild(replyGroup);
   }
   if (isVisible("btnMessages")) container.appendChild(botaoMessages);

@@ -320,5 +320,6 @@
     color: var(--ai-text-muted);
 }
 
-#containerBotoesGemini .atendeai-reply-primary { background: var(--ai-primary-soft); border-color: var(--ai-primary-border); color: var(--ai-primary); }
-.atendeai-reply-icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.4; flex: 0 0 auto; }
+#containerBotoesGemini .atendeai-primary-action { background: var(--ai-primary-soft); border-color: var(--ai-primary-border); color: var(--ai-primary); }
+#containerBotoesGemini .atendeai-reply-link { display: flex; align-items: center; gap: 6px; }
+.atendeai-reply-icon { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; flex: 0 0 auto; }
