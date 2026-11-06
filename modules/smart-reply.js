@@ -287,6 +287,7 @@ const SmartReplyModule = (() => {
     setHidden(s.compactChips, !(s.conversation?.messages?.length));
     setDisabled(s.input, !token);
     setDisabled(s.sendButton, !token || busy);
+    setDisabled(s.freshButton, !s.token || busy);
     const ariaBusy = busy ? "true" : "false";
     if (s.panel.getAttribute("aria-busy") !== ariaBusy) s.panel.setAttribute("aria-busy", ariaBusy);
     syncChips(s);
@@ -376,8 +377,10 @@ const SmartReplyModule = (() => {
     const header = node("div", "", "smart-reply-header");
     header.appendChild(node("strong", "Sugerir resposta", "smart-reply-title"));
     const fresh = node("button", "Nova", "smart-reply-link"); fresh.type = "button";
+    s.freshButton = fresh;
     fresh.addEventListener("click", async () => {
-      if (!s.token) return;
+      // Clearing while a reply is on its way would lose it and let the save bring the old chat back.
+      if (!s.token || s.busy.has(s.token)) return;
       const token = s.token;
       await chats().clear(token);
       s.cache.set(token, { token, messages: [], updatedAt: 0 });
@@ -442,6 +445,8 @@ const SmartReplyModule = (() => {
     panel.addEventListener("keydown", event => {
       if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
+        // SZ must never see the keystroke that just filled its composer (it could send it).
+        event.stopPropagation?.();
         insert(s, latestReply(s.conversation));
       }
     });

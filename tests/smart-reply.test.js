@@ -402,3 +402,27 @@ test('abrir o Sugerir resposta fecha o Consultar Docs', async () => {
   assert.equal(closed, 1);
   assert.ok(h.panel());
 });
+
+test('Ctrl+Enter insere sem deixar a tecla chegar aos atalhos do SZ', async () => {
+  const h = harness(); await openAndResolve(h);
+  let stopped = 0, prevented = 0;
+  await h.panel().emit('keydown', { key: 'Enter', ctrlKey: true, stopPropagation() { stopped++; }, preventDefault() { prevented++; } });
+  assert.equal(h.composer.value, 'Pode informar o erro exibido?');
+  assert.equal(stopped, 1, 'SZ must never see the Ctrl+Enter that just filled its composer');
+  assert.equal(prevented, 1);
+});
+
+test('Nova fica travado enquanto a resposta está a caminho e a conversa não volta depois', async () => {
+  const h = harness(); h.defer();
+  await h.module.open(); await settle();
+  const pending = h.button('Resolver').emit('click'); await settle();
+  const nova = h.button('Nova');
+  assert.equal(nova.disabled, true);
+  await nova.emit('click'); await settle();
+  h.respond('Chegou'); await pending; await settle();
+  assert.deepEqual(h.replies(), ['Chegou'], 'the reply that was paid for is shown, not lost');
+  assert.equal(h.button('Nova').disabled, false);
+  await h.button('Nova').emit('click'); await settle();
+  h.module.close(); await h.module.open(); await settle();
+  assert.deepEqual(h.replies(), [], 'a cleared conversation stays cleared');
+});
