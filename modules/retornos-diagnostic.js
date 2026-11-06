@@ -139,7 +139,11 @@ const RetornosDiagnostic = (() => {
       }, true);
       doc.addEventListener("atendeai:crm-ajax", (event) => {
         let signal = null;
-        try { signal = JSON.parse(event.detail); } catch { return; }
+        for (const raw of [event.detail, doc.documentElement?.getAttribute?.("data-atendeai-crm-ajax")]) {
+          if (!raw) continue;
+          try { signal = JSON.parse(raw); break; } catch { /* try the mirrored attribute */ }
+        }
+        if (!signal) return;
         record({
           kind: "ajax", phase: signal.phase, status: signal.status, form: signal.form, source: signal.source,
           args: signal.args || null,

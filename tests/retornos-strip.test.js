@@ -170,3 +170,17 @@ test('nothing mounts for other sectors or when switched off', async () => {
   const off = load({ atendeai_user_sector: 'suporte', atendeai_retornos_settings_v1: { enabled: false } });
   assert.equal(await off.P.mount(tableDoc(['1']).doc, {}), false);
 });
+
+test('the strip tells the last CRM save this browser saw, so "never saw it" and "could not confirm" are not the same silence', async () => {
+  const { P, R } = load();
+  const { doc } = tableDoc(['1']);
+  const text = () => textOf(doc.getElementById('atendeai-retornos-strip'));
+  await P.mount(doc, { now: () => T });
+  assert.doesNotMatch(text(), /Último salvamento/);
+  await R.setLastSave({ at: T, outcome: 'sem-confirmacao', mode: 'agendar', reason: 'ficou-na-tela' });
+  await settle();
+  assert.match(text(), /Último salvamento que eu vi \(.*\) — Agendar: não consegui confirmar que o CRM salvou, não mudei nada\./);
+  await R.setLastSave({ at: T, outcome: 'guardado', mode: 'agendar' });
+  await settle();
+  assert.match(text(), /Agendar: guardei o retorno\./);
+});

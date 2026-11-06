@@ -5,6 +5,7 @@ const RetornosStore = (() => {
   const ITEMS_KEY = "atendeai_retornos_v1";
   const SETTINGS_KEY = "atendeai_retornos_settings_v1";
   const FLAGS_KEY = "atendeai_retornos_flags_v1";
+  const LASTSAVE_KEY = "atendeai_retornos_lastsave_v1";
   const SECTOR_KEY = "atendeai_user_sector";
   const AGENDA_KEY = "usuarioAgendaEventsV2";
   const DAYS = ["amanha", "depois", "dom", "seg", "ter", "qua", "qui", "sex", "sab"];
@@ -229,8 +230,17 @@ const RetornosStore = (() => {
     });
   }
 
+  // The last CRM save this browser saw and what was done about it (no personal data): shown by the
+  // strip so a technician can tell "never saw it" from "saw it and could not confirm".
+  async function getLastSave() {
+    return (await read([LASTSAVE_KEY]))[LASTSAVE_KEY] || null;
+  }
+  function setLastSave(info) {
+    return mutate(async () => { await write({ [LASTSAVE_KEY]: info }); });
+  }
+
   function onChange(callback) {
-    const watched = new Set([ITEMS_KEY, SETTINGS_KEY, SECTOR_KEY]);
+    const watched = new Set([ITEMS_KEY, SETTINGS_KEY, SECTOR_KEY, LASTSAVE_KEY]);
     const handler = (changes, area) => {
       if (area && area !== "local") return;
       if (Object.keys(changes || {}).some((k) => watched.has(k))) {
@@ -245,7 +255,7 @@ const RetornosStore = (() => {
     ITEMS_KEY, SETTINGS_KEY, FLAGS_KEY,
     getSettings, setSettings, isActive, getFlag, setFlag,
     list, upsertCrm, addManual, remove, removeByProtocolo, acknowledge, snooze, refreshId,
-    pending, syncWithTable, migrateAgenda, onChange
+    pending, syncWithTable, migrateAgenda, getLastSave, setLastSave, onChange
   };
 })();
 

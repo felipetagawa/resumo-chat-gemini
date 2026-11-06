@@ -130,3 +130,6 @@
 .atendeai-retornos-tab-head .atendeai-retornos-btn { margin-left: auto; }
 .atendeai-retornos-add[hidden] { display: none !important; }
 .atendeai-retornos-add { margin-bottom: 10px; }
+
+#atendeai-retornos-strip .atendeai-retornos-lastsave { margin-top: 8px; color: var(--ai-text-muted); font-size: var(--ai-font-size-xs); }
+#atendeai-retornos-strip .atendeai-retornos-lastsave:empty { display: none; }

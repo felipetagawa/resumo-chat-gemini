@@ -186,3 +186,44 @@ test('the parsed args that pfAjaxComplete provides decide a refusal even when th
   await wait();
   assert.equal((await R.list()).length, 0);
 });
+
+test('the signal is also read from the mirrored attribute when the event detail is lost between worlds', async () => {
+  const { C, R } = load();
+  const page = realPage();
+  const attrs = {};
+  page.doc.documentElement = { getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; } };
+  await C.start(page.doc, { location: { href: 'https://www.sistemaempresarialweb.com.br/crm-atendimento/1250257' } });
+  const fire = (signal) => { attrs['data-atendeai-crm-ajax'] = JSON.stringify(signal); page.doc.listeners.filter((l) => l.type === 'atendeai:crm-ajax').forEach((l) => l.fn({ detail: null })); };
+  fire({ phase: 'send', source: SALVAR, status: 0 });
+  fire({ phase: 'complete', source: SALVAR, status: 200, responseText: redirectXml });
+  await wait();
+  assert.equal((await R.list()).length, 1);
+});
+
+test('an answer without proof of leaving is confirmed when the page unloads right after, and not otherwise', async () => {
+  const { C, R } = load();
+  const page = realPage();
+  const unload = [];
+  const win = { location: { href: 'https://www.sistemaempresarialweb.com.br/crm-atendimento/1250257' },
+    addEventListener: (t, fn) => unload.push([t, fn]), removeEventListener() {} };
+  await drive(page, C, [['send', SALVAR], ['complete', SALVAR, noRedirectXml]], win);
+  assert.equal((await R.list()).length, 0, 'not yet: nothing proves it saved');
+  unload.find(([t]) => t === 'beforeunload')[1]();
+  await wait();
+  assert.equal((await R.list()).length, 1, 'the CRM left the screen, so it did save');
+});
+
+test('every save the browser sees leaves a plain-language last-save note, with no personal data', async () => {
+  const { C, R } = load();
+  await drive(realPage(), C, [['send', SALVAR], ['complete', SALVAR, redirectXml]]);
+  let last = await R.getLastSave();
+  assert.equal(last.outcome, 'guardado');
+  assert.equal(last.mode, 'agendar');
+  assert.ok(!JSON.stringify(last).includes('PADARIA'));
+  const bad = '<partial-response><changes><extension ln="primefaces" type="args">{"validationFailed":true}</extension></changes></partial-response>';
+  await drive(realPage(), C, [['send', SALVAR], ['complete', SALVAR, bad]]);
+  last = await R.getLastSave();
+  assert.equal(last.outcome, 'recusado');
+  await drive(realPage({ mode: 'finalizar' }), C, [['send', SALVAR], ['complete', SALVAR, redirectXml]]);
+  assert.equal((await R.getLastSave()).outcome, 'removido');
+});

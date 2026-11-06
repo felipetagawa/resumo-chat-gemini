@@ -16,6 +16,7 @@ const RetornosCapture = (() => {
   ];
   let signatures = RECORDED_SIGNATURES;
 
+  const LEAVE_WAIT_MS = 4000;
   const ERROR_RE = /ui-messages-(?:error|fatal)|ui-message-(?:error|fatal)|ui-growl-(?:item[^"]*)?(?:error|fatal)|ui-state-error/;
   const text = (v) => String(v ?? "").replace(/\s+/g, " ").trim();
   const norm = (v) => text(v).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -61,11 +62,12 @@ const RetornosCapture = (() => {
     const mode = signature.mode === "radio" || signature.mode === "confirm" ? ctx.radioMode || null : signature.mode;
     const summary = summaryOf(signal);
     if (Number(signal.status) !== 200 || summary.args?.validationFailed === true || summary.hasError === true) {
-      return { outcome: "refused", mode };
+      return { outcome: "refused", mode, reason: "validacao" };
     }
     // Salvar can open "Confirmar Agendamento" (another chamado close to that time): nothing is saved yet.
     if (signature.mode !== "confirm" && asksConfirmation(summary)) return { outcome: "pending", mode };
-    if (!mode || !leaves(summary)) return { outcome: "unknown", mode };
+    if (!mode) return { outcome: "unknown", mode: null, reason: "sem-modo" };
+    if (!leaves(summary)) return { outcome: "unknown", mode, reason: "ficou-na-tela" };
     return { outcome: "ok", mode };
   }
 
@@ -148,20 +150,35 @@ const RetornosCapture = (() => {
     };
   }
 
+  // Returns what it did: "guardado", "removido" or null (nothing changed).
   async function applySave(verdict, page, remember, now = Date.now()) {
     const store = globalThis.RetornosStore;
-    if (!verdict || verdict.outcome !== "ok" || !store || !page?.protocolo) return;
+    if (!verdict || verdict.outcome !== "ok" || !store || !page?.protocolo) return null;
     if (verdict.mode === "finalizar") {
       await store.removeByProtocolo(page.protocolo);
-    } else if (verdict.mode === "agendar") {
+      return "removido";
+    }
+    if (verdict.mode === "agendar") {
       if (remember === false) {
         await store.removeByProtocolo(page.protocolo);
-        return;
+        return "removido";
       }
       const due = globalThis.RetornosSchedule.parseCrmValue(page.dateText);
-      if (!due) return;
+      if (!due) return null;
       await store.upsertCrm({ ...page, dueAt: due.getTime() }, now);
+      return "guardado";
     }
+    return null;
+  }
+
+  // The bridge sends the signal as the event detail and mirrors it in an attribute, because the
+  // detail can be lost between the page world and this one.
+  function signalOf(event, doc) {
+    for (const raw of [event?.detail, doc.documentElement?.getAttribute?.("data-atendeai-crm-ajax")]) {
+      if (!raw) continue;
+      try { return JSON.parse(raw); } catch { /* try the next source */ }
+    }
+    return null;
   }
 
   function readRemember(doc) {
@@ -180,13 +197,41 @@ const RetornosCapture = (() => {
       [0, 1500, 4000].forEach((ms) => setTimeout(() => { void refresh(); }, ms));
 
       // `snapshot`: the page as it was when Salvar was sent. `held`: the same snapshot kept while the
-      // "Confirmar Agendamento" dialog waits for Continuar (Cancelar sends nothing we track, and a new
-      // Salvar replaces it).
+      // "Confirmar Agendamento" dialog waits for Continuar (Cancelar drops it, a new Salvar replaces it).
       let snapshot = null, held = null;
+
+      const remember = (outcome, mode, reason, page) => store.setLastSave?.({ at: Date.now(), outcome, mode, reason: reason || "", protocolo: page?.protocolo || "" });
+
+      const settle = async (verdict, taken) => {
+        if (verdict.outcome === "ok") {
+          const did = await applySave(verdict, taken.page, taken.remember);
+          await remember(did || "ignorado", verdict.mode, "", taken.page);
+        } else if (verdict.outcome === "refused") {
+          await remember("recusado", verdict.mode, verdict.reason, taken.page);
+        } else if (verdict.reason === "ficou-na-tela" && verdict.mode) {
+          // No proof in the answer itself: a save makes the CRM leave this screen, so wait a moment for that.
+          let done = false;
+          const finish = (left) => {
+            if (done) return;
+            done = true;
+            win.removeEventListener?.("beforeunload", onLeave);
+            win.removeEventListener?.("pagehide", onLeave);
+            if (left) void applySave({ outcome: "ok", mode: verdict.mode }, taken.page, taken.remember).then((did) => remember(did || "ignorado", verdict.mode, "saiu-da-tela", taken.page));
+            else void remember("sem-confirmacao", verdict.mode, "ficou-na-tela", taken.page);
+          };
+          const onLeave = () => finish(true);
+          win.addEventListener?.("beforeunload", onLeave);
+          win.addEventListener?.("pagehide", onLeave);
+          setTimeout(() => finish(false), LEAVE_WAIT_MS);
+        } else {
+          await remember("sem-confirmacao", verdict.mode, verdict.reason, taken.page);
+        }
+      };
+
       doc.addEventListener("atendeai:crm-ajax", (event) => {
-        let signal = null;
-        try { signal = JSON.parse(event.detail); } catch { return; }
-        const signature = signatureFor(signal?.source, doc);
+        const signal = signalOf(event, doc);
+        if (!signal) return;
+        const signature = signatureFor(signal.source, doc);
         if (!signature) return;
         if (signature.mode === "cancel") { held = null; snapshot = null; return; }
         if (signal.phase === "send") {
@@ -199,7 +244,7 @@ const RetornosCapture = (() => {
           if (verdict?.outcome === "pending") held = taken;
           else {
             held = null;
-            if (verdict) void applySave(verdict, taken.page, taken.remember);
+            if (verdict) void settle(verdict, taken);
           }
         }
       });

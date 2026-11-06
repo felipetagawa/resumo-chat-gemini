@@ -47,10 +47,31 @@ const RetornosStrip = (() => {
       L.make(doc, "span", { class: "atendeai-retornos-strip-title", text: "Meus retornos" }),
       counts
     ]);
-    const strip = L.make(doc, "section", { id: STRIP_ID, class: "atendeai-retornos-strip", "aria-label": "Meus retornos do AtendeAI" }, [head, holder]);
+    const lastSave = L.make(doc, "div", { class: "atendeai-retornos-lastsave", role: "status" });
+    const strip = L.make(doc, "section", { id: STRIP_ID, class: "atendeai-retornos-strip", "aria-label": "Meus retornos do AtendeAI" }, [head, holder, lastSave]);
+    strip._lastSave = lastSave;
     strip._counts = counts;
     strip._body = holder;
     return strip;
+  }
+
+  const MODE_LABEL = { agendar: "Agendar", finalizar: "Finalizar" };
+  const pad2 = (n) => String(n).padStart(2, "0");
+
+  function lastSaveText(info) {
+    if (!info?.at) return "";
+    const when = new Date(info.at);
+    const time = `${pad2(when.getHours())}:${pad2(when.getMinutes())}`;
+    const day = globalThis.RetornosSchedule.whenLabel(info.at, Date.now()).split(" ")[0];
+    const mode = MODE_LABEL[info.mode] || "Salvar";
+    const label = {
+      guardado: `${mode}: guardei o retorno`,
+      removido: `${mode}: tirei o retorno da lista`,
+      ignorado: `${mode}: salvo no CRM, sem retorno para guardar`,
+      recusado: `${mode}: o CRM recusou (validação), não mudei nada`,
+      "sem-confirmacao": `${mode}: não consegui confirmar que o CRM salvou, não mudei nada`
+    }[info.outcome];
+    return label ? `Último salvamento que eu vi (${day} ${time}) — ${label}.` : "";
   }
 
   async function paint(doc, strip, opts) {
@@ -67,6 +88,7 @@ const RetornosStrip = (() => {
     [[c.atrasados, "atrasados", "late"], [c.hoje, "hoje", "today"], [c.proximos, "próximos", "next"]].forEach(([n, label, tone]) => {
       strip._counts.appendChild(L.make(doc, "span", { class: "atendeai-retornos-count", "data-tone": tone, text: `${n} ${label}` }));
     });
+    strip._lastSave.textContent = lastSaveText(await store.getLastSave());
     globalThis.ThemeModule?.apply?.(strip);
   }
 
