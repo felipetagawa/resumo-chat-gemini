@@ -67,22 +67,9 @@ const ObservationsModule = (() => {
     return blocks;
   }
 
+  // Um seletor próprio aqui pegava o primeiro .contact-name da página, que no SZ é o topo da
+  // fila: conversas sem protocolo nem telefone dividiam a mesma chave. chat-capture lê o card ativo.
   function detectContactName() {
-    const selectors = [
-      "#contact-name",
-      ".contact-name",
-      ".header-info .name",
-      ".conversation-header .name",
-      ".chat-header .title",
-      ".chat-title"
-    ];
-
-    for (const selector of selectors) {
-      const el = document.querySelector(selector);
-      const value = normalizeText(el?.innerText || "");
-      if (value) return value;
-    }
-
     if (window.ChatCaptureModule?.capturarNomeCliente) {
       const value = normalizeText(window.ChatCaptureModule.capturarNomeCliente());
       if (value && value !== "Cliente") return value;

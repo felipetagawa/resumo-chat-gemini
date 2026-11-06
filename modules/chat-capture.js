@@ -245,7 +245,22 @@ const ChatCaptureModule = (() => {
         return problema.trim() || resumoCompleto;
     }
 
+    // No SZ cada card da fila tem seu .contact-name: o primeiro da página é o topo da fila,
+    // não a conversa aberta. O nome vem do card ativo; o de qualquer outro card nunca vale.
     function capturarNomeCliente() {
+        const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+        const insideQueueCard = node => {
+            for (let parent = node; parent; parent = parent.parentElement) {
+                if (String(parent.className || '').split(/\s+/).includes('sz_contact')) return true;
+            }
+            return false;
+        };
+        const active = document.querySelectorAll('.sz_contact.active');
+        if (active.length === 1) {
+            const name = clean(active[0].querySelector('.contact-name')?.innerText);
+            if (name) return name;
+        }
+
         // Tentativa 1: Seletores comuns de header de chat
         const selectors = [
             "#contact-name",
@@ -259,24 +274,25 @@ const ChatCaptureModule = (() => {
         ];
 
         for (const sel of selectors) {
-            const el = document.querySelector(sel);
-            if (el && el.innerText.trim()) {
-                return el.innerText.trim();
+            for (const el of document.querySelectorAll(sel)) {
+                if (insideQueueCard(el)) continue;
+                const name = clean(el.innerText);
+                if (name) return name;
             }
         }
 
-        // Tentativa 2: Procurar na primeira mensagem recebida (que não seja do sistema)
-        // Isso é arriscado mas pode funcionar se o header falhar
-        const msgs = document.querySelectorAll(".msg");
-        for (const msg of msgs) {
-            const isSent = msg.classList.contains("sent"); // Se tiver classe de enviado
-            const nameEl = msg.querySelector(".name");
-            // Se tem nome e não parece ser o usuário logado (assumindo logica de classe ou comparação simples)
-            if (nameEl && nameEl.innerText) {
-                // Simplificação: apenas retorne o primeiro nome encontrado se não temos header
-                return nameEl.innerText.trim();
-            }
-        }
+        // Tentativa 2: o autor das bolhas visíveis. No SZ real a bolha do cliente traz o ícone
+        // da plataforma ao lado do nome; a do técnico, só o nome. A classe received ainda vale.
+        const named = Array.from(document.querySelectorAll(".msg"))
+            .filter(msg => !msg.closest?.('[hidden], [aria-hidden="true"]')
+                && !(msg.getClientRects && !msg.getClientRects().length))
+            .map(msg => ({ msg, name: clean(msg.querySelector(".name")?.innerText) }))
+            .filter(item => item.name && !/^autom[aá]tico\b/i.test(item.name));
+        const customer = named.find(({ msg }) => msg.classList.contains("received")
+            || msg.querySelector(".message-details .icon-platform-mini"));
+        if (customer) return customer.name;
+        const legacy = named.find(({ msg }) => !msg.classList.contains("sent"));
+        if (legacy) return legacy.name;
 
         return "Cliente";
     }
