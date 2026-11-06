@@ -138,11 +138,10 @@ const SmartReplyModule = (() => {
     if (isLast) {
       const retry = node("button", "Tentar de novo", "smart-reply-link"); retry.type = "button";
       retry.addEventListener("click", () => {
-        const conversation = s.conversation;
-        conversation.messages.pop();
-        const ask = conversation.messages.pop();
-        if (!ask || ask.role !== "user") { render(s); return; }
-        return send(s, { text: ask.content, intent: ask.intent });
+        const messages = s.conversation.messages, ask = messages[messages.length - 2];
+        if (ask?.role !== "user") { messages.pop(); render(s); return; }
+        // The failed ask and its error give way only once send really goes ahead.
+        return send(s, { text: ask.content, intent: ask.intent, retry: true });
       });
       msg.appendChild(retry);
     }
@@ -315,11 +314,13 @@ const SmartReplyModule = (() => {
     render(s);
   }
 
-  async function send(s, { text: ask, intent }) {
+  async function send(s, { text: ask, intent, retry }) {
     const token = s.token, conversation = s.conversation;
     const content = String(ask || "").trim().slice(0, MAX_MESSAGE);
     if (session !== s || !token || !conversation || !content || busy.has(token)) return;
     if (chatToken() !== token) { sync(s); return; }
+    // "Tentar de novo": the same ask takes the place of the failed one and its error.
+    if (retry) conversation.messages.splice(-2);
     conversation.messages.push(intent ? { role: "user", content, intent, at: Date.now() } : { role: "user", content, at: Date.now() });
     if (!intent) s.input.value = "";
     busy.add(token);

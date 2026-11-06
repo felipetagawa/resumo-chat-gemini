@@ -471,3 +471,21 @@ test('o tipo do último botão rápido segue nos pedidos livres até outro botã
   await ask('oi, tudo bem?');
   assert.equal(h.sent[4].intent, undefined, 'a fresh conversation starts with no kind');
 });
+
+test('Tentar de novo que não chega a sair não perde a mensagem nem o erro', async () => {
+  const h = harness(); h.fail();
+  await openAndResolve(h);
+  h.succeed();
+  const retry = h.button('Tentar de novo');
+  // The attendance changed on the page before the window caught up.
+  Object.assign(h.live, { name: 'Marta', time: '06/10/26 09:00', conversation: 'Marta: a nota não sai' });
+  await retry.emit('click'); await settle();
+  assert.equal(h.sent.length, 1, 'nothing goes out for the attendance that is open now');
+  await h.switchTo('Gabriel', '06/10/26 08:14', 'Gabriel: preciso de ajuda');
+  assert.deepEqual(h.allByClass('smart-reply-user').map(n => n.textContent), ['Resolver']);
+  assert.match(deepText(h.byClass('smart-reply-error') || { textContent: '', children: [] }), /Falha temporária/);
+  await h.button('Tentar de novo').emit('click'); await settle();
+  assert.equal(h.sent[1].intent, 'resolver');
+  assert.deepEqual(h.allByClass('smart-reply-user').map(n => n.textContent), ['Resolver']);
+  assert.deepEqual(h.replies(), ['Pode informar o erro exibido?']);
+});
