@@ -1,4 +1,21 @@
 const SummaryModule = (() => {
+  const POPUP_IDS = ["geminiResumoPopup", "geminiDicaPopup"];
+  let fecharAoClicarForaInstalado = false;
+
+  // Fecha os popups ao pressionar fora deles, como os outros painéis.
+  // Usa mousedown (não click) para que arrastar uma seleção de texto para fora
+  // do popup, ou o clique sintético do link de "Salvar .txt", não o feche.
+  function instalarFecharAoClicarFora() {
+    if (fecharAoClicarForaInstalado) return;
+    fecharAoClicarForaInstalado = true;
+    document.addEventListener("mousedown", (event) => {
+      POPUP_IDS.forEach((id) => {
+        const popup = document.getElementById(id);
+        if (popup && !popup.contains(event.target)) popup.remove();
+      });
+    }, true);
+  }
+
   function formatarResumoComNegrito(texto) {
     let html = texto
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -125,6 +142,7 @@ const SummaryModule = (() => {
 
     popup.querySelector("#conteudoResumo").innerHTML = conteudoFormatado;
     document.body.appendChild(popup);
+    instalarFecharAoClicarFora();
 
     popup.querySelector("#fecharResumoFlutuante").addEventListener("click", () => popup.remove());
 
@@ -241,6 +259,7 @@ const SummaryModule = (() => {
 
     popup.querySelector("#conteudoDica").innerHTML = formatarResumoComNegrito(conteudo);
     document.body.appendChild(popup);
+    instalarFecharAoClicarFora();
 
     popup.querySelector("#fecharDicaFlutuante").addEventListener("click", () => popup.remove());
   }
