@@ -64,6 +64,13 @@ Use **Observações para o resumo** para registrar contexto passado por telefone
 - **Opção 2:** Digite um atalho diretamente no chat (ex: `/1`, `/oi`)
   - A mensagem será inserida automaticamente
 
+### 🔔 Retornos automáticos (setor Suporte)
+Quando o cliente pede retorno, agende o atendimento no CRM como sempre. O AtendeAI guarda o retorno, avisa na hora (só dentro do navegador) e leva de volta ao atendimento com um clique:
+- Ao agendar, uma linha do AtendeAI abaixo da data do agendamento oferece atalhos (`Amanhã 08:00`, `Amanhã 14:00`, `Segunda 08:00`, editáveis nas opções), data e hora livres e a caixa **Me lembrar deste retorno**.
+- Na tela **Chamado por Técnico**, a faixa **Meus retornos** lista atrasados, hoje e próximos, com **Abrir** direto no atendimento.
+- A **Agenda & Gestão** do Suporte tem as abas **Retornos** e **Notas**.
+- Dá para desligar tudo, ou ajustar os atalhos, em Configurações › Retornos automáticos.
+
 ### 📚 Consultar Docs
 **O que faz:** Busca informações na documentação oficial.
 

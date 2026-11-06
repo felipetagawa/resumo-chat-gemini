@@ -19,7 +19,18 @@ const NotificationsModule = (() => {
         }
     }
 
+    // Suporte uses "Retornos automáticos" (its own notice and alerts); the old manual
+    // agenda/CRM notices below stay exactly as they were for Pré-atendimento.
+    async function isSuporte() {
+        const data = await StorageHelper.get(['atendeai_user_sector']);
+        return String(data.atendeai_user_sector || '').trim().toLowerCase() === 'suporte';
+    }
+
     async function checkAndShowNotification(clientName) {
+        if (await isSuporte()) {
+            await globalThis.RetornosChatNotice?.check({ name: clientName });
+            return;
+        }
         const data = await StorageHelper.get(['usuarioAgendaEventsV2', 'usuarioAgendaCRM']);
 
         const calendarEvents = data.usuarioAgendaEventsV2 || {};
@@ -100,6 +111,7 @@ const NotificationsModule = (() => {
     }
 
     async function verificarEventosVencidos() {
+        if (await isSuporte()) return;
         const calData = await StorageHelper.get(['usuarioAgendaEventsV2']);
         const calendarEvents = calData.usuarioAgendaEventsV2 || {};
 

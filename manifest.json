@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AtendeAI Manager",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Gera resumos estruturados de atendimentos usando Gemini.",
   "permissions": [
     "storage"
@@ -38,7 +38,8 @@
         "styles/queue-context.css",
         "styles/modals.css",
         "styles/calendar.css",
-        "styles/called.css"
+        "styles/called.css",
+        "styles/retornos.css"
       ],
       "js": [
         "utils/storage.js",
@@ -60,6 +61,11 @@
         "modules/smart-reply-context.js",
         "modules/smart-reply-samples.js",
         "modules/daily-notices.js",
+        "modules/retornos-schedule.js",
+        "modules/retornos-store.js",
+        "modules/retornos-list.js",
+        "modules/retornos-alert.js",
+        "modules/retornos-chat-notice.js",
         "modules/smart-reply.js",
         "modules/queue-context-parse.js",
         "modules/queue-context-store.js",
@@ -75,7 +81,8 @@
         "https://www.sistemaempresarialweb.com.br/crm-atendimento*"
       ],
       "js": [
-        "modules/crm-primefaces-bridge.js"
+        "modules/crm-primefaces-bridge.js",
+        "modules/crm-retornos-bridge.js"
       ],
       "run_at": "document_end",
       "world": "MAIN"
@@ -85,10 +92,39 @@
         "https://sistemaempresarialweb.com.br/crm-atendimento*",
         "https://www.sistemaempresarialweb.com.br/crm-atendimento*"
       ],
+      "css": [
+        "styles/tokens.css",
+        "styles/retornos.css"
+      ],
       "js": [
+        "modules/retornos-schedule.js",
+        "modules/retornos-store.js",
+        "modules/retornos-list.js",
+        "modules/retornos-alert.js",
+        "modules/retornos-diagnostic.js",
+        "modules/retornos-capture.js",
+        "modules/retornos-crm-line.js",
         "modules/documentation-learning.js",
         "modules/documentation-suggestion.js",
         "modules/crm-automation.js"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "https://sistemaempresarialweb.com.br/crm-chamado-por-tecnico*",
+        "https://www.sistemaempresarialweb.com.br/crm-chamado-por-tecnico*"
+      ],
+      "css": [
+        "styles/tokens.css",
+        "styles/retornos.css"
+      ],
+      "js": [
+        "modules/retornos-schedule.js",
+        "modules/retornos-store.js",
+        "modules/retornos-list.js",
+        "modules/retornos-alert.js",
+        "modules/retornos-strip.js"
       ],
       "run_at": "document_end"
     }

@@ -99,6 +99,8 @@ function inicializarModulos() {
   StyleSamplesModule.start();
   SmartReplyModule.retireLegacyProfiles();
   void globalThis.ThemeModule?.init?.();
+  // Retornos automáticos: the alert checks the Suporte sector and the on/off switch itself.
+  void globalThis.RetornosAlert?.start?.(document, { placement: "sz" });
 
   modulosInicializados = true;
 }

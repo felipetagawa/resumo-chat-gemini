@@ -58,7 +58,96 @@ const AgendaModule = (() => {
         atualizarKanbanSeAberto();
     });
 
-    function exibirAgenda() {
+    // --- Retornos automáticos -------------------------------------------------------------
+    // Suporte with the feature on sees Retornos and Notas; Suporte with it off sees only Notas;
+    // Pré-atendimento keeps the four original tabs exactly as before.
+    const LEGACY_TABS = [
+        { id: 'calendar', label: 'Calendário' },
+        { id: 'crm', label: 'CRM' },
+        { id: 'kanban', label: 'Kanban' },
+        { id: 'notes', label: 'Notas' }
+    ];
+
+    async function agendaMode() {
+        const store = globalThis.RetornosStore;
+        if (!store) return 'legacy';
+        const data = await StorageHelper.get(['atendeai_user_sector']);
+        if (String(data.atendeai_user_sector || '').trim().toLowerCase() !== 'suporte') return 'legacy';
+        return (await store.isActive()) ? 'retornos' : 'notas';
+    }
+
+    function tabsFor(mode) {
+        if (mode === 'retornos') return [{ id: 'retornos', label: 'Retornos' }, { id: 'notes', label: 'Notas' }];
+        if (mode === 'notas') return [{ id: 'notes', label: 'Notas' }];
+        return LEGACY_TABS;
+    }
+
+    async function tabsForCurrentUser() {
+        return tabsFor(await agendaMode());
+    }
+
+    function toLocalInput(date) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    async function iniciarRetornos(container) {
+        const store = globalThis.RetornosStore;
+        const L = globalThis.RetornosList;
+        const S = globalThis.RetornosSchedule;
+        if (!store || !(await store.isActive())) return;
+        await store.migrateAgenda(Date.now());
+        const doc = container.ownerDocument || document;
+
+        const holder = L.make(doc, 'div', { class: 'atendeai-retornos-tab-list' });
+        const manualText = L.make(doc, 'input', { id: 'atendeai-retornos-manual-text', type: 'text', placeholder: 'Lembrete (ex.: ligar para o contador)', 'aria-label': 'Texto do lembrete' });
+        const manualWhen = L.make(doc, 'input', { id: 'atendeai-retornos-manual-when', type: 'datetime-local', 'aria-label': 'Data e hora do lembrete' });
+        const save = L.make(doc, 'button', { type: 'button', class: 'atendeai-retornos-btn', 'data-kind': 'primary', text: 'Salvar lembrete' });
+        const cancel = L.make(doc, 'button', { type: 'button', class: 'atendeai-retornos-btn', text: 'Cancelar' });
+        const form = L.make(doc, 'div', { class: 'atendeai-retornos-add' }, [manualText, manualWhen, save, cancel]);
+        form.hidden = true;
+        const add = L.make(doc, 'button', { type: 'button', class: 'atendeai-retornos-btn', text: '+ Lembrete' });
+
+        const paintList = async () => {
+            L.render(holder, {
+                doc, items: await store.list(), now: Date.now(), withManual: true, showLegacy: true,
+                onOpen: (item) => window.open(L.openUrl(item), '_blank', 'noopener'),
+                onRemove: async (item) => { await store.remove(item.key); }
+            });
+        };
+
+        add.addEventListener('click', () => {
+            manualWhen.value = toLocalInput(S.resolveShortcut({ day: 'amanha', time: '08:00' }, new Date()));
+            form.hidden = false;
+            manualText.focus();
+        });
+        cancel.addEventListener('click', () => { form.hidden = true; });
+        save.addEventListener('click', async () => {
+            const due = new Date(manualWhen.value);
+            if (!String(manualText.value || '').trim() || Number.isNaN(due.getTime())) return;
+            await store.addManual({ text: manualText.value, dueAt: due.getTime() }, Date.now());
+            manualText.value = '';
+            form.hidden = true;
+        });
+
+        const header = L.make(doc, 'div', { class: 'atendeai-retornos-tab-head' }, [
+            L.make(doc, 'span', { class: 'atendeai-retornos-seal', text: 'AtendeAI' }),
+            L.make(doc, 'span', { class: 'atendeai-retornos-strip-title', text: 'Meus retornos' }),
+            add
+        ]);
+        container.appendChild(header);
+        container.appendChild(form);
+        container.appendChild(holder);
+        await paintList();
+        const stop = store.onChange(() => {
+            if (!doc.body?.contains?.(container)) { stop(); return; }
+            void paintList();
+        });
+    }
+
+    async function exibirAgenda() {
+        DOMHelpers.removeElement("geminiAgendaModal");
+        const mode = await agendaMode();
         DOMHelpers.removeElement("geminiAgendaModal");
 
         function loadTabOrder() {
@@ -73,13 +162,8 @@ const AgendaModule = (() => {
             localStorage.setItem('agenda_tab_order', JSON.stringify(order));
         }
 
-        const tabOrder = loadTabOrder();
-        const tabs = [
-            { id: 'calendar', label: 'Calendário' },
-            { id: 'crm', label: 'CRM' },
-            { id: 'kanban', label: 'Kanban' },
-            { id: 'notes', label: 'Notas' }
-        ];
+        const tabs = tabsFor(mode);
+        const tabOrder = mode === 'legacy' ? loadTabOrder() : tabs.map(tab => tab.id);
 
         const sortedTabs = tabOrder.map(tabId =>
             tabs.find(tab => tab.id === tabId)
@@ -108,10 +192,10 @@ const AgendaModule = (() => {
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <div style="font-weight:700; font-size:18px; color: var(--ai-text, #333);">Agenda & Gestão</div>
-                <button id="btnEditTabs" style="background: var(--ai-surface-muted, #f0f0f0); border: 1px solid var(--ai-border, #ddd); padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; gap:4px; transition:all 0.2s;" title="Reordenar abas">
+                ${mode === 'legacy' ? `<button id="btnEditTabs" style="background: var(--ai-surface-muted, #f0f0f0); border: 1px solid var(--ai-border, #ddd); padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; gap:4px; transition:all 0.2s;" title="Reordenar abas">
                 <span>↕️</span>
                 <span>Reordenar</span>
-                </button>
+                </button>` : ''}
             </div>
             <button id="fecharAgenda" style="background:none; border:none; font-size:20px; cursor:pointer; color: var(--ai-text-secondary, #666); padding:5px;">&times;</button>
             </div>
@@ -127,10 +211,7 @@ const AgendaModule = (() => {
             </div>
         </div>
         <div class="agenda-body">
-            <div id="tab-calendar" class="tab-content" ${firstTabId === 'calendar' ? '' : 'style="display:none;"'}></div>
-            <div id="tab-crm" class="tab-content" ${firstTabId === 'crm' ? '' : 'style="display:none;"'}></div>
-            <div id="tab-kanban" class="tab-content" ${firstTabId === 'kanban' ? '' : 'style="display:none;"'}></div>
-            <div id="tab-notes" class="tab-content" ${firstTabId === 'notes' ? '' : 'style="display:none;"'}></div>
+            ${sortedTabs.map(tab => `<div id="tab-${tab.id}" class="tab-content" ${firstTabId === tab.id ? '' : 'style="display:none;"'}></div>`).join('')}
         </div>
         `;
 
@@ -199,7 +280,7 @@ const AgendaModule = (() => {
             }
         }
 
-        modal.querySelector("#btnEditTabs").addEventListener("click", toggleEditMode);
+        modal.querySelector("#btnEditTabs")?.addEventListener("click", toggleEditMode);
 
         function handleDragStart(e) {
             draggedTab = this;
@@ -275,6 +356,9 @@ const AgendaModule = (() => {
 
                 if (contentElement.innerHTML.trim() === '') {
                     switch (tabName) {
+                        case 'retornos':
+                            iniciarRetornos(contentElement);
+                            break;
                         case 'calendar':
                             iniciarCalendario(contentElement);
                             currentCalendarContainer = contentElement;
@@ -2252,7 +2336,8 @@ const AgendaModule = (() => {
 
     return {
         exibirAgenda,
-        migrarEventosAntigos
+        migrarEventosAntigos,
+        _test: { agendaMode, tabsForCurrentUser, iniciarRetornos }
     };
 })();
 

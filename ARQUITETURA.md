@@ -189,6 +189,14 @@ Módulos não acoplados entre si
 - CSS vanilla para máximo controle
 - Sem dependências externas
 
+## 🔔 Retornos automáticos (1.8.0)
+
+Módulos `retornos-*.js`, todos compartilhando `chrome.storage.local` (chaves `atendeai_retornos_v1`, `_settings_v1`, `_flags_v1`, `_diag_*`):
+- `retornos-schedule.js` (funções puras), `retornos-store.js` (armazenamento, sincronia, migração da agenda), `retornos-list.js` (lista compartilhada).
+- `crm-retornos-bridge.js` (mundo MAIN) anuncia o AJAX do PrimeFaces e escreve no calendário; `retornos-capture.js` interpreta o salvamento (assinaturas gravadas, falha fechado); `retornos-diagnostic.js` é o modo de gravação, desligado por padrão.
+- UI: `retornos-crm-line.js` (linha no atendimento), `retornos-strip.js` (faixa no Chamado por Técnico), `retornos-alert.js` (aviso na hora), `retornos-chat-notice.js` (aviso ao abrir o chat), aba Retornos em `agenda.js`.
+- Só o setor Suporte; o Pré-atendimento não muda. Design e plano em `docs/superpowers/`.
+
 ## 📝 Próximos Passos (Opcional)
 
 1. **JSDoc** - Adicionar documentação inline
