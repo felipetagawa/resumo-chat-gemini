@@ -86,8 +86,16 @@
         "https://sistemaempresarialweb.com.br/crm-atendimento*",
         "https://www.sistemaempresarialweb.com.br/crm-atendimento*"
       ],
+      "css": [
+        "styles/tokens.css",
+        "styles/retornos.css"
+      ],
       "js": [
+        "modules/retornos-schedule.js",
+        "modules/retornos-store.js",
         "modules/retornos-diagnostic.js",
+        "modules/retornos-capture.js",
+        "modules/retornos-crm-line.js",
         "modules/documentation-learning.js",
         "modules/documentation-suggestion.js",
         "modules/crm-automation.js"

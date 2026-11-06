@@ -1,0 +1,120 @@
+/* AtendeAI — Retornos automáticos. Every selector is under an AtendeAI root or an .atendeai-retornos-* class.
+   Nothing here styles, moves or hides a native SZ.chat or CRM element: all of it is new, sibling UI. */
+.atendeai-retornos-line[hidden],
+.atendeai-retornos-alert[hidden],
+.atendeai-retornos-strip[hidden],
+.atendeai-retornos-news[hidden],
+.atendeai-retornos-chat-notice[hidden] { display: none !important; }
+
+.atendeai-retornos-seal {
+  display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px;
+  background: var(--ai-primary-fill); color: var(--ai-on-primary);
+  font: var(--ai-weight-bold) var(--ai-font-size-xs)/1.6 var(--ai-font); letter-spacing: .02em;
+}
+
+/* Line under the native "Data do agendamento" field. */
+#atendeai-retornos-line {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; box-sizing: border-box; width: 100%; flex: 1 0 100%;
+  margin: 8px 0 4px; padding: 10px 12px;
+  background: var(--ai-primary-soft); border: 1px solid var(--ai-primary-border); border-radius: var(--ai-radius-md);
+  font: var(--ai-weight-regular) var(--ai-font-size)/var(--ai-line) var(--ai-font); color: var(--ai-text);
+}
+#atendeai-retornos-line .atendeai-retornos-head { display: inline-flex; align-items: center; gap: 8px; }
+#atendeai-retornos-line .atendeai-retornos-title { font-weight: var(--ai-weight-medium); color: var(--ai-primary-ink); }
+#atendeai-retornos-line .atendeai-retornos-shortcuts { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+#atendeai-retornos-line .atendeai-retornos-shortcut {
+  appearance: none; cursor: pointer; padding: 5px 10px; border-radius: var(--ai-radius-sm);
+  background: var(--ai-surface); color: var(--ai-primary-ink); border: 1px solid var(--ai-primary-border);
+  font: var(--ai-weight-medium) var(--ai-font-size-sm)/1.3 var(--ai-font);
+}
+#atendeai-retornos-line .atendeai-retornos-shortcut:hover { background: var(--ai-surface-hover); }
+#atendeai-retornos-line .atendeai-retornos-free { display: inline-flex; align-items: center; gap: 6px; }
+#atendeai-retornos-line .atendeai-retornos-or { color: var(--ai-text-muted); font-size: var(--ai-font-size-sm); }
+#atendeai-retornos-line input[type="date"],
+#atendeai-retornos-line input[type="time"] {
+  width: auto; height: auto; padding: 4px 6px; border: 1px solid var(--ai-border-strong, var(--ai-border)); border-radius: var(--ai-radius-sm);
+  background: var(--ai-surface); color: var(--ai-text); font: var(--ai-font-size-sm)/1.3 var(--ai-font);
+}
+#atendeai-retornos-line .atendeai-retornos-remember { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: var(--ai-weight-medium); }
+#atendeai-retornos-line .atendeai-retornos-hint { flex: 1 0 100%; color: var(--ai-text-secondary); font-size: var(--ai-font-size-sm); }
+#atendeai-retornos-line button:focus-visible,
+#atendeai-retornos-line input:focus-visible { outline: none; box-shadow: var(--ai-focus); }
+
+/* Shared list (strip and Agenda & Gestão › Retornos). */
+.atendeai-retornos-list { display: flex; flex-direction: column; gap: 10px; font: var(--ai-font-size)/var(--ai-line) var(--ai-font); color: var(--ai-text); }
+.atendeai-retornos-group-title { margin: 0 0 4px; font-size: var(--ai-font-size-xs); font-weight: var(--ai-weight-bold); letter-spacing: .06em; text-transform: uppercase; color: var(--ai-text-muted); }
+.atendeai-retornos-group-title[data-tone="late"] { color: var(--ai-danger); }
+.atendeai-retornos-row {
+  display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 8px 10px; border: 1px solid var(--ai-border); border-radius: var(--ai-radius-sm); background: var(--ai-surface);
+}
+.atendeai-retornos-row[data-tone="late"] { border-color: var(--ai-danger-border); background: var(--ai-danger-soft); }
+.atendeai-retornos-when { font-weight: var(--ai-weight-medium); font-variant-numeric: tabular-nums; }
+.atendeai-retornos-who { min-width: 0; }
+.atendeai-retornos-client { font-weight: var(--ai-weight-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atendeai-retornos-what { color: var(--ai-text-secondary); font-size: var(--ai-font-size-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atendeai-retornos-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--ai-surface-muted); color: var(--ai-text-muted); font-size: var(--ai-font-size-xs); font-weight: var(--ai-weight-regular); }
+.atendeai-retornos-actions { display: inline-flex; gap: 6px; }
+.atendeai-retornos-btn {
+  appearance: none; cursor: pointer; padding: 5px 12px; border-radius: var(--ai-radius-sm); border: 1px solid var(--ai-border);
+  background: var(--ai-surface); color: var(--ai-text); font: var(--ai-weight-medium) var(--ai-font-size-sm)/1.3 var(--ai-font);
+}
+.atendeai-retornos-btn:hover { background: var(--ai-surface-hover); }
+.atendeai-retornos-btn[data-kind="primary"] { background: var(--ai-primary-fill); color: var(--ai-on-primary); border-color: transparent; }
+.atendeai-retornos-btn[data-kind="primary"]:hover { background: var(--ai-primary-fill-hover); }
+.atendeai-retornos-btn:focus-visible { outline: none; box-shadow: var(--ai-focus); }
+.atendeai-retornos-empty { margin: 0; padding: 10px 12px; border: 1px dashed var(--ai-primary-border); border-radius: var(--ai-radius-sm); background: var(--ai-primary-soft); color: var(--ai-text-secondary); }
+.atendeai-retornos-legacy summary { cursor: pointer; color: var(--ai-text-muted); font-size: var(--ai-font-size-sm); }
+.atendeai-retornos-legacy .atendeai-retornos-row { margin-top: 6px; }
+.atendeai-retornos-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.atendeai-retornos-add input {
+  padding: 5px 8px; border: 1px solid var(--ai-border-strong, var(--ai-border)); border-radius: var(--ai-radius-sm);
+  background: var(--ai-surface); color: var(--ai-text); font: var(--ai-font-size-sm)/1.3 var(--ai-font);
+}
+.atendeai-retornos-add input[type="text"] { flex: 1 1 200px; }
+
+/* Strip "Meus retornos" above the native CHAMADOS table. */
+#atendeai-retornos-strip {
+  box-sizing: border-box; margin: 0 0 12px; padding: 12px 14px;
+  background: var(--ai-bg); border: 1px solid var(--ai-primary-border); border-radius: var(--ai-radius-md);
+  font: var(--ai-font-size)/var(--ai-line) var(--ai-font); color: var(--ai-text);
+}
+#atendeai-retornos-strip .atendeai-retornos-strip-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+#atendeai-retornos-strip .atendeai-retornos-strip-title { font-weight: var(--ai-weight-bold); font-size: var(--ai-font-size-md); }
+#atendeai-retornos-strip .atendeai-retornos-counts { display: inline-flex; gap: 8px; margin-left: auto; font-size: var(--ai-font-size-sm); color: var(--ai-text-secondary); }
+#atendeai-retornos-strip .atendeai-retornos-count[data-tone="late"] { color: var(--ai-danger); font-weight: var(--ai-weight-medium); }
+
+/* Alert at the due time: fixed in a free corner, stays until closed or snoozed. */
+#atendeai-retornos-alert {
+  position: fixed; left: 20px; bottom: 20px; z-index: 1000000; box-sizing: border-box; width: min(380px, calc(100vw - 40px));
+  padding: 14px 16px; background: var(--ai-surface); border: 1px solid var(--ai-primary-border); border-left: 6px solid var(--ai-primary);
+  border-radius: var(--ai-radius-md); box-shadow: var(--ai-shadow-md);
+  font: var(--ai-font-size)/var(--ai-line) var(--ai-font); color: var(--ai-text);
+}
+#atendeai-retornos-alert .atendeai-retornos-alert-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+#atendeai-retornos-alert .atendeai-retornos-alert-title { font-weight: var(--ai-weight-bold); font-size: var(--ai-font-size-md); }
+#atendeai-retornos-alert .atendeai-retornos-close { margin-left: auto; }
+#atendeai-retornos-alert .atendeai-retornos-alert-item { padding: 8px 0; border-top: 1px solid var(--ai-border); }
+#atendeai-retornos-alert .atendeai-retornos-alert-item:first-of-type { border-top: 0; padding-top: 0; }
+#atendeai-retornos-alert .atendeai-retornos-snooze { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+#atendeai-retornos-alert .atendeai-retornos-snooze-label { color: var(--ai-text-muted); font-size: var(--ai-font-size-sm); }
+
+/* Chat notice in SZ.chat: below the dock corner, never over the chat list. */
+#atendeai-retornos-chat-notice {
+  position: fixed; right: 20px; top: 90px; z-index: 1000000; box-sizing: border-box; width: min(340px, calc(100vw - 40px));
+  padding: 12px 14px; background: var(--ai-surface); border: 1px solid var(--ai-primary-border); border-left: 6px solid var(--ai-primary);
+  border-radius: var(--ai-radius-md); box-shadow: var(--ai-shadow-md);
+  font: var(--ai-font-size)/var(--ai-line) var(--ai-font); color: var(--ai-text);
+}
+#atendeai-retornos-chat-notice .atendeai-retornos-chat-text { margin: 8px 0; }
+#atendeai-retornos-chat-notice .atendeai-retornos-actions { justify-content: flex-end; }
+
+/* News notice, once per browser. */
+#atendeai-retornos-news {
+  position: fixed; right: 20px; top: 20px; z-index: 1000000; box-sizing: border-box; width: min(360px, calc(100vw - 40px));
+  padding: 16px 18px; background: var(--ai-surface); border: 1px solid var(--ai-primary-border); border-radius: var(--ai-radius-lg); box-shadow: var(--ai-shadow-md);
+  font: var(--ai-font-size)/var(--ai-line) var(--ai-font); color: var(--ai-text);
+}
+#atendeai-retornos-news .atendeai-retornos-news-title { margin: 8px 0; font-size: var(--ai-font-size-lg); font-weight: var(--ai-weight-bold); }
+#atendeai-retornos-news ol { margin: 0 0 12px; padding-left: 20px; color: var(--ai-text-secondary); }
+#atendeai-retornos-news .atendeai-retornos-actions { justify-content: flex-end; }

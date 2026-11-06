@@ -1,0 +1,140 @@
+// The AtendeAI line under the CRM's native "Data do agendamento" field (/crm-atendimento).
+// It is a new sibling block: it never moves, hides or edits anything native. Shortcuts and free
+// date/time only ask the page-world bridge to write the native calendar; the native field stays
+// the truth and is what the CRM saves.
+const RetornosCrmLine = (() => {
+  const LINE_ID = "atendeai-retornos-line";
+  const SET_DATE_EVENT = "atendeai:crm-set-date";
+  const RESULT_ATTR = "data-atendeai-crm-set-date-result";
+  const HINT_ON = "Ao salvar, eu guardo este retorno e te aviso na hora.";
+  const HINT_OFF = "Este agendamento não vira lembrete.";
+  const HINT_FAIL = "Não consegui preencher a data. Use o campo do CRM acima.";
+
+  function make(doc, tag, props = {}, children = []) {
+    const node = doc.createElement(tag);
+    Object.entries(props).forEach(([key, value]) => {
+      if (key === "text") node.textContent = value;
+      else if (key === "class") node.className = value;
+      else if (key === "id") node.id = value;
+      else if (key === "checked") node.checked = value;
+      else node.setAttribute(key, value);
+    });
+    children.forEach((child) => node.appendChild(child));
+    return node;
+  }
+
+  function writeDate(doc, text, hint) {
+    try { doc.documentElement?.removeAttribute?.(RESULT_ATTR); } catch { /* ignore */ }
+    doc.dispatchEvent(new CustomEvent(SET_DATE_EVENT, { detail: text }));
+    setTimeout(() => {
+      const result = doc.documentElement?.getAttribute?.(RESULT_ATTR);
+      if (result && result !== "ok" && hint) hint.textContent = HINT_FAIL;
+    }, 300);
+  }
+
+  function buildShortcuts(doc, holder, shortcuts, hint) {
+    while (holder.children.length) holder.children[0].remove();
+    const now = new Date();
+    const S = globalThis.RetornosSchedule;
+    shortcuts.forEach((shortcut) => {
+      const button = make(doc, "button", { type: "button", class: "atendeai-retornos-shortcut", text: S.shortcutLabel(shortcut, now) });
+      button.addEventListener("click", () => writeDate(doc, S.toCrmValue(S.resolveShortcut(shortcut, new Date())), hint));
+      holder.appendChild(button);
+    });
+  }
+
+  function buildLine(doc, shortcuts) {
+    const hint = make(doc, "div", { id: "atendeai-retornos-hint", class: "atendeai-retornos-hint", text: HINT_ON });
+    const holder = make(doc, "div", { class: "atendeai-retornos-shortcuts" });
+    buildShortcuts(doc, holder, shortcuts, hint);
+
+    const date = make(doc, "input", { id: "atendeai-retornos-date", type: "date", "aria-label": "Data do retorno" });
+    const time = make(doc, "input", { id: "atendeai-retornos-time", type: "time", "aria-label": "Hora do retorno" });
+    const applyFree = () => {
+      const d = String(date.value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      const t = String(time.value || "").match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+      if (d && t) writeDate(doc, `${d[3]}/${d[2]}/${d[1]} ${t[1]}:${t[2]}`, hint);
+    };
+    [date, time].forEach((input) => {
+      input.addEventListener("change", applyFree);
+      input.addEventListener("keydown", (event) => { if (event.key === "Enter") event.preventDefault(); });
+    });
+
+    const remember = make(doc, "input", { id: "atendeai-retornos-remember", type: "checkbox", checked: true });
+    remember.addEventListener("change", () => { hint.textContent = remember.checked ? HINT_ON : HINT_OFF; });
+
+    const free = make(doc, "div", { class: "atendeai-retornos-free" }, [
+      make(doc, "span", { class: "atendeai-retornos-or", text: "ou escolha" }), date, time
+    ]);
+    const rememberRow = make(doc, "label", { class: "atendeai-retornos-remember", for: "atendeai-retornos-remember" }, [
+      remember, make(doc, "span", { text: "Me lembrar deste retorno" })
+    ]);
+    const head = make(doc, "div", { class: "atendeai-retornos-head" }, [
+      make(doc, "span", { class: "atendeai-retornos-seal", text: "AtendeAI" }),
+      make(doc, "span", { class: "atendeai-retornos-title", text: "Retorno rápido" })
+    ]);
+    const line = make(doc, "div", { id: LINE_ID, class: "atendeai-retornos-line", role: "group", "aria-label": "Retorno rápido do AtendeAI" },
+      [head, holder, free, rememberRow, hint]);
+    line.hidden = true;
+    line._shortcutsHolder = holder;
+    line._hint = hint;
+    return line;
+  }
+
+  function anchorOf(input) {
+    const wrapper = input.parentElement;
+    return wrapper && /\bui-calendar\b/.test(wrapper.className || "") ? wrapper : input;
+  }
+
+  function sync(doc) {
+    const line = doc.getElementById(LINE_ID);
+    if (line) line.hidden = globalThis.RetornosCapture.readMode(doc) !== "agendar";
+    return line;
+  }
+
+  async function mount(doc) {
+    const store = globalThis.RetornosStore;
+    if (!store || !(await store.isActive())) return false;
+    if (doc.getElementById(LINE_ID)) return false;
+    const input = globalThis.RetornosCapture.findDateInput(doc);
+    const anchor = input && anchorOf(input);
+    if (!anchor?.parentElement) return false;
+    const { shortcuts } = await store.getSettings();
+    const line = buildLine(doc, shortcuts);
+    anchor.parentElement.insertBefore(line, anchor.nextElementSibling);
+    sync(doc);
+    store.onChange(async () => {
+      const settings = await store.getSettings();
+      if (line._shortcutsHolder) buildShortcuts(doc, line._shortcutsHolder, settings.shortcuts, line._hint);
+    });
+    return true;
+  }
+
+  // PrimeFaces re-renders parts of the form after ajax calls, which can drop the line: keep it present.
+  function start(doc) {
+    let busy = false;
+    const tick = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        if (!doc.getElementById(LINE_ID)) await mount(doc);
+        sync(doc);
+      } catch (error) {
+        console.warn("AtendeAI: linha de retornos falhou.", error);
+      } finally { busy = false; }
+    };
+    ["click", "change"].forEach((type) => doc.addEventListener(type, () => setTimeout(tick, 0), true));
+    setInterval(tick, 700);
+    void tick();
+  }
+
+  return { mount, sync, start, LINE_ID };
+})();
+
+globalThis.RetornosCrmLine = RetornosCrmLine;
+if (typeof window !== "undefined") {
+  window.RetornosCrmLine = RetornosCrmLine;
+  if (typeof document !== "undefined" && typeof location !== "undefined" && /\/crm-atendimento/.test(location.pathname)) {
+    RetornosCrmLine.start(document);
+  }
+}
