@@ -60,9 +60,18 @@
       }));
   }
 
-  function setDate(text) {
-    const input = document.getElementById(DATE_INPUT_ID)
-      || document.querySelector('input[id$=":agendamento_input"], input[id*="agendamento"][id$="_input"]');
+  // The content script sends the real id of the native date input along with the value, so this never
+  // depends on a guessed id; the id/label scan below is only a fallback.
+  function findDateInput(id) {
+    const byId = id && document.getElementById(id);
+    if (byId) return byId;
+    return document.getElementById(DATE_INPUT_ID)
+      || [...document.querySelectorAll("input")].find((n) => /agendamento/i.test(n.id || "") && /_input$/.test(n.id || ""))
+      || null;
+  }
+
+  function setDate(text, id) {
+    const input = findDateInput(id);
     if (!input) return "input-not-found";
     const baseId = input.id.replace(/_input$/, "");
     const widget = Object.values(window.PrimeFaces?.widgets || {})
@@ -72,10 +81,20 @@
       if (widget && typeof widget.setDate === "function" && parts) {
         widget.setDate(new Date(+parts[3], +parts[2] - 1, +parts[1], +(parts[4] || 0), +(parts[5] || 0)));
       }
-    } catch (_) { /* fall back to the input below */ }
+    } catch (error) { console.warn("AtendeAI: o calendário do CRM recusou setDate; escrevo direto no campo.", error); }
     if (input.value !== text) input.value = text;
     ["input", "change"].forEach((type) => input.dispatchEvent(new Event(type, { bubbles: true })));
     return input.value === text ? "ok" : "not-applied";
+  }
+
+  // The request travels as JSON {id, value}, in the event detail and mirrored in an attribute: some
+  // browsers drop CustomEvent.detail between the extension's isolated world and the page world.
+  function payloadOf(event) {
+    const raw = String(event?.detail || document.documentElement.getAttribute(SET_DATE_ATTR) || "");
+    try {
+      const parsed = JSON.parse(raw);
+      return { id: String(parsed.id || ""), value: String(parsed.value || "") };
+    } catch (_) { return { id: "", value: raw }; }
   }
 
   document.addEventListener(WIDGETS_REQUEST, () => {
@@ -83,8 +102,10 @@
   });
 
   document.addEventListener(SET_DATE_EVENT, (event) => {
-    const text = String(event?.detail || document.documentElement.getAttribute(SET_DATE_ATTR) || "");
-    document.documentElement.setAttribute(SET_DATE_RESULT_ATTR, text ? setDate(text) : "empty");
+    const { id, value } = payloadOf(event);
+    const result = value ? setDate(value, id) : "empty";
+    if (result !== "ok") console.warn("AtendeAI: não consegui preencher a data do agendamento:", result, { id, value });
+    document.documentElement.setAttribute(SET_DATE_RESULT_ATTR, result);
   });
 
   if (!listenAjax()) {

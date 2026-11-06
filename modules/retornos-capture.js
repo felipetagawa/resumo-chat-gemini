@@ -166,6 +166,7 @@ const RetornosCapture = (() => {
 
   return {
     get SAVE_SIGNATURES() { return signatures; },
+    hasSignatures: () => signatures.length > 0,
     interpretSave, readPage, readMode, findDateInput, applySave, start, summarizeXml,
     _test: { setSignatures(list) { signatures = list; } }
   };

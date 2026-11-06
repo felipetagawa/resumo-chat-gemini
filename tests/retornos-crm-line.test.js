@@ -17,7 +17,7 @@ function load(store = { atendeai_user_sector: 'suporte' }) {
   vm.createContext(context);
   ['retornos-schedule', 'retornos-store', 'retornos-capture', 'retornos-crm-line'].forEach((name) =>
     vm.runInContext(fs.readFileSync(`modules/${name}.js`, 'utf8'), context));
-  return { L: context.window.RetornosCrmLine, S: context.window.RetornosSchedule, store };
+  return { L: context.window.RetornosCrmLine, S: context.window.RetornosSchedule, C: context.window.RetornosCapture, store };
 }
 
 function pageDoc({ mode = 'agendar' } = {}) {
@@ -79,7 +79,9 @@ test('shortcuts follow the settings and a click writes the CRM format to the nat
   first.click();
   const event = events.find((e) => e.type === 'atendeai:crm-set-date');
   assert.ok(event);
-  assert.equal(event.detail, S.toCrmValue(S.resolveShortcut(S.defaultShortcuts()[0], now)));
+  const sent = JSON.parse(event.detail);
+  assert.equal(sent.value, S.toCrmValue(S.resolveShortcut(S.defaultShortcuts()[0], now)));
+  assert.equal(sent.id, 'frmAtendimento:tbvAtendimento:agendamento_input', 'the real id of the native input travels with the value');
 });
 
 test('free date and time fill the native field once both are chosen', async () => {
@@ -93,11 +95,12 @@ test('free date and time fill the native field once both are chosen', async () =
   assert.equal(events.filter((e) => e.type === 'atendeai:crm-set-date').length, 0, 'waits for the time');
   time.value = '10:30';
   time.fire('change');
-  assert.equal(events.at(-1).detail, '09/11/2026 10:30');
+  assert.equal(JSON.parse(events.at(-1).detail).value, '09/11/2026 10:30');
 });
 
-test('the "Me lembrar" box starts checked and its sentence follows it', async () => {
-  const { L } = load();
+test('the "Me lembrar" box starts checked and its sentence follows it (once the save signal is calibrated)', async () => {
+  const { L, C } = load();
+  C._test.setSignatures([{ mode: 'radio', source: /x$/ }]);
   const { doc } = pageDoc();
   await L.mount(doc);
   const box = byId(doc, 'atendeai-retornos-remember');
@@ -137,4 +140,25 @@ test('mounts once, and not for other sectors, when switched off, or without the 
   assert.equal(await off.L.mount(pageDoc().doc), false);
   const empty = createDocument();
   assert.equal(await load().L.mount(empty), false);
+});
+
+test('while the save signal is not calibrated the line says so instead of promising to store the return', async () => {
+  const { L, C } = load();
+  C._test.setSignatures([]);
+  const { doc } = pageDoc();
+  await L.mount(doc);
+  const hint = byId(doc, 'atendeai-retornos-hint');
+  assert.match(hint.textContent, /^Em calibração: ainda não guardo este retorno sozinho/);
+  const box = byId(doc, 'atendeai-retornos-remember');
+  box.checked = false; box.fire('change');
+  assert.match(hint.textContent, /^Em calibração/);
+});
+
+test('after a shortcut the line shows the value it asked the CRM field to take', async () => {
+  const { L } = load();
+  const { doc } = pageDoc();
+  await L.mount(doc);
+  buttons(byId(doc, 'atendeai-retornos-line')).find((b) => b.className.includes('atendeai-retornos-shortcut')).click();
+  await new Promise((r) => setTimeout(r, 350));
+  assert.match(byId(doc, 'atendeai-retornos-picked').textContent, /^Preenchi o campo do CRM: \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/);
 });
