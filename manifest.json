@@ -75,7 +75,8 @@
         "https://www.sistemaempresarialweb.com.br/crm-atendimento*"
       ],
       "js": [
-        "modules/crm-primefaces-bridge.js"
+        "modules/crm-primefaces-bridge.js",
+        "modules/crm-retornos-bridge.js"
       ],
       "run_at": "document_end",
       "world": "MAIN"
@@ -86,6 +87,7 @@
         "https://www.sistemaempresarialweb.com.br/crm-atendimento*"
       ],
       "js": [
+        "modules/retornos-diagnostic.js",
         "modules/documentation-learning.js",
         "modules/documentation-suggestion.js",
         "modules/crm-automation.js"
