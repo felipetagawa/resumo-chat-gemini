@@ -27,15 +27,27 @@
     return out;
   }
 
-  function signalOf(phase, xhr, settings) {
+  // PrimeFaces announces its ajax through its own jQuery events (observed 06/11/2026: the generic
+  // ajaxSend/ajaxComplete never fire for it, `global` is off) as (event, xhr, settings[, args]).
+  // Its form fields are named jakarta.faces.* here (javax.faces.* on older builds); settings.source is
+  // the id of the component that triggered the request.
+  function paramOf(params, suffix) {
+    return params[`jakarta.faces.${suffix}`] ?? params[`javax.faces.${suffix}`] ?? "";
+  }
+
+  function signalOf(phase, xhr, settings, args) {
     const params = parseParams(settings?.data);
+    const source = String(settings?.source || paramOf(params, "source") || "");
+    let safeArgs = null;
+    try { safeArgs = args ? JSON.parse(JSON.stringify(args)) : null; } catch (_) { safeArgs = null; }
     return {
       phase,
-      url: String(settings?.url || "").split("?")[0],
+      url: String(settings?.url || "").split("?")[0].split(";")[0],
       status: Number(xhr?.status) || 0,
-      form: params["javax.faces.source"] ? String(params["javax.faces.source"]).split(":")[0] : "",
-      source: params["javax.faces.source"] || "",
+      form: source.split(":")[0],
+      source,
       params,
+      args: safeArgs,
       responseText: phase === "complete" ? String(xhr?.responseText || "") : ""
     };
   }
@@ -44,8 +56,8 @@
     const jquery = window.jQuery || window.$;
     if (typeof jquery !== "function") return false;
     const doc = jquery(document);
-    doc.on("ajaxSend", (_event, xhr, settings) => emit(AJAX_EVENT, signalOf("send", xhr, settings)));
-    doc.on("ajaxComplete", (_event, xhr, settings) => emit(AJAX_EVENT, signalOf("complete", xhr, settings)));
+    doc.on("pfAjaxSend", (_event, xhr, settings) => emit(AJAX_EVENT, signalOf("send", xhr, settings)));
+    doc.on("pfAjaxComplete", (_event, xhr, settings, args) => emit(AJAX_EVENT, signalOf("complete", xhr, settings, args)));
     return true;
   }
 

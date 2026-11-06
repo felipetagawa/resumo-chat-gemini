@@ -6,7 +6,7 @@ const RetornosDiagnostic = (() => {
   const ON_KEY = "atendeai_retornos_diag_on";
   const LOG_KEY = "atendeai_retornos_diag_log";
   const MAX_ENTRIES = 40;
-  const KEEP_PARAM = /^javax\.faces\.(source|partial\.|behavior\.event|event)|lblOnOf|agendamento/i;
+  const KEEP_PARAM = /^(?:javax|jakarta)\.faces\.(source|partial\.|behavior\.event|event)|lblOnOf|agendamento|dataA/i;
   const KEEP_TEXT_ID = /msg|message|growl|dialog|confirm/i;
   const ERROR_RE = /ui-messages-(?:error|fatal)|ui-message-(?:error|fatal)|ui-growl-(?:item[^"]*)?(?:error|fatal)|ui-state-error/;
   const MESSAGE_TEXT = /ui-(?:messages-(?:error|warn|info|fatal)-(?:summary|detail)|growl-title|growl-message)[^>]*>([^<]*)</g;
@@ -33,7 +33,7 @@ const RetornosDiagnostic = (() => {
   function redactParams(params) {
     const out = {};
     Object.entries(params || {}).forEach(([name, value]) => {
-      if (name === "javax.faces.ViewState") out[name] = { length: String(value ?? "").length };
+      if (/^(?:javax|jakarta)\.faces\.ViewState$/.test(name)) out[name] = { length: String(value ?? "").length };
       else out[name] = KEEP_PARAM.test(name) ? String(value ?? "") : mask(value);
     });
     return out;
@@ -85,7 +85,7 @@ const RetornosDiagnostic = (() => {
 
   function snapshotDom(root) {
     const fields = [...root.querySelectorAll("input, select, textarea")]
-      .filter((n) => n.name !== "javax.faces.ViewState")
+      .filter((n) => !/\.faces\.ViewState$/.test(n.name || ""))
       .map((n) => {
         const type = n.type || n.getAttribute("type") || n.tagName.toLowerCase();
         const entry = {
@@ -142,6 +142,7 @@ const RetornosDiagnostic = (() => {
         try { signal = JSON.parse(event.detail); } catch { return; }
         record({
           kind: "ajax", phase: signal.phase, status: signal.status, form: signal.form, source: signal.source,
+          args: signal.args || null,
           params: redactParams(signal.params), response: signal.phase === "complete" ? redactResponse(signal.responseText) : null
         });
         if (signal.phase === "complete") setTimeout(() => record({ kind: "dom-after", dom: snapshotDom(root) }), 150);

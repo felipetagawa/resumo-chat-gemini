@@ -37,8 +37,11 @@ const RetornosCapture = (() => {
   const leaves = (summary) => Boolean(summary.redirect) || (summary.evals || []).some((e) => /location|href|redirect/i.test(e));
   const asksConfirmation = (summary) => summary.showsConfirm === true || /dlgConfirmarAgendamento/.test(JSON.stringify(summary.evals || []));
 
-  const summaryOf = (signal) => (signal.response && typeof signal.response === "object"
-    ? signal.response : summarizeXml(signal.responseText));
+  const summaryOf = (signal) => {
+    const summary = signal.response && typeof signal.response === "object" ? signal.response : summarizeXml(signal.responseText);
+    // pfAjaxComplete also hands over the parsed `args`; prefer it over the XML extension.
+    return signal.args && typeof signal.args === "object" ? { ...summary, args: signal.args } : summary;
+  };
 
   function signatureFor(source, doc) {
     const id = String(source || "");

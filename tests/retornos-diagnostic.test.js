@@ -78,3 +78,11 @@ test('snapshotDom lists fields with label and value shape, never the value, and 
   assert.ok(!JSON.stringify(snap).includes('Maria'));
   assert.deepEqual([...snap.buttons.map((b) => b.id)], ['btnSalvar']);
 });
+
+test('redactParams understands the CRM\'s jakarta.faces.* names and keeps the component source', () => {
+  const { diag } = load();
+  const out = diag.redactParams({ 'jakarta.faces.source': 'frmAtendimento:tbvAtendimento:j_idt92', 'jakarta.faces.ViewState': 'abc', 'frmAtendimento:tbvAtendimento:problema': 'NF-e' });
+  assert.equal(out['jakarta.faces.source'], 'frmAtendimento:tbvAtendimento:j_idt92');
+  assert.deepEqual({ ...out['jakarta.faces.ViewState'] }, { length: 3 });
+  assert.equal(out['frmAtendimento:tbvAtendimento:problema'], 'aa-a');
+});

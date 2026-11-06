@@ -175,3 +175,14 @@ test('Agendar with the "Me lembrar" box unchecked removes an existing return and
   await drive(page, C, [['send', SALVAR], ['complete', SALVAR, redirectXml]]);
   assert.equal((await R.list()).length, 0);
 });
+
+test('the parsed args that pfAjaxComplete provides decide a refusal even when the XML shows nothing', async () => {
+  const { C, R } = load();
+  const page = realPage();
+  await C.start(page.doc, { location: { href: 'https://www.sistemaempresarialweb.com.br/crm-atendimento/1250257' } });
+  const fire = (signal) => page.doc.listeners.filter((l) => l.type === 'atendeai:crm-ajax').forEach((l) => l.fn({ detail: JSON.stringify(signal) }));
+  fire({ phase: 'send', source: SALVAR, status: 0 });
+  fire({ phase: 'complete', source: SALVAR, status: 200, responseText: redirectXml, args: { validationFailed: true } });
+  await wait();
+  assert.equal((await R.list()).length, 0);
+});
