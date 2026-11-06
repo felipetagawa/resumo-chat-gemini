@@ -160,7 +160,8 @@ const RetornosDiagnostic = (() => {
   return { isOn, redactParams, redactResponse, snapshotDom, record, export: exportLog, clear, start, ON_KEY, LOG_KEY };
 })();
 
-window.RetornosDiagnostic = RetornosDiagnostic;
-if (typeof document !== "undefined" && typeof location !== "undefined" && /\/crm-atendimento/.test(location.pathname)) {
+globalThis.RetornosDiagnostic = RetornosDiagnostic;
+if (typeof window !== "undefined") window.RetornosDiagnostic = RetornosDiagnostic;
+if (typeof document !== "undefined" && typeof location !== "undefined" && typeof window !== "undefined" && /\/crm-atendimento/.test(location.pathname)) {
   void RetornosDiagnostic.start(document, window);
 }
