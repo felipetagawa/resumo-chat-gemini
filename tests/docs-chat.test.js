@@ -56,3 +56,22 @@ test('conversation title and dates are short and readable', () => {
   assert.equal(formatDate('2026-11-03 16:08:59'), '03/11/2026');
   assert.equal(formatDate(''), '');
 });
+
+test('abrir o Consultar Docs fecha o Sugerir resposta e close() fecha a janela', async () => {
+  const document = createDocument();
+  let closed = 0;
+  const context = { document, window: {}, console, setTimeout: () => 0, globalThis: {},
+    Option: class { constructor(text, value) { this.tagName = 'option'; this.textContent = text; this.value = value; this.children = []; } },
+    chrome: { runtime: {}, storage: { local: { get(keys, cb) { cb({}); }, set(data, cb) { cb?.(); } } } } };
+  context.globalThis = context;
+  context.SmartReplyModule = { close() { closed++; } };
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync('modules/docs.js', 'utf8'), context);
+  const docs = context.window.DocsModule;
+  await docs.exibirPainelConsultaDocs();
+  assert.equal(closed, 1);
+  assert.ok(document.getElementById('geminiDocsPopup'));
+  docs.close();
+  assert.equal(document.getElementById('geminiDocsPopup'), null);
+  docs.close();
+});

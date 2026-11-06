@@ -87,6 +87,15 @@ class MiniNode {
 
   focus() { this.focused = true; }
 
+  append(...nodes) {
+    nodes.forEach((node) => this.appendChild(node));
+  }
+
+  replaceChildren(...nodes) {
+    [...this.children].forEach((child) => child.remove());
+    nodes.forEach((node) => this.appendChild(node));
+  }
+
   select() {}
 
   get nextElementSibling() {

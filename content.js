@@ -108,6 +108,7 @@ function inicializarModulos() {
 // One drawn icon set for the dock: 24px grid, 1.75 stroke, round joins.
 const DOCK_ICONS = {
   report: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>',
+  docs: '<path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/>',
   reply: '<path d="M11 3.5l1.9 4.6 4.6 1.9-4.6 1.9L11 16.5l-1.9-4.6L4.5 10l4.6-1.9z"/><path d="M18.5 14.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z"/>',
   messages: '<path d="M20 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8 8h8M8 12h5"/>',
   agenda: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
@@ -336,8 +337,6 @@ async function initializeExtensionDock(container) {
   }
 
   function applySize() {
-    // The open Smart Reply card froze the dock's footprint; a size or minimize change would let it outlive that.
-    if (container.getAttribute("data-reply-open") === "true") globalThis.SmartReplyModule?.close?.();
     const nativeList = document.querySelector("#contact-fields, .contacts-field.contact-scroll, .chats-list, .contacts-list, .contact-list");
     const listRect = nativeList?.getBoundingClientRect();
     // The visual QA found the full dock covering the left queue on narrow windows.
@@ -576,7 +575,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
   const botaoDocs = createButton(
     "btnConsultarDocs",
     "Consultar Docs",
-    "",
+    "docs",
     guardFeature(() => DocsModule.exibirPainelConsultaDocs())
   );
 
@@ -631,12 +630,13 @@ function criarBotoesFlutuantes(visibility, userSector) {
     return RecoveryBufferModule.openPreservedBuffers();
   }));
 
-  const botaoSmartReply = createButton('btnSmartReply', 'Sugerir resposta', 'reply',
+  // Consultar Docs is the hero of its group; Sugerir resposta is the smaller link below it.
+  const botaoSmartReply = createButton('btnSmartReply', 'Sugerir resposta', '',
     guardFeature(() => SmartReplyModule.open()));
-  botaoSmartReply.className += ' gemini-hero atendeai-reply-primary';
+  botaoSmartReply.className = 'gemini-preserved-link';
+  botaoSmartReply.textContent = 'Sugerir resposta';
   botaoDocs.id = 'btnConsultarDocsLoop';
-  botaoDocs.className = 'gemini-preserved-link';
-  botaoDocs.textContent = 'Consultar Docs';
+  botaoDocs.className += ' gemini-hero';
 
   const botaoMessages = createButton(
     "btnMessages",
@@ -684,7 +684,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
     container.appendChild(productClassifierResult);
   }
 
-  // Gerar Relatório is the main feature: first and the only gold action. Sugerir resposta sits right below it.
+  // Gerar Relatório is the main feature: first and the only gold action. Consultar Docs (with Sugerir resposta as its link) sits right below it.
   if (isVisible("btnResumoGemini")) {
     const reportGroup = document.createElement("div");
     reportGroup.className = "gemini-report-group gemini-group-accent";
@@ -696,8 +696,8 @@ function criarBotoesFlutuantes(visibility, userSector) {
   if (showSmartReply || isVisible('btnConsultarDocsLoop')) {
     const replyGroup = document.createElement('div');
     replyGroup.className = 'gemini-report-group';
-    if (showSmartReply) replyGroup.appendChild(botaoSmartReply);
     if (isVisible('btnConsultarDocsLoop')) replyGroup.appendChild(botaoDocs);
+    if (showSmartReply) replyGroup.appendChild(botaoSmartReply);
     container.appendChild(replyGroup);
   }
   const divider = document.createElement("div");

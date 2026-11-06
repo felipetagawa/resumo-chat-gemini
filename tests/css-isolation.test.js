@@ -220,14 +220,12 @@ test('message popup and form styles are isolated and use tokens for all visual s
   assert.match(declarations('#popupMensagensPadrao #conteudoMensagens'), /scrollbar-color:\s*var\(--ai-border-strong\) var\(--ai-surface\)/);
 });
 
-test('Smart Reply card lives inside the dock footprint, uses tokens and respects reduced motion', () => {
+test('Sugerir resposta is a fixed window scoped to its own root, uses tokens and keeps focus visible', () => {
   const css = fs.readFileSync('styles/smart-reply.css', 'utf8');
-  assert.doesNotMatch(css, /position:\s*(fixed|absolute)/);
-  assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b/i);
-  assert.doesNotMatch(css, /smart-reply-profiles|smart-reply-preview|atendeai-reply-context/);
-  assert.match(css, /#containerBotoesGemini\[data-reply-open="true"\] > :not\(\.gemini-dock-toolbar\):not\(#atendeai-smart-reply\)\s*\{[^}]*display:\s*none/);
-  assert.match(css, /\.smart-reply-card\s*\{[^}]*min-height:\s*0/);
-  assert.match(css, /\.smart-reply-text\s*\{[^}]*overflow-y:\s*auto/);
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.smart-reply-skeleton\s*\{[^}]*animation:\s*none/);
+  for (const selector of extractSelectors(css)) assert.match(selector, /^#atendeai-smart-reply(?:\s|$|\s*\[|\.|:)/, selector);
+  assert.doesNotMatch(css, /data-reply-open|smart-reply-card|lockDock/);
+  assert.doesNotMatch(stripComments(css), /#[a-f\d]{3,8}\b|rgba?\(|:\s*(?:white|black)\b/i);
+  assert.match(css, /#atendeai-smart-reply\s*\{[^}]*position:\s*fixed/);
+  assert.match(css, /\.smart-reply-messages\s*\{[^}]*overflow-y:\s*auto/);
   assert.match(css, /:focus-visible\s*\{[^}]*box-shadow:\s*var\(--ai-focus\)/);
 });

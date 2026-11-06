@@ -80,8 +80,8 @@ document.addEventListener("DOMContentLoaded", () => {
     { id: "btnMessages", label: "Mensagens Padrão", defaultSupport: true, defaultPre: true },
     { id: "btnResumoGemini", label: "Gerar Relatório (IA)", defaultSupport: true, defaultPre: false },
     { id: "btnChamadoManual", label: "Chamado Manual", defaultSupport: true, defaultPre: false },
-    { id: "btnSmartReply", label: "Sugerir resposta", defaultSupport: true, defaultPre: true },
-    { id: "btnConsultarDocsLoop", label: "↳ Consultar Docs", defaultSupport: true, defaultPre: true }
+    { id: "btnConsultarDocsLoop", label: "Consultar Docs", defaultSupport: true, defaultPre: true },
+    { id: "btnSmartReply", label: "↳ Sugerir resposta", defaultSupport: true, defaultPre: true }
   ];
 
   const FIXED_MESSAGES = [

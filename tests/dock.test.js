@@ -45,15 +45,24 @@ test('all dock actions remain expandable on demand in compact viewport without p
   assert.deepEqual(h.store.atendeai_dock_preferences, h.saved); assert.equal(h.writes.length, 0);
 });
 
-test('size, minimize and window resize close an open Smart Reply card so the frozen footprint never outlives the dock', async () => {
+test('mudar tamanho, minimizar ou redimensionar não fecha a janela do Sugerir resposta', async () => {
   const h = harness(); await h.init();
-  const open = () => h.dock.setAttribute('data-reply-open', 'true');
-  open(); await Promise.all(h.dock.querySelector('.gemini-dock-size').click());
-  assert.equal(h.reply.closed, 1);
-  open(); await Promise.all(h.dock.querySelector('.gemini-dock-toggle').click());
-  assert.equal(h.reply.closed, 2);
-  open(); h.handlers.resize();
-  assert.equal(h.reply.closed, 3);
+  // Even a leftover attribute from the old in-dock card must not close the window.
+  h.dock.setAttribute('data-reply-open', 'true');
+  await Promise.all(h.dock.querySelector('.gemini-dock-size').click());
+  await Promise.all(h.dock.querySelector('.gemini-dock-toggle').click());
   h.handlers.resize();
-  assert.equal(h.reply.closed, 3, 'nothing to close when no card is open');
+  assert.equal(h.reply.closed, 0, 'the reply window is fixed on the page, not inside the dock');
+});
+
+test('Consultar Docs é o botão do grupo e Sugerir resposta o link embaixo', () => {
+  const src = fs.readFileSync('content.js', 'utf8');
+  const group = src.slice(src.indexOf("replyGroup.className"), src.indexOf("container.appendChild(replyGroup)"));
+  assert.ok(group.indexOf('appendChild(botaoDocs)') >= 0 && group.indexOf('appendChild(botaoDocs)') < group.indexOf('appendChild(botaoSmartReply)'));
+  assert.match(src, /botaoDocs\.className \+= ' gemini-hero'/);
+  assert.match(src, /botaoSmartReply\.className = 'gemini-preserved-link';/);
+  assert.doesNotMatch(src, /botaoSmartReply\.className \+= ' gemini-hero/);
+  assert.doesNotMatch(src, /data-reply-open/);
+  const options = fs.readFileSync('options.js', 'utf8');
+  assert.ok(options.indexOf('id: "btnConsultarDocsLoop", label: "Consultar Docs"') < options.indexOf('id: "btnSmartReply", label: "↳ Sugerir resposta"'));
 });
