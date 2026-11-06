@@ -214,8 +214,23 @@ const RetornosCapture = (() => {
     return null;
   }
 
+  // "Me lembrar" lives in the AtendeAI line, which PrimeFaces drops whenever it re-renders the form.
+  // The technician's choice is kept in memory for the attendance on screen (its protocolo), so the
+  // rebuilt line, and a Salvar sent before it is back, never tick an unticked box again.
+  let rememberChoice = null;
+  const protocoloOf = (doc) => valuesByLabel(doc, /^protocolo\b/)[0] || "";
+
+  function keepRemember(doc, checked) {
+    rememberChoice = { protocolo: protocoloOf(doc), checked: checked !== false };
+  }
+
+  function keptRemember(doc) {
+    return rememberChoice && rememberChoice.protocolo === protocoloOf(doc) ? rememberChoice.checked : true;
+  }
+
   function readRemember(doc) {
-    return doc.getElementById("atendeai-retornos-remember")?.checked !== false;
+    const box = doc.getElementById("atendeai-retornos-remember");
+    return box ? box.checked !== false : keptRemember(doc);
   }
 
   async function start(doc, win) {
@@ -289,7 +304,7 @@ const RetornosCapture = (() => {
   return {
     get SAVE_SIGNATURES() { return signatures; },
     hasSignatures: () => signatures.length > 0,
-    interpretSave, readPage, readMode, findDateInput, applySave, start, summarizeXml,
+    interpretSave, readPage, readMode, findDateInput, applySave, start, summarizeXml, keepRemember, keptRemember,
     _test: { setSignatures(list) { signatures = list; }, setLeaveWait(ms) { leaveWaitMs = ms; } }
   };
 })();

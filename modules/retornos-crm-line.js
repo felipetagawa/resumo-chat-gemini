@@ -66,7 +66,9 @@ const RetornosCrmLine = (() => {
   }
 
   function buildLine(doc, shortcuts) {
-    const hint = make(doc, "div", { id: "atendeai-retornos-hint", class: "atendeai-retornos-hint", text: hintFor(true) });
+    // A re-render rebuilds the line: the box comes back as the technician left it for this attendance.
+    const checked = globalThis.RetornosCapture.keptRemember(doc);
+    const hint = make(doc, "div", { id: "atendeai-retornos-hint", class: "atendeai-retornos-hint", text: hintFor(checked) });
     const picked = make(doc, "div", { id: "atendeai-retornos-picked", class: "atendeai-retornos-picked", role: "status" });
     const holder = make(doc, "div", { class: "atendeai-retornos-shortcuts" });
     buildShortcuts(doc, holder, shortcuts, hint, picked);
@@ -83,8 +85,11 @@ const RetornosCrmLine = (() => {
       input.addEventListener("keydown", (event) => { if (event.key === "Enter") event.preventDefault(); });
     });
 
-    const remember = make(doc, "input", { id: "atendeai-retornos-remember", type: "checkbox", checked: true });
-    remember.addEventListener("change", () => { hint.textContent = hintFor(remember.checked); });
+    const remember = make(doc, "input", { id: "atendeai-retornos-remember", type: "checkbox", checked });
+    remember.addEventListener("change", () => {
+      globalThis.RetornosCapture.keepRemember(doc, remember.checked);
+      hint.textContent = hintFor(remember.checked);
+    });
 
     const free = make(doc, "div", { class: "atendeai-retornos-free" }, [
       make(doc, "span", { class: "atendeai-retornos-or", text: "ou escolha" }), date, time

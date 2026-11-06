@@ -290,3 +290,43 @@ test('the real success answer on Finalizar removes the return', async () => {
   await drive(realPage({ mode: 'finalizar' }), C, [['send', SALVAR], ['complete', SALVAR, growlSaved]]);
   assert.equal((await R.list()).length, 0);
 });
+
+// PrimeFaces re-renders frmAtendimento after its ajax calls: the whole form (and the line inside it)
+// is replaced by fresh markup. `protocolo` changes the attendance the fresh form shows.
+function rerender(page, { protocolo } = {}) {
+  const fresh = realPage();
+  page.form.remove();
+  page.doc.body.prepend(fresh.form);
+  page.form = fresh.form;
+  if (protocolo) page.doc.getElementById('frmAtendimento:tbvAtendimento:j_idt22').value = protocolo;
+}
+
+test('an unticked "Me lembrar" stays unticked when the form is re-rendered; another attendance starts ticked', async () => {
+  const { L } = load();
+  const page = realPage();
+  await L.mount(page.doc);
+  const box = page.doc.getElementById('atendeai-retornos-remember');
+  box.checked = false; box.fire('change');
+  rerender(page);
+  assert.equal(page.doc.getElementById('atendeai-retornos-line'), null, 'the re-render dropped the line');
+  assert.equal(await L.mount(page.doc), true);
+  assert.equal(page.doc.getElementById('atendeai-retornos-remember').checked, false);
+  assert.equal(page.doc.getElementById('atendeai-retornos-hint').textContent, 'Este agendamento não vira lembrete.');
+  rerender(page, { protocolo: '1790172575960' });
+  await L.mount(page.doc);
+  assert.equal(page.doc.getElementById('atendeai-retornos-remember').checked, true, 'a different attendance starts ticked');
+});
+
+test('Salvar sent after a re-render, before the line is back, still honours the unticked "Me lembrar"', async () => {
+  const { C, R, L } = load();
+  const page = realPage();
+  await L.mount(page.doc);
+  const box = page.doc.getElementById('atendeai-retornos-remember');
+  box.checked = false; box.fire('change');
+  rerender(page);
+  await drive(page, C, [['send', SALVAR], ['complete', SALVAR, growlSaved]]);
+  assert.equal((await R.list()).length, 0, 'an opted-out schedule never becomes a reminder');
+  await L.mount(page.doc);
+  await drive(page, C, [['send', SALVAR], ['complete', SALVAR, growlSaved]]);
+  assert.equal((await R.list()).length, 0, 'nor after the line is back');
+});
