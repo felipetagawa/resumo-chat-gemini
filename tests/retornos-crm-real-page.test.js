@@ -358,3 +358,17 @@ test('only a script that really shows "Confirmar Agendamento" makes Salvar wait 
   await drive(page, C, [['send', CONTINUAR], ['complete', CONTINUAR, growlSaved]]);
   assert.equal((await R.list()).length, 1, 'Continuar finishes the save that was waiting');
 });
+
+test('Finalizar removes the return even when its answer re-rendered the form without the Salvar button', async () => {
+  const { C, R } = load();
+  await R.upsertCrm({ protocolo: '1790172575959', atendimentoId: '1250257', cliente: 'X', dueAt: new Date(2026, 10, 12, 8, 0).getTime() }, 1);
+  const page = realPage({ mode: 'finalizar' });
+  await C.start(page.doc, { location: { href: 'https://www.sistemaempresarialweb.com.br/crm-atendimento/1250257' } });
+  const fire = (signal) => page.doc.listeners.filter((l) => l.type === 'atendeai:crm-ajax').forEach((l) => l.fn({ detail: JSON.stringify(signal) }));
+  fire({ phase: 'send', source: SALVAR, status: 0 });
+  page.doc.getElementById(SALVAR).remove();
+  fire({ phase: 'complete', source: SALVAR, status: 200, responseText: growlSaved });
+  await wait();
+  assert.equal((await R.list()).length, 0, 'the answer pairs with the Salvar sent, by its source');
+  assert.equal((await R.getLastSave()).outcome, 'removido');
+});

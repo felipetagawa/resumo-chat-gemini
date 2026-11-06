@@ -286,13 +286,9 @@ const RetornosCapture = (() => {
       doc.addEventListener("atendeai:crm-ajax", (event) => {
         const signal = signalOf(event, doc);
         if (!signal) return;
-        const signature = signatureFor(signal.source, doc);
-        if (!signature) return;
-        if (signature.mode === "cancel") { held = null; snapshot = null; return; }
-        if (signal.phase === "send") {
-          if (signature.mode === "confirm") snapshot = held ? { ...held, signature, source: signal.source } : null;
-          else { held = null; snapshot = { page: readPage(doc, href()), remember: readRemember(doc), radioMode: readMode(doc), signature, source: signal.source }; }
-        } else if (signal.phase === "complete" && snapshot && snapshot.source === signal.source) {
+        // The answer pairs with the request sent by its source, and uses the signature read at send
+        // time: by now the answer may have re-rendered the form without that button.
+        if (signal.phase === "complete" && snapshot && snapshot.source === signal.source) {
           const taken = snapshot;
           snapshot = null;
           const verdict = interpretSave(signal, { radioMode: taken.radioMode, signature: taken.signature });
@@ -301,6 +297,14 @@ const RetornosCapture = (() => {
             held = null;
             if (verdict) void settle(verdict, taken);
           }
+          return;
+        }
+        const signature = signatureFor(signal.source, doc);
+        if (!signature) return;
+        if (signature.mode === "cancel") { held = null; snapshot = null; return; }
+        if (signal.phase === "send") {
+          if (signature.mode === "confirm") snapshot = held ? { ...held, signature, source: signal.source } : null;
+          else { held = null; snapshot = { page: readPage(doc, href()), remember: readRemember(doc), radioMode: readMode(doc), signature, source: signal.source }; }
         }
       });
     } catch (error) {
