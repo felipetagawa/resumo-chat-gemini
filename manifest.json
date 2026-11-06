@@ -65,6 +65,7 @@
         "modules/retornos-store.js",
         "modules/retornos-list.js",
         "modules/retornos-alert.js",
+        "modules/retornos-chat-notice.js",
         "modules/smart-reply.js",
         "modules/queue-context-parse.js",
         "modules/queue-context-store.js",
