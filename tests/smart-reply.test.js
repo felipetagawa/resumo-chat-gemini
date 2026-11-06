@@ -121,7 +121,7 @@ test('abrir mostra a janela vazia com os botões rápidos e não chama a API', a
   assert.equal(h.sent.length, 0);
   const chips = h.byClass('smart-reply-chips').children;
   assert.deepEqual(chips.filter(c => !c.hidden).map(c => c.textContent), ['Resolver', 'Pedir info', 'Cliente difícil', 'Cobrar', 'Encerrar']);
-  assert.equal(deepText(h.byClass('smart-reply-context')).trim(), 'Lendo o atendimento de Gabriel');
+  assert.equal(deepText(h.byClass('smart-reply-reading')).trim(), 'Lendo o atendimento de Gabriel');
   assert.match(deepText(h.byClass('smart-reply-empty')), /Escolha o tipo de resposta, ou escreva o que quer dizer ao cliente\./);
   assert.equal(h.input().placeholder, 'Diga o que responder, ou corrija a última… (Enter envia)');
 });
@@ -210,7 +210,7 @@ test('Nova limpa só a conversa deste atendimento', async () => {
 test('trocar de atendimento com a janela aberta mostra a conversa do outro', async () => {
   const h = harness(); await openAndResolve(h);
   await h.switchTo('Marta', '06/10/26 09:00', 'Marta: a nota não sai');
-  assert.equal(deepText(h.byClass('smart-reply-context')).trim(), 'Lendo o atendimento de Marta');
+  assert.equal(deepText(h.byClass('smart-reply-reading')).trim(), 'Lendo o atendimento de Marta');
   assert.deepEqual(h.replies(), []);
   await h.button('Pedir info').emit('click'); await settle();
   assert.equal(h.sent[1].conversation, 'Cliente (Marta): a nota não sai');
@@ -265,4 +265,131 @@ test('retireLegacyProfiles apaga só as chaves de perfil antigas', () => {
     customInstructions: 'LEGACY_NO_MIGRATION' };
   harness(store).module.retireLegacyProfiles();
   assert.deepEqual(Object.keys(store), ['customInstructions']);
+});
+
+function fakeNotices() {
+  let active = [];
+  return {
+    DURATIONS: [['today', 'Até hoje 23h59']], MAX_TEXT: 500,
+    async list() { return active.map((text, i) => ({ id: `n${i}`, text, expiresAt: Date.now() + 3600000 })); },
+    async forRequest() { return active.slice(); },
+    async add(text) { active.push(text); }, async remove() { active = []; },
+    untilLabel: () => 'até 23h59'
+  };
+}
+
+test('Inserir no chat escreve no campo sem enviar, avisa as amostras e mantém a janela aberta', async () => {
+  const h = harness(); await openAndResolve(h);
+  await h.button('Inserir no chat').emit('click');
+  assert.equal(h.composer.value, 'Pode informar o erro exibido?');
+  assert.deepEqual(h.composer.events, ['input']);
+  assert.equal(h.live.inserted, 'Pode informar o erro exibido?');
+  assert.notEqual(h.panel(), null);
+});
+
+test('rascunho existente pede Substituir, Acrescentar ou Cancelar', async () => {
+  const h = harness(); h.composer.value = 'rascunho meu'; await openAndResolve(h);
+  await h.button('Inserir no chat').emit('click');
+  assert.equal(h.composer.value, 'rascunho meu');
+  const choices = h.byClass('smart-reply-draft-choices');
+  assert.ok(visible(choices));
+  await h.button('Cancelar').emit('click');
+  assert.ok(!visible(choices));
+  await h.button('Inserir no chat').emit('click');
+  await h.button('Acrescentar').emit('click');
+  assert.equal(h.composer.value, 'rascunho meu\nPode informar o erro exibido?');
+  assert.ok(!visible(choices));
+  h.composer.value = 'outro rascunho';
+  await h.button('Inserir no chat').emit('click');
+  await h.button('Substituir').emit('click');
+  assert.equal(h.composer.value, 'Pode informar o erro exibido?');
+});
+
+test('Copiar copia o texto, avisa as amostras e mostra Copiado', async () => {
+  const h = harness(); await openAndResolve(h);
+  const copy = h.button('Copiar');
+  await copy.emit('click');
+  assert.equal(h.live.clipboard, 'Pode informar o erro exibido?');
+  assert.equal(h.live.inserted, 'Pode informar o erro exibido?');
+  assert.equal(copy.textContent, 'Copiado');
+});
+
+test('Copiar sem permissão mostra Não copiou', async () => {
+  const h = harness(); h.live.clipboardFails = true; await openAndResolve(h);
+  const copy = h.button('Copiar');
+  await copy.emit('click');
+  assert.equal(copy.textContent, 'Não copiou');
+  assert.equal(h.live.inserted, null);
+});
+
+test('só a resposta mais recente pode ser inserida', async () => {
+  const h = harness(); await openAndResolve(h);
+  h.input().value = 'mais curto'; await h.input().emit('keydown', { key: 'Enter' }); await settle();
+  const inserts = h.buttons('Inserir no chat');
+  assert.equal(inserts.length, 2);
+  assert.equal(inserts[0].disabled, true);
+  assert.equal(inserts[1].disabled, false);
+  assert.equal(h.buttons('Copiar').every(b => !b.disabled), true);
+});
+
+test('mensagem nova do cliente trava Inserir mas Copiar continua', async () => {
+  const h = harness(); await openAndResolve(h);
+  h.live.conversation += '\nGabriel: e agora?'; h.notify(); await settle();
+  assert.equal(h.buttons('Inserir no chat')[0].disabled, true);
+  await h.buttons('Inserir no chat')[0].emit('click');
+  assert.equal(h.composer.value, '');
+  await h.button('Copiar').emit('click');
+  assert.equal(h.live.clipboard, 'Pode informar o erro exibido?');
+});
+
+test('sem atendimento identificado Inserir fica travado', async () => {
+  const h = harness(); await openAndResolve(h);
+  h.live.platform = ''; h.notify(); await settle();
+  assert.equal(h.buttons('Inserir no chat')[0].disabled, true);
+  assert.match(h.status(), /Reabra a conversa/);
+  await h.buttons('Inserir no chat')[0].emit('click');
+  assert.equal(h.composer.value, '');
+});
+
+test('Ctrl+Enter insere a resposta mais recente', async () => {
+  const h = harness(); await openAndResolve(h);
+  await h.panel().emit('keydown', { key: 'Enter', ctrlKey: true });
+  assert.equal(h.composer.value, 'Pode informar o erro exibido?');
+  let stopped = 0;
+  await h.input().emit('keydown', { key: 'Enter', ctrlKey: true, stopPropagation() { stopped++; } });
+  assert.equal(stopped, 0, 'Ctrl+Enter bubbles from the input to the window');
+  assert.equal(h.sent.length, 1, 'Ctrl+Enter never sends a chat message');
+});
+
+test('Avisos abre o painel, adiciona e remove; Aviso só aparece com aviso ativo', async () => {
+  const h = harness(); h.useNotices(fakeNotices());
+  await h.module.open(); await settle();
+  const toggle = h.byClass('smart-reply-notices-toggle');
+  assert.equal(toggle.textContent, 'Avisos');
+  assert.equal(h.button('Aviso'), undefined, 'hidden without notices');
+  await toggle.emit('click');
+  assert.ok(visible(h.byClass('smart-reply-notices')));
+  h.byClass('smart-reply-notice-input').value = 'SEFAZ-MG instável desde 9h';
+  await h.button('Adicionar').emit('click'); await settle();
+  assert.equal(toggle.textContent, 'Avisos (1)');
+  assert.ok(h.button('Aviso'));
+  await h.button('Aviso').emit('click'); await settle();
+  assert.equal(h.sent.at(-1).intent, 'aviso');
+  assert.deepEqual(h.sent.at(-1).notices, ['SEFAZ-MG instável desde 9h']);
+  const remove = h.allByClass('smart-reply-notice-remove')[0];
+  assert.equal(remove.getAttribute('aria-label'), 'Remover aviso');
+  await remove.emit('click'); await settle();
+  assert.equal(toggle.textContent, 'Avisos');
+});
+
+test('selo adendo só aparece quando o adendo foi usado', async () => {
+  const h = harness(); h.live.complement = '';
+  await openAndResolve(h);
+  const badge = h.byClass('smart-reply-badge');
+  assert.equal(badge.textContent, 'adendo');
+  assert.ok(!visible(badge));
+  assert.equal(h.sent[0].promptComplement, undefined);
+  h.live.complement = 'cliente já reinstalou';
+  h.input().value = 'de novo'; await h.input().emit('keydown', { key: 'Enter' }); await settle();
+  assert.ok(visible(badge));
 });

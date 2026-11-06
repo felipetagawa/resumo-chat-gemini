@@ -33,6 +33,24 @@ const SmartReplyModule = (() => {
     return el;
   }
   const clear = el => Array.from(el.children).forEach(child => child.remove());
+  const draftText = el => el.isContentEditable || el.contentEditable === "true" ? el.textContent || "" : el.value || "";
+  function setComposer(el, value) {
+    el.focus();
+    if (el.isContentEditable || el.contentEditable === "true") {
+      el.textContent = value;
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else {
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+      if (setter) setter.call(el, value); else el.value = value;
+      el.setSelectionRange(value.length, value.length);
+    }
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }
   function setDisabled(el, value) { if (el.disabled !== value) el.disabled = value; }
   function setHidden(el, value) { if (el.hidden !== value) el.hidden = value; }
   function setText(el, value) { if (el.textContent !== value) el.textContent = value; }
@@ -99,6 +117,12 @@ const SmartReplyModule = (() => {
     msg.appendChild(node("span", "Resposta para o cliente", "smart-reply-label"));
     msg.appendChild(node("div", m.content, "smart-reply-reply"));
     const actions = node("div", "", "smart-reply-msg-actions");
+    const copy = node("button", "Copiar", "smart-reply-link"); copy.type = "button";
+    copy.addEventListener("click", () => copyReply(m, copy));
+    const insertButton = node("button", "Inserir no chat", "smart-reply-insert"); insertButton.type = "button";
+    insertButton.addEventListener("click", () => insert(s, m));
+    actions.appendChild(copy); actions.appendChild(insertButton);
+    s.insertButtons.push({ button: insertButton, message: m });
     msg.appendChild(actions);
     const sources = safeSources(m.sources);
     if (sources.length) msg.appendChild(renderSources(sources));
@@ -126,6 +150,7 @@ const SmartReplyModule = (() => {
     const messages = s.conversation?.messages || [];
     clear(list);
     s.emptyChips = null;
+    s.insertButtons = [];
     if (!messages.length) {
       const empty = node("div", "", "smart-reply-empty");
       s.emptyChips = buildChips(s, "smart-reply-chips");
@@ -147,10 +172,102 @@ const SmartReplyModule = (() => {
     sync(s);
   }
   function renderContext(s) {
-    clear(s.context);
+    clear(s.reading);
     if (!s.token) return;
-    s.context.appendChild(node("span", "Lendo o atendimento de "));
-    s.context.appendChild(node("strong", ChatCaptureModule.capturarNomeCliente?.() || "cliente"));
+    s.reading.appendChild(node("span", "Lendo o atendimento de "));
+    s.reading.appendChild(node("strong", ChatCaptureModule.capturarNomeCliente?.() || "cliente"));
+  }
+
+  // ---------- Copiar / Inserir no chat ----------
+  async function copyReply(m, button) {
+    try {
+      await navigator.clipboard.writeText(m.content);
+      // A pasted-and-sent suggestion must not be learned as the technician's own voice.
+      samples()?.noteInserted?.(m.content);
+      setText(button, "Copiado");
+    } catch { setText(button, "Não copiou"); }
+    setTimeout(() => setText(button, "Copiar"), 1500);
+  }
+  /** Only the latest reply, for the attendance open now, written from the conversation as it is now. */
+  function canInsert(s, m) {
+    return session === s && !!m && m === latestReply(s.conversation) && !!s.token
+      && chatToken() === s.token && !s.busy.has(s.token) && !s.stale;
+  }
+  function showChoices(s, visible) {
+    setHidden(s.choices, !visible);
+    if (!visible) s.pendingDraft = null;
+  }
+  function insert(s, m, mode, expected) {
+    sync(s);
+    if (!canInsert(s, m)) return;
+    const el = ChatCaptureModule.encontrarComposer();
+    if (!el || !capture().conversation.trim()) {
+      setText(s.feedback, "Não foi possível localizar com segurança o campo de mensagem deste atendimento.");
+      return;
+    }
+    const value = draftText(el);
+    if (value.trim() && (!mode || expected?.el !== el || expected.value !== value || expected.message !== m)) {
+      s.pendingDraft = { el, value, message: m };
+      setHidden(s.choices, false);
+      setText(s.feedback, "");
+      return;
+    }
+    // Recheck immediately before writing; a choice never retains a different composer.
+    sync(s);
+    if (!canInsert(s, m) || ChatCaptureModule.encontrarComposer() !== el) return;
+    setComposer(el, mode === "append" && value ? `${value}\n${m.content}` : m.content);
+    samples()?.noteInserted?.(m.content);
+    setText(s.feedback, "");
+    showChoices(s, false);
+  }
+
+  // ---------- Avisos ----------
+  async function refreshNotices(s) {
+    const list = (await notices()?.list?.()) || [];
+    if (session !== s) return;
+    s.noticeCount = list.length;
+    setText(s.noticesToggle, list.length ? `Avisos (${list.length})` : "Avisos");
+    clear(s.noticesList);
+    if (!list.length) s.noticesList.appendChild(node("div", "Nenhum aviso ativo.", "smart-reply-notice-empty"));
+    for (const item of list) {
+      const row = node("div", "", "smart-reply-notice");
+      row.appendChild(node("span", item.text, "smart-reply-notice-text"));
+      row.appendChild(node("span", notices().untilLabel(item.expiresAt), "smart-reply-notice-until"));
+      const remove = node("button", "×", "smart-reply-notice-remove"); remove.type = "button";
+      remove.setAttribute("aria-label", "Remover aviso");
+      remove.addEventListener("click", async () => { await notices().remove(item.id); return refreshNotices(s); });
+      row.appendChild(remove);
+      s.noticesList.appendChild(row);
+    }
+    syncChips(s);
+  }
+  function buildNoticesPanel(s) {
+    const panel = node("div", "", "smart-reply-notices"); panel.hidden = true;
+    panel.appendChild(node("div", "Avisos: a sugestão leva em conta quando o cliente fala do assunto. Ficam só neste navegador; remova quando a situação normalizar.", "smart-reply-notices-help"));
+    s.noticesList = node("div", "", "smart-reply-notice-list");
+    panel.appendChild(s.noticesList);
+    const input = node("textarea", "", "smart-reply-notice-input");
+    input.rows = 2; input.maxLength = notices()?.MAX_TEXT || 500;
+    input.placeholder = "Ex.: SEFAZ-MG instável desde 9h, notas saindo em contingência";
+    input.setAttribute("aria-label", "Novo aviso");
+    input.addEventListener("keydown", event => { if (event.key !== "Escape") event.stopPropagation?.(); });
+    const duration = node("select", "", "smart-reply-notice-duration");
+    duration.setAttribute("aria-label", "Validade do aviso");
+    for (const [value, label] of notices()?.DURATIONS || []) {
+      const option = node("option", label); option.value = value; duration.appendChild(option);
+    }
+    duration.value = "today";
+    const add = node("button", "Adicionar", "smart-reply-link"); add.type = "button";
+    add.addEventListener("click", async () => {
+      if (!String(input.value || "").trim() || !notices()) return;
+      await notices().add(input.value, duration.value);
+      input.value = "";
+      return refreshNotices(s);
+    });
+    const row = node("div", "", "smart-reply-notice-add");
+    row.appendChild(duration); row.appendChild(add);
+    panel.appendChild(input); panel.appendChild(row);
+    return panel;
   }
 
   // ---------- state ----------
@@ -164,6 +281,9 @@ const SmartReplyModule = (() => {
     const reply = latestReply(s.conversation);
     s.stale = !!reply && !busy && token === s.token && reply.basis !== currentBasis();
     setHidden(s.staleNote, !s.stale);
+    setHidden(s.badge, !reply?.usedComplement);
+    for (const { button, message } of s.insertButtons || []) setDisabled(button, !canInsert(s, message));
+    if (!s.choices.hidden && !canInsert(s, s.pendingDraft?.message)) showChoices(s, false);
     setHidden(s.compactChips, !(s.conversation?.messages?.length));
     setDisabled(s.input, !token);
     setDisabled(s.sendButton, !token || busy);
@@ -242,7 +362,8 @@ const SmartReplyModule = (() => {
 
   async function open() {
     if (session) { close(); return; }
-    const s = { token: "", conversation: null, cache: new Map(), busy: new Set(), switchRequest: 0, noticeCount: 0, stale: false };
+    const s = { token: "", conversation: null, cache: new Map(), busy: new Set(), switchRequest: 0, noticeCount: 0, stale: false,
+      insertButtons: [], pendingDraft: null };
     session = s;
     const panel = node("section", "", "smart-reply-window");
     panel.id = PANEL_ID;
@@ -266,6 +387,29 @@ const SmartReplyModule = (() => {
     header.appendChild(fresh); header.appendChild(x);
 
     s.context = node("div", "", "smart-reply-context");
+    s.reading = node("span", "", "smart-reply-reading");
+    s.badge = node("span", "adendo", "smart-reply-badge"); s.badge.hidden = true;
+    s.badge.title = "O Adendo para resposta foi usado";
+    s.noticesToggle = node("button", "Avisos", "smart-reply-notices-toggle"); s.noticesToggle.type = "button";
+    s.noticesToggle.setAttribute("aria-expanded", "false");
+    s.context.appendChild(s.reading); s.context.appendChild(s.badge); s.context.appendChild(s.noticesToggle);
+    s.noticesPanel = buildNoticesPanel(s);
+    s.noticesToggle.addEventListener("click", () => {
+      s.noticesPanel.hidden = !s.noticesPanel.hidden;
+      s.noticesToggle.setAttribute("aria-expanded", String(!s.noticesPanel.hidden));
+    });
+    s.feedback = node("div", "", "smart-reply-feedback"); s.feedback.setAttribute("role", "status");
+    s.choices = node("div", "", "smart-reply-draft-choices"); s.choices.hidden = true;
+    s.choices.appendChild(node("span", "Já existe um rascunho no campo do SZ.", "smart-reply-draft-text"));
+    for (const [label, mode] of [["Substituir", "replace"], ["Acrescentar", "append"], ["Cancelar", "cancel"]]) {
+      const button = node("button", label, mode === "replace" ? "smart-reply-insert" : "smart-reply-link"); button.type = "button";
+      button.addEventListener("click", () => {
+        if (mode === "cancel") { showChoices(s, false); return; }
+        const pending = s.pendingDraft;
+        return insert(s, pending?.message, mode, pending);
+      });
+      s.choices.appendChild(button);
+    }
     s.status = node("div", "", "smart-reply-status"); s.status.setAttribute("role", "status");
     s.list = node("div", "", "smart-reply-messages");
     s.list.setAttribute("aria-live", "polite");
@@ -283,7 +427,8 @@ const SmartReplyModule = (() => {
     form.appendChild(s.input); form.appendChild(s.sendButton);
     form.addEventListener("submit", event => { event.preventDefault(); return send(s, { text: s.input.value }); });
     s.input.addEventListener("keydown", event => {
-      if (event.key === "Escape") return;
+      // Esc (close) and Ctrl+Enter (insert) still reach the window.
+      if (event.key === "Escape" || (event.key === "Enter" && (event.ctrlKey || event.metaKey))) return;
       // SZ's global shortcuts must not see what is typed here.
       event.stopPropagation?.();
       if (event.key === "Enter" && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
@@ -292,7 +437,13 @@ const SmartReplyModule = (() => {
       }
     });
 
-    for (const el of [header, s.context, s.status, s.list, s.staleNote, s.compactChips, form]) panel.appendChild(el);
+    panel.addEventListener("keydown", event => {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        insert(s, latestReply(s.conversation));
+      }
+    });
+    for (const el of [header, s.context, s.noticesPanel, s.status, s.list, s.staleNote, s.feedback, s.choices, s.compactChips, form]) panel.appendChild(el);
     document.body.appendChild(panel);
     globalThis.ThemeModule?.apply?.(panel);
 
@@ -310,6 +461,7 @@ const SmartReplyModule = (() => {
     });
     s.observer.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
     render(s);
+    void refreshNotices(s);
     s.input.focus();
   }
 

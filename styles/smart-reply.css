@@ -56,8 +56,62 @@
     background: var(--ai-surface-muted);
     color: var(--ai-text-muted);
 }
-#atendeai-smart-reply .smart-reply-context strong { color: var(--ai-text); }
-#atendeai-smart-reply .smart-reply-context:empty { display: none; }
+#atendeai-smart-reply .smart-reply-reading { flex: 1 1 auto; min-width: 0; }
+#atendeai-smart-reply .smart-reply-reading strong { color: var(--ai-text); }
+#atendeai-smart-reply .smart-reply-badge {
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--ai-primary-soft);
+    color: var(--ai-primary);
+    font-size: var(--ai-font-size-xs);
+}
+#atendeai-smart-reply .smart-reply-notices-toggle {
+    padding: 2px 8px;
+    border: 1px solid var(--ai-border-strong);
+    border-radius: var(--ai-radius-sm);
+    background: var(--ai-surface);
+    color: var(--ai-text-secondary);
+    font: inherit;
+    font-size: var(--ai-font-size-xs);
+    cursor: pointer;
+}
+#atendeai-smart-reply .smart-reply-notices-toggle:hover { background: var(--ai-surface-hover); }
+
+#atendeai-smart-reply .smart-reply-notices {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid var(--ai-border);
+    border-radius: var(--ai-radius-md);
+    background: var(--ai-surface-muted);
+}
+#atendeai-smart-reply .smart-reply-notices-help,
+#atendeai-smart-reply .smart-reply-notice-empty,
+#atendeai-smart-reply .smart-reply-notice-until { color: var(--ai-text-muted); font-size: var(--ai-font-size-xs); }
+#atendeai-smart-reply .smart-reply-notice-list { display: flex; flex-direction: column; gap: 4px; }
+#atendeai-smart-reply .smart-reply-notice { display: flex; align-items: center; gap: 6px; }
+#atendeai-smart-reply .smart-reply-notice-text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+#atendeai-smart-reply .smart-reply-notice-remove {
+    width: 24px; height: 24px; padding: 0;
+    border: 0; border-radius: var(--ai-radius-sm);
+    background: transparent; color: var(--ai-text-secondary);
+    font: inherit; cursor: pointer;
+}
+#atendeai-smart-reply .smart-reply-notice-remove:hover { background: var(--ai-danger-soft); color: var(--ai-danger); }
+#atendeai-smart-reply .smart-reply-notice-input,
+#atendeai-smart-reply .smart-reply-notice-duration {
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border: 1px solid var(--ai-border-strong);
+    border-radius: var(--ai-radius-sm);
+    background: var(--ai-surface);
+    color: var(--ai-text);
+    font: inherit;
+}
+#atendeai-smart-reply .smart-reply-notice-input { width: 100%; resize: vertical; }
+#atendeai-smart-reply .smart-reply-notice-input::placeholder { color: var(--ai-text-muted); opacity: 1; }
+#atendeai-smart-reply .smart-reply-notice-add { display: flex; justify-content: space-between; gap: 6px; }
 
 #atendeai-smart-reply .smart-reply-status:empty { display: none; }
 #atendeai-smart-reply .smart-reply-status { color: var(--ai-danger); }
@@ -120,7 +174,18 @@
     white-space: pre-wrap;
 }
 #atendeai-smart-reply .smart-reply-msg-actions { display: flex; justify-content: flex-end; gap: 6px; }
-#atendeai-smart-reply .smart-reply-msg-actions:empty { display: none; }
+#atendeai-smart-reply .smart-reply-insert {
+    padding: 4px 10px;
+    border: 1px solid var(--ai-primary);
+    border-radius: var(--ai-radius-sm);
+    background: var(--ai-primary);
+    color: var(--ai-on-primary);
+    font: inherit;
+    font-weight: var(--ai-weight-medium);
+    cursor: pointer;
+}
+#atendeai-smart-reply .smart-reply-insert:hover:not(:disabled) { background: var(--ai-primary-hover); }
+#atendeai-smart-reply .smart-reply-insert:disabled { opacity: 0.45; cursor: default; }
 #atendeai-smart-reply .smart-reply-error { border-color: var(--ai-danger-border); background: var(--ai-danger-soft); color: var(--ai-danger); }
 #atendeai-smart-reply .smart-reply-error p { margin: 0; }
 #atendeai-smart-reply .smart-reply-typing { color: var(--ai-text-muted); font-style: italic; }
@@ -145,6 +210,19 @@
     background: var(--ai-warning-soft);
     color: var(--ai-warning);
 }
+
+#atendeai-smart-reply .smart-reply-feedback:empty { display: none; }
+#atendeai-smart-reply .smart-reply-feedback { color: var(--ai-danger); }
+#atendeai-smart-reply .smart-reply-draft-choices {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: var(--ai-radius-sm);
+    background: var(--ai-surface-muted);
+}
+#atendeai-smart-reply .smart-reply-draft-text { flex: 1 1 100%; color: var(--ai-text-secondary); }
 
 #atendeai-smart-reply .smart-reply-form { display: flex; gap: 6px; align-items: flex-end; }
 #atendeai-smart-reply .smart-reply-input {
