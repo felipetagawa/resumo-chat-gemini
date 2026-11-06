@@ -426,3 +426,31 @@ test('Nova fica travado enquanto a resposta está a caminho e a conversa não vo
   h.module.close(); await h.module.open(); await settle();
   assert.deepEqual(h.replies(), [], 'a cleared conversation stays cleared');
 });
+
+test('resposta a caminho sobrevive a fechar e reabrir a janela e Nova não traz a conversa de volta', async () => {
+  const h = harness(); h.defer();
+  await h.module.open(); await settle();
+  const pending = h.button('Resolver').emit('click'); await settle();
+  h.module.close(); await h.module.open(); await settle();
+  assert.ok(h.byClass('smart-reply-typing'), 'the reopened window shows the reply on its way');
+  assert.equal(h.button('Enviar').disabled, true);
+  assert.equal(h.button('Nova').disabled, true);
+  await h.button('Nova').emit('click'); await settle();
+  h.respond('Chegou'); await pending; await settle();
+  assert.deepEqual(h.replies(), ['Chegou'], 'the reply shows up in the window open now');
+  assert.equal(h.byClass('smart-reply-typing'), undefined);
+  await h.button('Nova').emit('click'); await settle();
+  h.module.close(); await h.module.open(); await settle();
+  assert.deepEqual(h.replies(), [], 'a cleared conversation stays cleared');
+  assert.deepEqual(Object.keys(h.store.atendeai_reply_chats_v1.items), [], 'nor does storage bring it back');
+});
+
+test('um botão rápido logo depois de Nova vai para a conversa nova e fica salvo', async () => {
+  const h = harness(); await openAndResolve(h);
+  const clearing = h.button('Nova').emit('click');
+  await h.button('Pedir info').emit('click'); await clearing; await settle();
+  assert.deepEqual(h.allByClass('smart-reply-user').map(n => n.textContent), ['Pedir info']);
+  assert.deepEqual(h.replies(), ['Pode informar o erro exibido?']);
+  assert.deepEqual(Object.values(h.store.atendeai_reply_chats_v1.items).map(item => item.messages.map(m => m.content)),
+    [['Pedir info', 'Pode informar o erro exibido?']]);
+});

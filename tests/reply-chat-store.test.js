@@ -115,3 +115,13 @@ test('storage indisponível não quebra: load volta vazio e save resolve', async
   await chats.clear('A');
   assert.deepEqual(plain(await chats.load('A')), { token: 'A', messages: [], updatedAt: 0 });
 });
+
+test('load lê depois das gravações pendentes', async () => {
+  const { chats } = load();
+  const saving = chats.save({ token: 'A', messages: [user('Resolver')] });
+  assert.deepEqual((await chats.load('A')).messages.map(m => m.content), ['Resolver']);
+  await saving;
+  const clearing = chats.clear('A');
+  assert.equal((await chats.load('A')).messages.length, 0);
+  await clearing;
+});

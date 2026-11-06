@@ -22,6 +22,8 @@ const SmartReplyModule = (() => {
   const samples = () => globalThis.StyleSamplesModule;
   const chats = () => ReplyChatStore;
   let session = null;
+  // Per attendance, shared by every opening of the window: a reply on its way outlives the window that asked.
+  const cache = new Map(), busy = new Set();
   const text = value => String(value || "").replace(/\s+/g, " ").trim();
   const chatToken = () => ChatCaptureModule.identificarAtendimentoResposta();
   const capture = () => ChatCaptureModule.capturarConversaRotulada(samples()?.selfName?.() || "");
@@ -91,7 +93,7 @@ const SmartReplyModule = (() => {
     return wrap;
   }
   function syncChips(s) {
-    const blocked = !s.token || s.busy.has(s.token);
+    const blocked = !s.token || busy.has(s.token);
     for (const wrap of [s.emptyChips, s.compactChips]) {
       if (!wrap) continue;
       for (const button of wrap.children) {
@@ -163,7 +165,7 @@ const SmartReplyModule = (() => {
       else if (m.error) list.appendChild(renderError(s, m, index === messages.length - 1));
       else list.appendChild(renderReply(s, m));
     });
-    if (s.token && s.busy.has(s.token)) {
+    if (s.token && busy.has(s.token)) {
       const typing = node("div", "Escrevendo a resposta…", "smart-reply-msg smart-reply-bot smart-reply-typing");
       typing.setAttribute("role", "status");
       list.appendChild(typing);
@@ -191,7 +193,7 @@ const SmartReplyModule = (() => {
   /** Only the latest reply, for the attendance open now, written from the conversation as it is now. */
   function canInsert(s, m) {
     return session === s && !!m && m === latestReply(s.conversation) && !!s.token
-      && chatToken() === s.token && !s.busy.has(s.token) && !s.stale;
+      && chatToken() === s.token && !busy.has(s.token) && !s.stale;
   }
   function showChoices(s, visible) {
     setHidden(s.choices, !visible);
@@ -277,28 +279,28 @@ const SmartReplyModule = (() => {
     const token = chatToken();
     if (token && token !== s.token) { void switchTo(s, token); return; }
     setText(s.status, token ? "" : NO_IDENTITY);
-    const busy = !!s.token && s.busy.has(s.token);
+    const writing = !!s.token && busy.has(s.token);
     const reply = latestReply(s.conversation);
-    s.stale = !!reply && !busy && token === s.token && reply.basis !== currentBasis();
+    s.stale = !!reply && !writing && token === s.token && reply.basis !== currentBasis();
     setHidden(s.staleNote, !s.stale);
     setHidden(s.badge, !reply?.usedComplement);
     for (const { button, message } of s.insertButtons || []) setDisabled(button, !canInsert(s, message));
     if (!s.choices.hidden && !canInsert(s, s.pendingDraft?.message)) showChoices(s, false);
     setHidden(s.compactChips, !(s.conversation?.messages?.length));
     setDisabled(s.input, !token);
-    setDisabled(s.sendButton, !token || busy);
-    setDisabled(s.freshButton, !s.token || busy);
-    const ariaBusy = busy ? "true" : "false";
+    setDisabled(s.sendButton, !token || writing);
+    setDisabled(s.freshButton, !s.token || writing);
+    const ariaBusy = writing ? "true" : "false";
     if (s.panel.getAttribute("aria-busy") !== ariaBusy) s.panel.setAttribute("aria-busy", ariaBusy);
     syncChips(s);
   }
   async function conversationFor(s, token) {
-    if (!s.cache.has(token)) {
+    if (!cache.has(token)) {
       const loaded = await chats().load(token);
       // Another load for the same token may have finished first: keep a single object per attendance.
-      if (!s.cache.has(token)) s.cache.set(token, loaded);
+      if (!cache.has(token)) cache.set(token, loaded);
     }
-    return s.cache.get(token);
+    return cache.get(token);
   }
   async function switchTo(s, token) {
     const request = ++s.switchRequest;
@@ -314,11 +316,11 @@ const SmartReplyModule = (() => {
   async function send(s, { text: ask, intent }) {
     const token = s.token, conversation = s.conversation;
     const content = String(ask || "").trim().slice(0, MAX_MESSAGE);
-    if (session !== s || !token || !conversation || !content || s.busy.has(token)) return;
+    if (session !== s || !token || !conversation || !content || busy.has(token)) return;
     if (chatToken() !== token) { sync(s); return; }
     conversation.messages.push(intent ? { role: "user", content, intent, at: Date.now() } : { role: "user", content, at: Date.now() });
     if (!intent) s.input.value = "";
-    s.busy.add(token);
+    busy.add(token);
     render(s);
     void chats().save(conversation);
     try {
@@ -344,10 +346,12 @@ const SmartReplyModule = (() => {
     } catch (err) {
       conversation.messages.push({ role: "assistant", error: true, content: err?.message || GENERIC_ERROR, at: Date.now() });
     } finally {
-      s.busy.delete(token);
-      // Saved to the attendance it was asked for, even if the technician moved on.
-      await chats().save(conversation);
-      if (session === s && s.token === token) { render(s); s.input.focus(); }
+      busy.delete(token);
+      // Saved to the attendance it was asked for, even if the technician moved on; never once Nova replaced it.
+      if (cache.get(token) === conversation) await chats().save(conversation);
+      // Shown in whichever window is open on that attendance now, even if it is not the one that asked.
+      const current = session;
+      if (current?.token === token) { render(current); current.input.focus(); }
     }
   }
 
@@ -365,7 +369,7 @@ const SmartReplyModule = (() => {
     if (session) { close(); return; }
     // Both chat windows sit in the same corner: only one at a time.
     globalThis.DocsModule?.close?.();
-    const s = { token: "", conversation: null, cache: new Map(), busy: new Set(), switchRequest: 0, noticeCount: 0, stale: false,
+    const s = { token: "", conversation: null, switchRequest: 0, noticeCount: 0, stale: false,
       insertButtons: [], pendingDraft: null };
     session = s;
     const panel = node("section", "", "smart-reply-window");
@@ -378,13 +382,15 @@ const SmartReplyModule = (() => {
     header.appendChild(node("strong", "Sugerir resposta", "smart-reply-title"));
     const fresh = node("button", "Nova", "smart-reply-link"); fresh.type = "button";
     s.freshButton = fresh;
-    fresh.addEventListener("click", async () => {
+    fresh.addEventListener("click", () => {
       // Clearing while a reply is on its way would lose it and let the save bring the old chat back.
-      if (!s.token || s.busy.has(s.token)) return;
+      if (!s.token || busy.has(s.token)) return;
       const token = s.token;
-      await chats().clear(token);
-      s.cache.set(token, { token, messages: [], updatedAt: 0 });
-      if (session === s && s.token === token) { s.conversation = s.cache.get(token); render(s); s.input.focus(); }
+      // Replaced before the clear is queued: the next ask goes to the new one, saved after the clear.
+      s.conversation = { token, messages: [], updatedAt: 0 };
+      cache.set(token, s.conversation);
+      render(s); s.input.focus();
+      return chats().clear(token);
     });
     const x = node("button", "×", "smart-reply-close"); x.type = "button";
     x.setAttribute("aria-label", "Fechar");

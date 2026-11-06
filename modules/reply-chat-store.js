@@ -37,10 +37,13 @@ const ReplyChatStore = (() => {
   const fresh = (item, now) => item && Array.isArray(item.messages)
     && Number.isFinite(item.updatedAt) && now - item.updatedAt < TTL;
 
-  async function load(token) {
-    const item = (await read())[token];
-    if (!fresh(item, Date.now())) return { token, messages: [], updatedAt: 0 };
-    return { token, messages: item.messages.filter(validMessage), updatedAt: item.updatedAt };
+  // Queued like the writes, so a read never sees storage from before a pending save or clear.
+  function load(token) {
+    return enqueue(async () => {
+      const item = (await read())[token];
+      if (!fresh(item, Date.now())) return { token, messages: [], updatedAt: 0 };
+      return { token, messages: item.messages.filter(validMessage), updatedAt: item.updatedAt };
+    });
   }
 
   function save(conversation) {
