@@ -1,4 +1,13 @@
 const TARGET_URL = "https://softeninformatica.sz.chat/user/agent";
+// SoftenChat: the agent screen is /{empresa}/chat (also /chat-novo while it is being rolled out).
+const SOFTENCHAT_HOST = "chat.softensistemas.com.br";
+function isTargetPage(href = window.location.href) {
+  if (href.startsWith(TARGET_URL)) return true;
+  try {
+    const url = new URL(href);
+    return url.hostname === SOFTENCHAT_HOST && /(^|\/)chat(-novo)?\/?$/.test(url.pathname);
+  } catch { return false; }
+}
 let modulosInicializados = false;
 const MAX_PROMPT_COMPLEMENT_CHARS = 2000;
 
@@ -537,6 +546,7 @@ function criarBotoesFlutuantes(visibility, userSector) {
         btn.innerHTML = `${getIconHTML("loading")}<span class="label">Identificando…</span>`;
       }
 
+      await ChatCaptureModule.prepararCaptura?.();
       const conversation = ChatCaptureModule.capturarTextoChat();
       if (!conversation) {
         renderProductClassifierMessage("Produto", "Conversa não encontrada");
@@ -582,10 +592,15 @@ function criarBotoesFlutuantes(visibility, userSector) {
   const botaoResumo = createButton("btnResumoGemini", "Gerar Relatório", "report",
     guardFeature(async () => {
       const btn = document.getElementById("btnResumoGemini");
+      await ChatCaptureModule.prepararCaptura?.();
       const texto = ChatCaptureModule.capturarTextoChat();
       const clientName = ChatCaptureModule.capturarNomeCliente(); // Captura nome para histórico
 
       if (!texto) {
+        if (globalThis.SoftenChatCapture?.ativo?.()) {
+          alert("Não encontrei a conversa para resumir. Clique na conversa desejada e tente de novo.");
+          return;
+        }
         await RecoveryBufferModule.openReportFallback();
         return;
       }
@@ -752,7 +767,7 @@ async function checkAndInit() {
   }
   if (checkingConfig || onboardingSaving) return;
   const currentUrl = window.location.href;
-  const isTarget = currentUrl.startsWith(TARGET_URL);
+  const isTarget = isTargetPage(currentUrl);
 
 
   if (!isTarget) {
@@ -768,7 +783,7 @@ async function checkAndInit() {
   checkingConfig = true;
   try {
     const configured = await isUserConfigured();
-    if (extensionContextInvalid || !window.location.href.startsWith(TARGET_URL)) return;
+    if (extensionContextInvalid || !isTargetPage()) return;
     document.getElementById("atendeai-context-notice")?.remove();
     inicializarModulos();
     NotificationsModule.verificarNotificacoesChat();
@@ -789,7 +804,7 @@ async function checkAndInit() {
     // Preserve the effective loop's behavior: create the dock only when absent.
     if (!document.getElementById("containerBotoesGemini")) {
       const items = await storageGet(["atendeai_visibility", SECTOR_KEY]);
-      if (!extensionContextInvalid && window.location.href.startsWith(TARGET_URL)
+      if (!extensionContextInvalid && isTargetPage()
           && !document.getElementById("containerBotoesGemini")) {
         const visibility = items.atendeai_visibility || {};
         const rawSector = items[SECTOR_KEY];

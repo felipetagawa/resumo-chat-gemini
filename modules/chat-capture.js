@@ -1,7 +1,16 @@
 const ChatCaptureModule = (() => {
     const replyOwners = new WeakMap();
     let replyObserver;
+    // On SoftenChat every reader below delegates to SoftenChatCapture; SZ keeps its DOM rules.
+    const soften = () => globalThis.SoftenChatCapture?.ativo?.() ? globalThis.SoftenChatCapture : null;
+    /** SoftenChat reads the transcript from its API: await this before capturing. */
+    async function prepararCaptura() {
+        const s = soften();
+        return s ? s.atualizar() : true;
+    }
     function identificarAtendimentoResposta() {
+        const s = soften();
+        if (s) { const id = s.conversaEmFoco(); return id ? `softenchat:${id}` : ''; }
         const normalize = value => String(value || '').replace(/\s+/g, ' ').trim();
         const card = document.querySelector('.sz_contact.active');
         if (!card || document.querySelectorAll('.sz_contact.active').length !== 1) return '';
@@ -36,6 +45,7 @@ const ChatCaptureModule = (() => {
     function observarAtendimentoResposta() {
         // Retain only weak node references and attendance IDs, never message excerpts.
         // Old nodes cannot be reassigned when SZ updates a same-name header/container.
+        if (soften()) { soften().observar(); return; }
         rememberReplyNodes();
         if (!replyObserver && globalThis.MutationObserver && document.body) {
             replyObserver = new MutationObserver(rememberReplyNodes);
@@ -46,6 +56,7 @@ const ChatCaptureModule = (() => {
     // Smart Reply alone: structured, ephemeral capture of the active attendance.
     // Keep the legacy report capture below independent of these rules.
     function mensagensParaResposta() {
+        if (soften()) return soften().mensagens();
         const card = document.querySelector('.sz_contact.active');
         const token = rememberReplyNodes();
         if (!card || !token) return [];
@@ -162,6 +173,7 @@ const ChatCaptureModule = (() => {
         const labeled = mensagensParaResposta().map(item => ({ ...item, name: item.customer
             ? (item.author ? `Cliente (${item.author})` : 'Cliente')
             : !item.sent ? item.name
+            : item.self === true ? 'Você' : item.self === false ? 'Outro técnico'
             : !self || !item.author ? 'Técnico' : normalizeName(item.author) === self ? 'Você' : 'Outro técnico' }));
         return { conversation: conversaComInicio(labeled),
             fullConversation: labeled.map(item => `${item.name}: ${item.message}`).join('\n') };
@@ -172,6 +184,7 @@ const ChatCaptureModule = (() => {
     }
 
     function encontrarComposer() {
+        if (soften()) return soften().composer();
         const candidates = Array.from(document.querySelectorAll('textarea[placeholder*="Digite"], div[contenteditable="true"][role="textbox"], div[contenteditable="true"][placeholder*="Digite"], #twemoji-textarea'))
             .filter(el => el.offsetWidth > 0 && el.offsetHeight > 0 && getComputedStyle(el).visibility !== 'hidden'
                 && !el.closest?.('#containerBotoesGemini, [id^="atendeai-"]'));
@@ -179,6 +192,7 @@ const ChatCaptureModule = (() => {
     }
 
     function capturarTextoChat() {
+        if (soften()) return soften().mensagens().map(item => `${item.name}: ${item.message}`).join("\n");
         const mensagensDOM = document.querySelectorAll(".msg");
 
         if (!mensagensDOM.length) {
@@ -249,6 +263,7 @@ const ChatCaptureModule = (() => {
     // não a conversa aberta. O nome vem do card ativo; o de qualquer outro card nunca vale.
     function capturarNomeCliente() {
         const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+        if (soften()) return clean(soften().nomeDoCliente()) || "Cliente";
         const insideQueueCard = node => {
             for (let parent = node; parent; parent = parent.parentElement) {
                 if (String(parent.className || '').split(/\s+/).includes('sz_contact')) return true;
@@ -298,6 +313,7 @@ const ChatCaptureModule = (() => {
     }
 
     return {
+        prepararCaptura,
         capturarTextoChat,
         capturarContextoResposta,
         capturarConversaRotulada,

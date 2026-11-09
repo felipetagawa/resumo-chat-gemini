@@ -2,6 +2,17 @@ const NotificationsModule = (() => {
     let lastCheckedClientName = "";
 
     function verificarNotificacoesChat() {
+        // SoftenChat: the conversation in focus; a new focus re-checks even for a same-name client.
+        const soften = globalThis.SoftenChatCapture?.ativo?.() ? globalThis.SoftenChatCapture : null;
+        if (soften) {
+            const id = soften.conversaEmFoco();
+            const name = String(soften.nomeDoCliente(id) || '').trim();
+            if (!id || !name || `${id}|${name}` === lastCheckedClientName) return;
+            lastCheckedClientName = `${id}|${name}`;
+            const raw = String(soften.identificadorDoContato?.(id) || '');
+            checkAndShowNotification(name, /[a-z]/i.test(raw) ? '' : raw);
+            return;
+        }
         const chatContainer = document.querySelector('.chats-list');
         if (!chatContainer) return;
 
@@ -26,9 +37,9 @@ const NotificationsModule = (() => {
         return String(data.atendeai_user_sector || '').trim().toLowerCase() === 'suporte';
     }
 
-    async function checkAndShowNotification(clientName) {
+    async function checkAndShowNotification(clientName, phone = '') {
         if (await isSuporte()) {
-            await globalThis.RetornosChatNotice?.check({ name: clientName });
+            await globalThis.RetornosChatNotice?.check(phone ? { name: clientName, phone } : { name: clientName });
             return;
         }
         const data = await StorageHelper.get(['usuarioAgendaEventsV2', 'usuarioAgendaCRM']);

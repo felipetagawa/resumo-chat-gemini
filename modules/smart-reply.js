@@ -468,6 +468,9 @@ const SmartReplyModule = (() => {
     document.body.appendChild(panel);
     globalThis.ThemeModule?.apply?.(panel);
 
+    // SoftenChat reads the transcript from its API; SZ answers at once.
+    await ChatCaptureModule.prepararCaptura?.();
+    if (session !== s) return;
     const token = chatToken();
     if (token) {
       s.token = token;
