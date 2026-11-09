@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "AtendeAI Manager",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Gera resumos estruturados de atendimentos usando Gemini.",
   "permissions": [
     "storage"
   ],
   "host_permissions": [
     "https://softeninformatica.sz.chat/*",
+    "https://chat.softensistemas.com.br/*",
     "https://gemini-resumo-298442462030.southamerica-east1.run.app/*",
     "https://generativelanguage.googleapis.com/*",
     "http://localhost:8080/*"
@@ -26,7 +27,8 @@
   "content_scripts": [
     {
       "matches": [
-        "https://softeninformatica.sz.chat/*"
+        "https://softeninformatica.sz.chat/*",
+        "https://chat.softensistemas.com.br/*"
       ],
       "css": [
         "styles/tokens.css",
@@ -47,6 +49,7 @@
         "utils/dom-helpers.js",
         "modules/ui-builder.js",
         "modules/shortcuts.js",
+        "modules/softenchat-capture.js",
         "modules/chat-capture.js",
         "modules/summary.js",
         "modules/messages.js",
@@ -143,7 +146,8 @@
         "config.png"
       ],
       "matches": [
-        "https://softeninformatica.sz.chat/*"
+        "https://softeninformatica.sz.chat/*",
+        "https://chat.softensistemas.com.br/*"
       ]
     }
   ]

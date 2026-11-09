@@ -382,6 +382,22 @@ const MessagesModule = (() => {
     }
 
     function enviarMensagemParaChat(mensagem) {
+        // SoftenChat: the composer of the conversation in focus. Its textarea is React-controlled,
+        // so the value goes through the native setter before the input event.
+        const softenChat = globalThis.SoftenChatCapture?.ativo?.();
+        if (softenChat) {
+            const el = ChatCaptureModule.encontrarComposer();
+            if (!el) {
+                alert("Não foi possível saber em qual conversa inserir. Clique no campo de mensagem da conversa e tente de novo.");
+                return;
+            }
+            el.focus();
+            const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+            if (setter) setter.call(el, mensagem); else el.value = mensagem;
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+            el.setSelectionRange?.(mensagem.length, mensagem.length);
+            return;
+        }
         const textAreas = document.querySelectorAll('textarea[placeholder*="Digite"], div[contenteditable="true"][role="textbox"], div[contenteditable="true"][placeholder*="Digite"], #twemoji-textarea');
 
         let inputEncontrado = null;

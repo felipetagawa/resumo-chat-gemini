@@ -79,6 +79,16 @@ const ObservationsModule = (() => {
   }
 
   function detectChatMeta() {
+    // SoftenChat shows several conversations at once: only the one in focus counts, never the
+    // first header on the page. Its "(…)" is a phone, or a visitor id on the site widget.
+    const soften = globalThis.SoftenChatCapture?.ativo?.() ? globalThis.SoftenChatCapture : null;
+    if (soften) {
+      const contactName = detectContactName();
+      const raw = normalizeText(soften.identificadorDoContato?.() || "");
+      const phone = /\d{8,}/.test(raw.replace(/\D/g, "")) && !/[a-z]/i.test(raw) ? normalizePhone(raw) : "";
+      const protocol = !phone && /^visitor_/i.test(raw) ? raw : "";
+      return { contactName, phone, protocol };
+    }
     const blocks = getCandidateTextBlocks();
     const contactName = detectContactName();
     let protocol = "";

@@ -1186,6 +1186,9 @@ const RecoveryBufferModule = (() => {
   function init() {
     if (started) return;
     started = true;
+    // SoftenChat keeps the whole history behind its API: the report reads it there, so nothing
+    // is copied to local storage. Buffers saved on SZ stay reachable through the panel.
+    if (globalThis.SoftenChatCapture?.ativo?.()) return;
     ensureViewportClamp();
 
     if (document.body && typeof MutationObserver === "function") {
