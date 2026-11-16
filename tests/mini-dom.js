@@ -22,6 +22,7 @@ function matchesCompound(element, compound) {
   if (!attributes.every(([, name, value]) => value == null
     ? element.getAttribute(name) != null : element.getAttribute(name) === value)) return false;
   compound = compound.replace(/\[[^\]]+\]/g, "");
+  if (!compound) return attributes.length > 0;
   const tokens = compound.match(/[.#]?[A-Za-z_][\w-]*/g);
   if (!tokens || tokens.join("") !== compound) return false;
   return tokens.every((token) => {
@@ -59,6 +60,12 @@ class MiniNode {
     if (name === "id") this.id = stringValue;
     else if (name === "class") this.className = stringValue;
     else this.attrs[name] = stringValue;
+  }
+
+  removeAttribute(name) {
+    if (name === "id") this.id = "";
+    else if (name === "class") this.className = "";
+    else delete this.attrs[name];
   }
 
   appendChild(child) {
