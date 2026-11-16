@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AtendeAI Manager",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Gera resumos estruturados de atendimentos usando Gemini.",
   "permissions": [
     "storage"
@@ -38,6 +38,7 @@
         "styles/smart-reply.css",
         "styles/docs-chat.css",
         "styles/queue-context.css",
+        "styles/pre-marcacoes.css",
         "styles/modals.css",
         "styles/calendar.css",
         "styles/called.css",
@@ -58,6 +59,7 @@
         "modules/called.js",
         "modules/notifications.js",
         "modules/pre-controls.js",
+        "modules/softenchat-pre-marcacoes.js",
         "modules/observations.js",
         "modules/theme.js",
         "modules/recovery-buffer.js",
@@ -78,6 +80,16 @@
         "content.js"
       ],
       "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "https://chat.softensistemas.com.br/*"
+      ],
+      "js": [
+        "modules/softenchat-cards-bridge.js"
+      ],
+      "run_at": "document_end",
+      "world": "MAIN"
     },
     {
       "matches": [

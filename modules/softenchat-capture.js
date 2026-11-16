@@ -140,6 +140,13 @@ const SoftenChatCapture = (() => {
         return job;
     }
 
+    /** GET on SoftenChat's API with the page's own session; rejects without one. */
+    function apiGet(path) {
+        const auth = token();
+        if (!auth) return Promise.reject(new Error('SoftenChat sem sessão.'));
+        return get(path, auth);
+    }
+
     function mensagens(id = conversaEmFoco()) {
         const entry = id && cache.get(id);
         if (!entry) return [];
@@ -171,7 +178,7 @@ const SoftenChatCapture = (() => {
         void atualizar();
     }
 
-    return { ativo, conversaEmFoco, nomeDoCliente, identificadorDoContato, composer, atualizar, mensagens, observar, _normalizar: normalizar };
+    return { ativo, conversaEmFoco, nomeDoCliente, identificadorDoContato, composer, atualizar, mensagens, observar, apiGet, _normalizar: normalizar };
 })();
 
 window.SoftenChatCapture = SoftenChatCapture;
