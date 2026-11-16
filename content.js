@@ -101,6 +101,8 @@ function inicializarModulos() {
   NotificationsModule.init();
 
   PreControlModule.init();
+  // SoftenChat: the same Pré-atendimento markings, on its list cards (checks host and sector itself).
+  void globalThis.SoftenChatPreMarcacoes?.init?.();
   ObservationsModule.init();
   RecoveryBufferModule.init();
   // Track attendance ownership from page load, so a same-name switch is caught before the first suggestion.

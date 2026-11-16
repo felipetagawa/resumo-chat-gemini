@@ -197,6 +197,11 @@ Módulos `retornos-*.js`, todos compartilhando `chrome.storage.local` (chaves `a
 - UI: `retornos-crm-line.js` (linha no atendimento), `retornos-strip.js` (faixa no Chamado por Técnico), `retornos-alert.js` (aviso na hora), `retornos-chat-notice.js` (aviso ao abrir o chat), aba Retornos em `agenda.js`.
 - Só o setor Suporte; o Pré-atendimento não muda. Design e plano em `docs/superpowers/`.
 
+## ⏱️ Marcações do Pré-atendimento no SoftenChat (1.10.0)
+
+- Na SZ continuam em `pre-controls.js`. No SoftenChat: `softenchat-cards-bridge.js` (mundo MAIN) lê nas props React de cada card da lista qual conversa ele mostra e se é sua, e grava `data-atendeai-conversa` / `data-atendeai-minha`.
+- `softenchat-pre-marcacoes.js` desenha cronômetro + 💸 no fim da primeira linha desses cards (só setor Pré-atendimento). Início = `assumedAt` da API do SoftenChat (ou a primeira vez visto). Estado em `chrome.storage.local` (`atendeai_softenchat_pre_v1`), limpo após 7 dias sem ver a conversa. Nada é enviado à API.
+
 ## 📝 Próximos Passos (Opcional)
 
 1. **JSDoc** - Adicionar documentação inline

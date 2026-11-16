@@ -1,0 +1,54 @@
+/* styles/pre-marcacoes.css
+   Pré-atendimento on SoftenChat: timer + 💸 at the end of a list card's first line (20px tall),
+   in normal flow so the native text just truncates earlier. Same colors as the SZ markings;
+   white text on solid chips reads on both SoftenChat themes. */
+.atendeai-pre-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  margin: 0 0 0 4px;
+  padding: 0;
+}
+.atendeai-pre-timer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 16px;
+  min-width: 54px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #41925f;
+  color: #fff;
+  font: 700 10px/1 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  user-select: none;
+}
+.atendeai-pre-neg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #6b7280;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+}
+.atendeai-pre-neg[aria-pressed="true"] {
+  background: #5ccf86;
+}
+.atendeai-pre-neg:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
