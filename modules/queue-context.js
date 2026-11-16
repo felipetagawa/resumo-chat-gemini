@@ -149,8 +149,44 @@ const QueueContextModule = (() => {
     console.warn(`[AtendeAI] Contexto na fila desligado: ${reason}.`);
   }
 
+  // SoftenChat list cards are React components with no wrapper of their own: the strip goes INSIDE the
+  // card, as its last line (a node beside them in the list could break React's own updates). The card
+  // opens its conversation on click/Enter, so nothing done in the strip may reach it.
+  const SOFTEN_CARD = 'main aside [role="button"][tabindex="0"]';
+  function shield(strip) {
+    ["pointerdown", "mousedown", "click", "dblclick", "keydown"].forEach(type =>
+      strip.addEventListener(type, event => event.stopPropagation?.()));
+  }
+  function reconcileSoftenChat() {
+    const prefix = QueueContextCapture.SOFTEN_PREFIX;
+    const seen = new Set();
+    for (const card of document.querySelectorAll(SOFTEN_CARD)) {
+      const conversa = card.getAttribute("data-atendeai-conversa");
+      const id = conversa ? prefix + conversa : null;
+      let strip = Array.from(card.children).find(child => child.classList?.contains(ROOT)) || null;
+      if (!id || !hasContent(items[id])) { strip?.remove(); continue; }
+      seen.add(card);
+      if (strip && strip.getAttribute("data-for-chat") !== id) { strip.remove(); strip = null; }
+      if (!strip) {
+        strip = build(id, items[id]);
+        strip.setAttribute("data-host", "softenchat");
+        shield(strip);
+        card.appendChild(strip);
+      } else {
+        if (card.children[card.children.length - 1] !== strip) card.appendChild(strip);
+        if (strip.getAttribute("data-signature") !== signature(items[id]) && !strip.querySelector("input")) fill(strip, items[id]);
+      }
+    }
+    // Strips left in cards that are gone from the list.
+    for (const strip of document.querySelectorAll(`.${ROOT}`)) {
+      const card = strip.parentElement;
+      if (!card || !seen.has(card)) strip.remove();
+    }
+  }
+
   function reconcile() {
     if (disabled) return;
+    if (globalThis.SoftenChatCapture?.ativo?.()) { reconcileSoftenChat(); return; }
     const list = safeList(), strips = Array.from(document.querySelectorAll(`.${ROOT}`));
     if (!list) { strips.forEach(strip => strip.remove()); return; }
     const all = Array.from(list.querySelectorAll(".sz_contact")), units = all.map(unitOf);
@@ -200,8 +236,10 @@ const QueueContextModule = (() => {
   const pending = new Set();
   async function capture() {
     if (!prefs.anydesk && !prefs.problem) return;
-    const snapshot = QueueContextCapture.read();
-    if (!snapshot) return;
+    // SZ: the open chat. SoftenChat: each conversation open side by side.
+    for (const snapshot of QueueContextCapture.readAll()) await captureOne(snapshot);
+  }
+  async function captureOne(snapshot) {
     const P = QueueContextParse, { chatId, messages } = snapshot;
     const source = P.problemMessages(messages), heuristic = P.heuristicLine(source.texts);
     const saved = await QueueContextStore.merge(chatId, {
@@ -261,6 +299,12 @@ const QueueContextModule = (() => {
       if (!changes[QueueContextStore.KEY]) return;
       void QueueContextStore.all().then(next => { items = next; schedule(); });
     });
+    // SoftenChat: the bridge marks cards with attributes (not observed above) and the API answers
+    // without touching the DOM, so check again every couple of seconds.
+    if (globalThis.SoftenChatCapture?.ativo?.()) {
+      globalThis.SoftenChatCapture.observar?.();
+      setInterval(schedule, 2000);
+    }
     schedule();
   }
 
