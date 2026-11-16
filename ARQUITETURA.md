@@ -202,6 +202,11 @@ Módulos `retornos-*.js`, todos compartilhando `chrome.storage.local` (chaves `a
 - Na SZ continuam em `pre-controls.js`. No SoftenChat: `softenchat-cards-bridge.js` (mundo MAIN) lê nas props React de cada card da lista qual conversa ele mostra e se é sua, e grava `data-atendeai-conversa` / `data-atendeai-minha`.
 - `softenchat-pre-marcacoes.js` desenha cronômetro + 💸 no fim da primeira linha desses cards (só setor Pré-atendimento). Início = `assumedAt` da API do SoftenChat (ou a primeira vez visto). Estado em `chrome.storage.local` (`atendeai_softenchat_pre_v1`), limpo após 7 dias sem ver a conversa. Nada é enviado à API.
 
+## 🖥 Contexto na fila no SoftenChat (1.11.0)
+
+- AnyDesk + linha do problema (as mesmas opções "Contexto na fila" da página de opções). Na SZ a faixa fica depois do card; no SoftenChat fica **dentro** do card, como última linha (um nó ao lado dos cards na lista poderia atrapalhar o React). Cliques e teclas na faixa não chegam ao card.
+- O card certo vem de `data-atendeai-conversa` (a ponte das marcações). A transcrição vem da API, de cada conversa aberta lado a lado (`QueueContextCapture.readAll`); a IA do problema continua sendo chamada só para conversas abertas, como na SZ. Chave no storage: `softenchat:{id}`.
+
 ## 📝 Próximos Passos (Opcional)
 
 1. **JSDoc** - Adicionar documentação inline

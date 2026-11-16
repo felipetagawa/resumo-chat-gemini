@@ -8,7 +8,7 @@ const SoftenChatCapture = (() => {
     const inflight = new Map();
     let lastFocused = '';
     let watching = false;
-    let refreshTimer = null;
+    const refreshTimers = new Map(); // conversationId -> pending re-read
     let me = null; // { id } from /auth/me, read once per page
 
     const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
@@ -147,6 +147,11 @@ const SoftenChatCapture = (() => {
         return get(path, auth);
     }
 
+    function conversasAbertas() {
+        return articles().map(a => a.getAttribute('data-conversa')).filter(Boolean);
+    }
+    const emCache = id => !!id && cache.has(id);
+
     function mensagens(id = conversaEmFoco()) {
         const entry = id && cache.get(id);
         if (!entry) return [];
@@ -166,19 +171,28 @@ const SoftenChatCapture = (() => {
         };
         document.addEventListener('focusin', escolher, true);
         document.addEventListener('pointerdown', escolher, true);
-        // A new bubble in the focused conversation: re-read it once the burst settles.
+        // A new bubble in any open conversation (or a conversation just opened): re-read that one
+        // once the burst settles. The queue context reads every open conversation, not only the focused one.
         if (globalThis.MutationObserver && document.body) {
             new MutationObserver(records => {
-                const id = conversaEmFoco();
-                if (!id || !records.some(r => articleOf(r.target)?.getAttribute('data-conversa') === id)) return;
-                clearTimeout(refreshTimer);
-                refreshTimer = setTimeout(() => void atualizar(id), 800);
+                const ids = new Set();
+                for (const r of records) {
+                    const id = articleOf(r.target)?.getAttribute('data-conversa');
+                    if (id) ids.add(id);
+                    for (const node of r.addedNodes || []) {
+                        if (node?.getAttribute?.('data-conversa') != null) ids.add(node.getAttribute('data-conversa'));
+                    }
+                }
+                for (const id of ids) {
+                    clearTimeout(refreshTimers.get(id));
+                    refreshTimers.set(id, setTimeout(() => { refreshTimers.delete(id); void atualizar(id); }, 800));
+                }
             }).observe(document.body, { childList: true, subtree: true });
         }
-        void atualizar();
+        for (const id of conversasAbertas()) void atualizar(id);
     }
 
-    return { ativo, conversaEmFoco, nomeDoCliente, identificadorDoContato, composer, atualizar, mensagens, observar, apiGet, _normalizar: normalizar };
+    return { ativo, conversaEmFoco, conversasAbertas, emCache, nomeDoCliente, identificadorDoContato, composer, atualizar, mensagens, observar, apiGet, _normalizar: normalizar };
 })();
 
 window.SoftenChatCapture = SoftenChatCapture;

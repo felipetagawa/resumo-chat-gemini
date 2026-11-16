@@ -107,9 +107,9 @@ test('diagnostic toggle writes the flag, and copy/clear work on the log', async 
   assert.deepEqual(store.atendeai_retornos_diag_log, []);
 });
 
-test('manifest: 1.10.0, still only the storage permission, every listed file exists, and load order is safe', () => {
+test('manifest: 1.11.0, still only the storage permission, every listed file exists, and load order is safe', () => {
   const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
-  assert.equal(manifest.version, '1.10.0');
+  assert.equal(manifest.version, '1.11.0');
   assert.deepEqual(manifest.permissions, ['storage']);
   for (const entry of manifest.content_scripts) {
     for (const file of [...(entry.js || []), ...(entry.css || [])]) assert.ok(fs.existsSync(path.join(process.cwd(), file)), file);

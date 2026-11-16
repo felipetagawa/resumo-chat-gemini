@@ -206,3 +206,15 @@ test('aviso ao abrir conversa: usa a conversa em foco e passa o telefone para os
   await new Promise(r => setTimeout(r, 0));
   assert.deepEqual(JSON.parse(JSON.stringify(checks)), [{ name: 'ROBERTA', phone: '5511999990000' }]);
 });
+
+test('ao observar, le todas as conversas abertas (o contexto da fila precisa de cada uma)', async () => {
+  const a = conversa('c1', 'ROBERTA'), b = conversa('c2', 'MARCOS');
+  const { soften, calls } = load([a.article, b.article], { messages: { c1: [msg('user', 'oi', 'x')], c2: [msg('user', 'ola', 'y')] } });
+  soften.observar();
+  await new Promise(r => setTimeout(r, 0));
+  await new Promise(r => setTimeout(r, 0));
+  assert.deepEqual([...new Set(calls.map(c => c.url.match(/conversations\/([^/]+)\//)[1]))].sort(), ['c1', 'c2']);
+  assert.deepEqual(JSON.parse(JSON.stringify(soften.conversasAbertas())), ['c1', 'c2']);
+  assert.equal(soften.emCache('c1') && soften.emCache('c2'), true);
+  assert.equal(soften.mensagens('c2')[0].message, 'ola');
+});

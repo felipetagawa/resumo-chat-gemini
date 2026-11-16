@@ -80,6 +80,28 @@ const QueueContextCapture = (() => {
     // SZ can switch the active card before swapping the transcript: require the customer's own name.
     return customerSeen ? { chatId, messages } : null;
   }
-  return Object.freeze({ read, idOf });
+  // SoftenChat: every open conversation, read from its API (SoftenChatCapture's cache), keyed by the
+  // conversation id the list cards also carry (data-atendeai-conversa, from the page-world bridge).
+  // A conversation not read yet is asked for and skipped this time.
+  const SOFTEN_PREFIX = "softenchat:";
+  function readSoftenChat(api) {
+    const out = [];
+    for (const id of api.conversasAbertas()) {
+      if (!api.emCache(id)) { void api.atualizar(id); continue; }
+      const messages = api.mensagens(id).map(m => ({
+        role: m.customer ? "client" : m.sent ? "agent" : "system", text: clean(m.message) })).filter(m => m.text);
+      if (messages.some(m => m.role === "client")) out.push({ chatId: SOFTEN_PREFIX + id, messages });
+    }
+    return out;
+  }
+  function softenApi() { return globalThis.SoftenChatCapture?.ativo?.() ? globalThis.SoftenChatCapture : null; }
+  /** Every transcript that can be read now: the open SZ chat, or each open SoftenChat conversation. */
+  function readAll() {
+    const api = softenApi();
+    if (api) return readSoftenChat(api);
+    const one = read();
+    return one ? [one] : [];
+  }
+  return Object.freeze({ read, readAll, idOf, SOFTEN_PREFIX });
 })();
 globalThis.QueueContextCapture = QueueContextCapture;
